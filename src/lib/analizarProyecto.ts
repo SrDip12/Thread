@@ -1,8 +1,8 @@
 // Cliente del endpoint de análisis de proyecto con IA.
-// El endpoint es una Cloudflare Pages Function (functions/analizar-proyecto.ts).
-// OJO: en `vite dev` la Function NO corre — necesitás `wrangler pages dev` o el
-// deploy en Cloudflare Pages. En `vite dev` el fetch fallará (404 / HTML) y el UI
-// debe mostrar el error con gracia.
+// El endpoint es una Vercel Edge Function (api/analizar-proyecto.ts).
+// OJO: en `vite dev` la Function NO corre — necesitás `vercel dev` o el deploy en
+// Vercel. En `vite dev` el fetch fallará (404 / HTML) y el UI debe mostrar el error
+// con gracia.
 
 export interface TareaPropuesta {
   titulo: string
@@ -25,7 +25,7 @@ function esModuloPropuesto(x: unknown): x is ModuloPropuesto {
 }
 
 export async function analizarProyecto(documento: string): Promise<ModuloPropuesto[]> {
-  const res = await fetch('/analizar-proyecto', {
+  const res = await fetch('/api/analizar-proyecto', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ documento }),

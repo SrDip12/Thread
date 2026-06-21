@@ -10,14 +10,14 @@ App web de gestión de proyectos/tareas. UI **en español**.
 - **React Router v7** (`react-router-dom`, modo declarativo)
 - **@tanstack/react-query** (estado de servidor / cache)
 - **@supabase/supabase-js** (backend: datos + auth)
-- Deploy: **Cloudflare Pages** (+ Pages Functions en `/functions`)
+- Deploy: **Vercel** (+ Edge Functions en `/api`)
 
 ## Estructura
 
 ```
 /design            Export de Claude Design. REFERENCIA VISUAL. NO MODIFICAR.
-/functions         Cloudflare Pages Functions (vacío por ahora; cada .ts = ruta /api).
-/public            Estáticos. _redirects hace el fallback SPA.
+/api               Vercel Edge Functions (cada .ts = ruta /api/<archivo>).
+/public            Estáticos. vercel.json hace el fallback SPA (rewrites).
 /src
   /components       Componentes compartidos (Layout, etc.)
   /lib              Clientes/infra (supabase.ts)
@@ -114,12 +114,13 @@ Ventana de tiempo **ortogonal a los módulos**: la tarea sigue en su módulo y g
 
 Registra reuniones (no las agenda) y convierte notas en tareas. Datos `src/data/reuniones.ts`; UI `src/pages/Reuniones.tsx` (`/reuniones`, filtrable por proyecto) y `src/pages/ReunionDetalle.tsx` (`/reuniones/:id`: encabezado proyecto/tipo/fecha/sprint/asistentes, notas con autoguardado, extracción IA, tareas creadas).
 
-**Extracción IA** → `functions/extraer-tareas.ts` (Cloudflare Pages Function, `POST /extraer-tareas`):
+**Extracción IA** → `api/extraer-tareas.ts` (Vercel Edge Function, `POST /api/extraer-tareas`):
 - Proveedor: **Groq** (API compatible con OpenAI, `POST /openai/v1/chat/completions`). Modelo en la constante `MODEL = 'llama-3.3-70b-versatile'` (cambiar ahí). Usa `response_format: json_object`.
-- API key: **secret de Cloudflare Pages** `GROQ_API_KEY` (`env.GROQ_API_KEY`, header `Authorization: Bearer`), nunca en el cliente. Setear: dashboard → Settings → Environment variables (Secret), o `npx wrangler pages secret put GROQ_API_KEY`.
+- API key: **env var de Vercel** `GROQ_API_KEY` (`process.env.GROQ_API_KEY`, header `Authorization: Bearer`), nunca en el cliente. Setear: dashboard → Settings → Environment Variables, o `vercel env add GROQ_API_KEY`.
+- Cada función declara `export const config = { runtime: 'edge' }` y exporta `default async function handler(request: Request)`. La otra función IA es `api/analizar-proyecto.ts` (cliente `src/lib/analizarProyecto.ts`).
 - Recibe `{ notas, personas[], modulos[] }`, devuelve `{ tareas: [{ titulo, responsable_sugerido, modulo_sugerido, fecha }] }` (validado/tipado). Cliente: `src/lib/extraer.ts`.
 - Las tareas **nunca** se crean sin revisión: el detalle muestra una vista editable (responsable/módulo/fecha) antes de confirmar; al confirmar se crean con `reunion_id` + `sprint_id`.
-- **Dev local**: `vite dev` NO ejecuta Functions. Para probar la IA local: `npx wrangler pages dev` (sirve `/functions`) con `GROQ_API_KEY` seteado, o probá contra el deploy.
+- **Dev local**: `vite dev` NO ejecuta Functions. Para probar la IA local: `vercel dev` (sirve `/api`) con `GROQ_API_KEY` en `.env.local`, o probá contra el deploy.
 
 ## Realtime
 
@@ -127,30 +128,29 @@ Cambios en `tareas` y `comentarios` se reflejan en vivo entre miembros. Hook `sr
 
 Requiere la migración `…_realtime.sql` (agrega las tablas a la publicación `supabase_realtime` + `replica identity full`). Aplicar en el SQL editor o `supabase db push`.
 
-## Deploy (Cloudflare Pages)
+## Deploy (Vercel)
 
-Build de Vite: **build command** `npm run build`, **output dir** `dist` (también en `wrangler.toml` → `pages_build_output_dir`). Node 20 (`.node-version`). Las **Pages Functions** de `/functions` se despliegan automáticamente junto al sitio; `POST /extraer-tareas` queda accesible en el mismo dominio (la app la llama con path relativo). El SPA-fallback lo da `public/_redirects` (`/* /index.html 200`); las Functions tienen prioridad sobre ese fallback.
+Build de Vite: **build command** `npm run build`, **output dir** `dist`. Node 20 (`.node-version`). Las **Edge Functions** de `/api` se despliegan automáticamente junto al sitio; `POST /api/extraer-tareas` y `POST /api/analizar-proyecto` quedan en el mismo dominio (la app las llama con path relativo). El SPA-fallback lo da `vercel.json` → `rewrites` (`/((?!api/).*) → /index.html`); las rutas `/api/*` quedan excluidas del rewrite.
 
 ### Conectar el repo
 1. Push del repo a GitHub/GitLab.
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**, elegí el repo.
-3. Build settings: framework preset **Vite** (o None), **build command** `npm run build`, **output directory** `dist`.
-4. **Variables de entorno** (Settings → Environment variables):
-   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` → **plain** (públicas; Vite las inyecta en build, por eso van como variables, no secrets).
-   - `GROQ_API_KEY` → **Secret/Encrypted** (solo la Function la lee en runtime; nunca llega al cliente).
-   - `NODE_VERSION` = `20` si el preset no toma `.node-version`.
-5. Deploy. Cada push redeploya.
+2. Vercel dashboard → **Add New → Project → Import** el repo.
+3. Build settings: framework preset **Vite** (autodetectado), **build command** `npm run build`, **output directory** `dist`. No hay deploy command.
+4. **Variables de entorno** (Settings → Environment Variables):
+   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` → públicas (Vite las inyecta en build).
+   - `GROQ_API_KEY` → solo la Function la lee en runtime (`process.env`); nunca llega al cliente.
+5. Deploy. Cada push redeploya (Preview en ramas, Production en `main`).
 
 ### Comandos
 ```
-npm run dev                 # app (Vite). NO ejecuta las Functions de /functions
-npx wrangler pages dev      # app + Functions /functions (probar /extraer-tareas local; necesita GROQ_API_KEY)
+npm run dev                 # app (Vite). NO ejecuta las Functions de /api
+vercel dev                  # app + Functions /api (probar la IA local; necesita GROQ_API_KEY en .env.local)
 npm run build               # tsc -b + vite build → dist/
 npm run preview             # sirve el build de dist
-npx wrangler pages deploy   # deploy por CLI (alternativa al git connect)
+vercel deploy               # deploy por CLI (alternativa al git import)
 ```
 
-Para `wrangler pages dev` con el secret local: `npx wrangler pages secret put GROQ_API_KEY` (remoto) o un `.dev.vars` con `GROQ_API_KEY=...` (local, no commitear).
+Para `vercel dev` con el secret local: `vercel env add GROQ_API_KEY` (remoto) o un `.env.local` con `GROQ_API_KEY=...` (local, no commitear).
 
 ## Navegación base
 

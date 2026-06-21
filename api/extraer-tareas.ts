@@ -1,11 +1,8 @@
-// Cloudflare Pages Function: POST /extraer-tareas
+// Vercel Edge Function: POST /api/extraer-tareas
 // Recibe notas + personas + módulos, llama a Groq y devuelve tareas propuestas.
-// La API key SOLO vive como secret de Cloudflare Pages (env.GROQ_API_KEY); NUNCA en el cliente.
-// No usamos el tipo `PagesFunction` porque @cloudflare/workers-types no está instalado.
+// La API key SOLO vive como env var de Vercel (process.env.GROQ_API_KEY); NUNCA en el cliente.
 
-interface Env {
-  GROQ_API_KEY: string
-}
+export const config = { runtime: 'edge' }
 
 // Modelo de Groq; constante fácil de cambiar.
 const MODEL = 'llama-3.3-70b-versatile'
@@ -123,11 +120,10 @@ interface GroqRespuesta {
   choices?: { message?: { content?: string } }[]
 }
 
-export async function onRequestPost(context: {
-  request: Request
-  env: Env
-}): Promise<Response> {
-  const { request, env } = context
+export default async function handler(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return json({ error: 'Método no permitido.' }, 405)
+  }
 
   let cuerpoCrudo: unknown
   try {
@@ -144,7 +140,8 @@ export async function onRequestPost(context: {
     )
   }
 
-  if (!env.GROQ_API_KEY) {
+  const groqKey = process.env.GROQ_API_KEY
+  if (!groqKey) {
     return json({ error: 'Falta configurar GROQ_API_KEY en el servidor.' }, 500)
   }
 
@@ -152,7 +149,7 @@ export async function onRequestPost(context: {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      authorization: `Bearer ${env.GROQ_API_KEY}`,
+      authorization: `Bearer ${groqKey}`,
     },
     body: JSON.stringify({
       model: MODEL,

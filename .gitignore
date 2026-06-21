@@ -6,7 +6,6 @@ dist
 !.env.example
 .DS_Store
 node_modules/.tmp
-.dev.vars
-.wrangler
+.vercel
 supabase/.temp/
 vite.dev.log

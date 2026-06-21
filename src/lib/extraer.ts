@@ -1,8 +1,8 @@
 // Cliente del endpoint de extracción de tareas con IA.
-// El endpoint es una Cloudflare Pages Function (functions/extraer-tareas.ts).
-// OJO: en `vite dev` la Function NO corre — necesitás `wrangler pages dev` o el
-// deploy en Cloudflare Pages. En `vite dev` el fetch fallará (404 / HTML) y el UI
-// debe mostrar el error con gracia.
+// El endpoint es una Vercel Edge Function (api/extraer-tareas.ts).
+// OJO: en `vite dev` la Function NO corre — necesitás `vercel dev` o el deploy en
+// Vercel. En `vite dev` el fetch fallará (404 / HTML) y el UI debe mostrar el error
+// con gracia.
 
 export interface TareaPropuesta {
   titulo: string
@@ -31,7 +31,7 @@ function esTareaPropuesta(x: unknown): x is TareaPropuesta {
 }
 
 export async function extraerTareas(input: ExtraerInput): Promise<TareaPropuesta[]> {
-  const res = await fetch('/extraer-tareas', {
+  const res = await fetch('/api/extraer-tareas', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
