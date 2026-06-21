@@ -10,34 +10,41 @@ interface AuthContextValue {
   session: Session | null
   persona: Persona | null
   cargando: boolean
+  /** Falla real de la query de personas (red/permiso), distinta de "email no registrado". */
+  error: string | null
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-async function buscarPersona(email: string | undefined): Promise<Persona | null> {
-  if (!email) return null
-  const { data } = await supabase
+type ResultadoPersona = { persona: Persona | null; error: string | null }
+
+async function buscarPersona(email: string | undefined): Promise<ResultadoPersona> {
+  if (!email) return { persona: null, error: null }
+  const { data, error } = await supabase
     .from('personas')
     .select('*')
     .eq('email', email)
     .maybeSingle()
-  return data
+  if (error) return { persona: null, error: error.message }
+  return { persona: data, error: null }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [persona, setPersona] = useState<Persona | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let activo = true
 
     async function resolverSesion(nuevaSesion: Session | null) {
-      const nuevaPersona = await buscarPersona(nuevaSesion?.user.email)
+      const res = await buscarPersona(nuevaSesion?.user.email)
       if (!activo) return
       setSession(nuevaSesion)
-      setPersona(nuevaPersona)
+      setPersona(res.persona)
+      setError(res.error)
       setCargando(false)
     }
 
@@ -61,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, persona, cargando, signOut }}>
+    <AuthContext.Provider value={{ session, persona, cargando, error, signOut }}>
       {children}
     </AuthContext.Provider>
   )

@@ -25,6 +25,7 @@ export interface Database {
           rol: Database['public']['Enums']['rol_persona']
           color: string
           activo: boolean
+          user_id: string | null
           created_at: string
         }
         Insert: {
@@ -34,6 +35,7 @@ export interface Database {
           rol: Database['public']['Enums']['rol_persona']
           color?: string
           activo?: boolean
+          user_id?: string | null
           created_at?: string
         }
         Update: {
@@ -43,6 +45,7 @@ export interface Database {
           rol?: Database['public']['Enums']['rol_persona']
           color?: string
           activo?: boolean
+          user_id?: string | null
           created_at?: string
         }
       }

@@ -6,29 +6,14 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [aviso, setAviso] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
   async function entrar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
-    setAviso(null)
     setEnviando(true)
     const { error: errLogin } = await supabase.auth.signInWithPassword({ email, password })
     if (errLogin) setError(errLogin.message)
-    setEnviando(false)
-  }
-
-  async function crearCuenta() {
-    setError(null)
-    setAviso(null)
-    setEnviando(true)
-    const { data, error: errSignUp } = await supabase.auth.signUp({ email, password })
-    if (errSignUp) {
-      setError(errSignUp.message)
-    } else if (!data.session) {
-      setAviso('Cuenta creada. Revisá tu correo para confirmarla antes de entrar.')
-    }
     setEnviando(false)
   }
 
@@ -71,7 +56,6 @@ export default function Login() {
           </label>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {aviso && <p className="text-sm text-muted">{aviso}</p>}
 
           <button
             type="submit"
@@ -80,16 +64,11 @@ export default function Login() {
           >
             Entrar
           </button>
-
-          <button
-            type="button"
-            onClick={crearCuenta}
-            disabled={enviando}
-            className="rounded-[9px] border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-hover disabled:opacity-60"
-          >
-            Crear cuenta
-          </button>
         </form>
+
+        <p className="mt-4 text-xs text-muted">
+          ¿No tenés acceso? El alta de cuentas la hace un administrador del equipo.
+        </p>
       </div>
     </div>
   )

@@ -47,6 +47,7 @@ export function useCrearPersona() {
         rol: nueva.rol,
         color: nueva.color ?? '',
         activo: nueva.activo ?? true,
+        user_id: nueva.user_id ?? null,
         created_at: nueva.created_at ?? new Date().toISOString(),
       }
       queryClient.setQueryData<Persona[]>(queryKey, (viejo) => [...(viejo ?? []), optimista])
