@@ -1,0 +1,466 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import type { Enums } from '../lib/database.types.ts'
+import { fmtFecha } from '../lib/ui.ts'
+import { useProyectos } from '../data/proyectos.ts'
+import { usePersonas } from '../data/personas.ts'
+import { useModulos, useActualizarModulo } from '../data/modulos.ts'
+import { useSprints } from '../data/sprints.ts'
+import { useReunion, useAsistentes, useActualizarReunion } from '../data/reuniones.ts'
+import { useCrearTarea, useTareasReunion } from '../data/tareas.ts'
+import { extraerTareas, type TareaPropuesta } from '../lib/extraer.ts'
+import { Avatar, AvatarStack } from '../components/ui.tsx'
+
+type TipoReunion = Enums<'tipo_reunion'>
+
+const TIPOS: Record<TipoReunion, { label: string; color: string; tint: string }> = {
+  sprint_planning: { label: 'Sprint planning', color: '#bb6a3e', tint: '#f8ece2' },
+  retro: { label: 'Retro', color: '#477155', tint: '#e7efe9' },
+  sync: { label: 'Sync', color: '#43618f', tint: '#e8eef6' },
+  cliente: { label: 'Cliente', color: '#a96a23', tint: '#f9ecdc' },
+  otro: { label: 'Otro', color: '#7a5a8c', tint: '#f0e9f3' },
+}
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+// Fecha completa "12 jun 2026" a partir de un timestamptz. null si no hay.
+function fmtFechaCompleta(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`
+}
+
+// Fila editable de la vista de revisión de tareas propuestas por la IA.
+interface FilaRevision {
+  id: string
+  incluir: boolean
+  titulo: string
+  responsableId: string
+  moduloId: string
+  fecha: string
+}
+
+export default function ReunionDetalle() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+
+  const { data: reunion, isLoading } = useReunion(id)
+  const { data: proyectos } = useProyectos()
+  const { data: personas } = usePersonas()
+  const { data: asistentes } = useAsistentes(id)
+  const actualizar = useActualizarReunion()
+  const crearTarea = useCrearTarea()
+  const actualizarModulo = useActualizarModulo()
+
+  const proyectoId = reunion?.proyecto_id ?? ''
+  const { data: modulos } = useModulos(proyectoId)
+  const { data: sprints } = useSprints(proyectoId)
+  const { data: tareasCreadas } = useTareasReunion(id)
+
+  const personaPorId = useMemo(
+    () => new Map((personas ?? []).map((p) => [p.id, p])),
+    [personas],
+  )
+
+  // --- Notas con autoguardado (debounce + onBlur) ---
+  const [notas, setNotas] = useState('')
+  const notasReales = reunion?.notas ?? ''
+  // Sincroniza el estado local cuando llega/cambia la reunión del servidor.
+  useEffect(() => {
+    setNotas(notasReales)
+  }, [notasReales])
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+  }, [])
+
+  const guardarNotas = (valor: string) => {
+    if (!reunion || valor === notasReales) return
+    actualizar.mutate({ id: reunion.id, proyectoId: reunion.proyecto_id, cambios: { notas: valor } })
+  }
+
+  const onCambiarNotas = (valor: string) => {
+    setNotas(valor)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => guardarNotas(valor), 700)
+  }
+
+  const onBlurNotas = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    guardarNotas(notas)
+  }
+
+  // Reunión de cliente: la extracción produce CORRECCIONES (feedback del cliente).
+  const esCliente = reunion?.tipo === 'cliente'
+
+  // --- Extracción de tareas con IA ---
+  const [cargandoIA, setCargandoIA] = useState(false)
+  const [errorIA, setErrorIA] = useState<string | null>(null)
+  const [revision, setRevision] = useState<FilaRevision[] | null>(null)
+  // Nombres de módulos que se reabrieron al confirmar correcciones de cliente.
+  const [reabiertos, setReabiertos] = useState<string[]>([])
+
+  const matchResponsable = (sugerido: string | null): string => {
+    if (!sugerido) return ''
+    const s = sugerido.toLowerCase()
+    const match = (personas ?? []).find(
+      (p) => p.nombre.toLowerCase().includes(s) || s.includes(p.nombre.toLowerCase()),
+    )
+    return match?.id ?? ''
+  }
+
+  const matchModulo = (sugerido: string | null): string => {
+    const lista = modulos ?? []
+    if (lista.length === 0) return ''
+    if (sugerido) {
+      const s = sugerido.toLowerCase()
+      const match = lista.find(
+        (m) => m.nombre.toLowerCase().includes(s) || s.includes(m.nombre.toLowerCase()),
+      )
+      if (match) return match.id
+    }
+    return lista[0].id
+  }
+
+  const aFila = (t: TareaPropuesta): FilaRevision => ({
+    id: crypto.randomUUID(),
+    incluir: true,
+    titulo: t.titulo,
+    responsableId: matchResponsable(t.responsable_sugerido),
+    moduloId: matchModulo(t.modulo_sugerido),
+    fecha: t.fecha ?? '',
+  })
+
+  const onExtraer = async () => {
+    if (!reunion) return
+    setCargandoIA(true)
+    setErrorIA(null)
+    try {
+      const propuestas = await extraerTareas({
+        notas,
+        personas: (personas ?? []).map((p) => ({ id: p.id, nombre: p.nombre })),
+        modulos: (modulos ?? []).map((m) => ({ id: m.id, nombre: m.nombre })),
+        esCliente,
+      })
+      setRevision(propuestas.map(aFila))
+    } catch (e) {
+      setErrorIA(e instanceof Error ? e.message : 'No se pudieron extraer las tareas.')
+    } finally {
+      setCargandoIA(false)
+    }
+  }
+
+  const actualizarFila = (filaId: string, cambios: Partial<FilaRevision>) => {
+    setRevision((prev) =>
+      prev ? prev.map((f) => (f.id === filaId ? { ...f, ...cambios } : f)) : prev,
+    )
+  }
+
+  const incluidas = (revision ?? []).filter((f) => f.incluir && f.titulo.trim() && f.moduloId)
+
+  const onConfirmar = () => {
+    if (!reunion) return
+    for (const f of incluidas) {
+      crearTarea.mutate({
+        modulo_id: f.moduloId,
+        titulo: f.titulo.trim(),
+        responsable_id: f.responsableId || null,
+        fecha: f.fecha || null,
+        sprint_id: reunion.sprint_id ?? null,
+        reunion_id: reunion.id,
+        // En reuniones de cliente, cada ítem confirmado es una corrección.
+        tipo: esCliente ? 'correccion' : 'tarea',
+      })
+    }
+
+    // Reapertura: si una corrección de cliente toca un módulo 'cerrado', reabrirlo.
+    if (esCliente) {
+      const modPorId = new Map((modulos ?? []).map((m) => [m.id, m]))
+      const aReabrir = new Map<string, string>() // moduloId → nombre (dedup)
+      for (const f of incluidas) {
+        const mod = modPorId.get(f.moduloId)
+        if (mod && mod.estado === 'cerrado' && !aReabrir.has(mod.id)) {
+          aReabrir.set(mod.id, mod.nombre)
+        }
+      }
+      for (const [moduloId] of aReabrir) {
+        actualizarModulo.mutate({
+          id: moduloId,
+          proyectoId: reunion.proyecto_id,
+          cambios: { estado: 'abierto' },
+        })
+      }
+      setReabiertos([...aReabrir.values()])
+    }
+
+    setRevision(null)
+  }
+
+  if (isLoading) {
+    return <div className="p-11 text-sm text-muted">Cargando reunión…</div>
+  }
+  if (!reunion) {
+    return <div className="p-11 text-sm text-muted">Reunión no encontrada.</div>
+  }
+
+  const tipo = TIPOS[reunion.tipo]
+  const proyecto = (proyectos ?? []).find((p) => p.id === reunion.proyecto_id)
+  const sprint = reunion.sprint_id
+    ? (sprints ?? []).find((s) => s.id === reunion.sprint_id)
+    : undefined
+  const fecha = fmtFechaCompleta(reunion.fecha)
+
+  const sprintTexto = sprint
+    ? [sprint.nombre, [fmtFecha(sprint.fecha_inicio), fmtFecha(sprint.fecha_fin)].filter(Boolean).join('–')]
+        .filter(Boolean)
+        .join(' · ')
+    : null
+
+  return (
+    <div className="h-screen overflow-auto">
+      <div className="mx-auto max-w-[780px] px-11 pb-24 pt-[34px]">
+        <button
+          type="button"
+          onClick={() => navigate('/reuniones')}
+          className="mb-[18px] flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 3L5 8l5 5" />
+          </svg>
+          Reuniones
+        </button>
+
+        <div className="mb-[7px] flex flex-wrap items-center gap-2.5">
+          {proyecto && (
+            <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-[#4a463f]">
+              <span className="inline-block h-[9px] w-[9px] flex-none rounded-[2px]" style={{ background: proyecto.color }} />
+              {proyecto.nombre}
+            </span>
+          )}
+          <span
+            className="rounded-[7px] px-2.5 py-[3px] text-[11.5px] font-bold"
+            style={{ background: tipo.tint, color: tipo.color }}
+          >
+            {tipo.label}
+          </span>
+          {fecha && <span className="font-mono text-xs text-muted">{fecha}</span>}
+          {sprintTexto && (
+            <>
+              <span className="text-xs text-faint">·</span>
+              <span className="text-xs text-muted">{sprintTexto}</span>
+            </>
+          )}
+        </div>
+
+        <div className="mb-[26px] flex items-start justify-between gap-5">
+          <h1 className="m-0 text-[25px] font-extrabold tracking-[-0.025em]">{reunion.titulo}</h1>
+          <div className="flex-none pt-1">
+            <AvatarStack
+              personas={(asistentes ?? []).map((a) => ({ nombre: a.nombre, color: a.color }))}
+              size={28}
+            />
+          </div>
+        </div>
+
+        <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+          Notas de la reunión
+        </div>
+        <textarea
+          value={notas}
+          onChange={(e) => onCambiarNotas(e.target.value)}
+          onBlur={onBlurNotas}
+          placeholder="Anotá lo que se habló: decisiones, pendientes, quién hace qué y para cuándo…"
+          rows={9}
+          className="w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[15px] text-sm leading-relaxed text-ink outline-none focus:border-[#c96442]"
+        />
+
+        <div className="mt-3.5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void onExtraer()}
+            disabled={cargandoIA || !notas.trim()}
+            className="flex items-center gap-2 rounded-[10px] bg-ink px-[17px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b] disabled:opacity-50"
+          >
+            {cargandoIA ? (
+              <>
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Analizando notas…
+              </>
+            ) : (
+              <>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 1.5l1.6 3.5L13.5 6.5 10.7 9.2l.7 3.9L8 11.3 3.6 13.1l.7-3.9L1.5 6.5l3.9-1.5z" />
+                </svg>
+                Extraer tareas con IA
+              </>
+            )}
+          </button>
+          <span className="text-xs text-muted">
+            {esCliente
+              ? 'Convierte el feedback del cliente en correcciones sobre sus módulos.'
+              : 'Detecta acciones y las convierte en tareas asignadas.'}
+          </span>
+        </div>
+
+        {esCliente && (
+          <div className="mt-3 rounded-[10px] border border-[#ecdcc2] bg-[#fbf2e4] px-3 py-2.5 text-[12.5px] text-[#8a5a1c]">
+            Reunión con el cliente · los ítems extraídos se crean como <strong>correcciones</strong>.
+            Si una corrección toca un módulo cerrado, el módulo se reabre.
+          </div>
+        )}
+
+        {reabiertos.length > 0 && (
+          <div className="mt-3 rounded-[10px] border border-[#ecdcc2] bg-[#fbf2e4] px-3 py-2.5 text-[13px] text-[#8a5a1c]">
+            {reabiertos.map((nombre) => (
+              <div key={nombre}>Se reabrió el módulo <strong>{nombre}</strong> por una corrección del cliente.</div>
+            ))}
+          </div>
+        )}
+
+        {errorIA && (
+          <div className="mt-3.5 rounded-[10px] border border-[#f0d8cc] bg-[#fbeee9] px-3 py-2.5 text-[13px] text-[#b5532f]">
+            {errorIA}
+          </div>
+        )}
+
+        {revision && (
+          <div className="mt-6 overflow-hidden rounded-[15px] border border-line bg-canvas">
+            <div className="flex items-center gap-2 border-b border-line-soft bg-surface px-[18px] py-3.5">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bb6a3e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 1.5l1.6 3.5L13.5 6.5 10.7 9.2l.7 3.9L8 11.3 3.6 13.1l.7-3.9L1.5 6.5l3.9-1.5z" />
+              </svg>
+              <span className="text-[13.5px] font-bold">
+                {esCliente ? 'Correcciones detectadas' : 'Tareas detectadas'}
+              </span>
+              <span className="text-xs text-muted">· revisá y desmarcá lo que no quieras crear</span>
+            </div>
+
+            {revision.length === 0 && (
+              <div className="px-[18px] py-5 text-[13px] text-muted">
+                No se detectaron tareas accionables en las notas.
+              </div>
+            )}
+
+            {revision.map((f) => (
+              <div
+                key={f.id}
+                className="flex flex-col gap-3 border-b border-line-soft px-[18px] py-3.5 md:flex-row md:items-center"
+                style={{ opacity: f.incluir ? 1 : 0.5 }}
+              >
+                <label className="flex flex-1 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={f.incluir}
+                    onChange={(e) => actualizarFila(f.id, { incluir: e.target.checked })}
+                    className="h-[18px] w-[18px] flex-none accent-[#c96442]"
+                  />
+                  <input
+                    value={f.titulo}
+                    onChange={(e) => actualizarFila(f.id, { titulo: e.target.value })}
+                    className="min-w-0 flex-1 rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-sm font-medium text-ink outline-none focus:border-[#c96442]"
+                  />
+                </label>
+                <div className="flex flex-wrap items-center gap-2 pl-[30px] md:pl-0">
+                  <select
+                    value={f.responsableId}
+                    onChange={(e) => actualizarFila(f.id, { responsableId: e.target.value })}
+                    className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
+                  >
+                    <option value="">Sin responsable</option>
+                    {(personas ?? []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={f.moduloId}
+                    onChange={(e) => actualizarFila(f.id, { moduloId: e.target.value })}
+                    className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
+                  >
+                    {(modulos ?? []).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={f.fecha}
+                    onChange={(e) => actualizarFila(f.id, { fecha: e.target.value })}
+                    className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-end gap-2.5 px-[18px] py-3.5">
+              <button
+                type="button"
+                onClick={() => setRevision(null)}
+                className="rounded-[9px] border border-line bg-surface px-[15px] py-2 text-[13.5px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+              >
+                Descartar
+              </button>
+              <button
+                type="button"
+                onClick={onConfirmar}
+                disabled={incluidas.length === 0}
+                className="flex items-center gap-1.5 rounded-[9px] bg-[#c96442] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#b85636] disabled:opacity-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M8 3v10M3 8h10" />
+                </svg>
+                Crear {incluidas.length}{' '}
+                {esCliente
+                  ? incluidas.length === 1
+                    ? 'corrección'
+                    : 'correcciones'
+                  : incluidas.length === 1
+                    ? 'tarea'
+                    : 'tareas'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(tareasCreadas?.length ?? 0) > 0 && (
+          <div className="mt-[30px]">
+            <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+              Tareas creadas en esta reunión · {tareasCreadas?.length ?? 0}
+            </div>
+            <div className="overflow-hidden rounded-[13px] border border-line bg-canvas">
+              {(tareasCreadas ?? []).map((t) => {
+                const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+                const proy = t.modulos?.proyectos
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px]"
+                  >
+                    <span className="h-[9px] w-[9px] flex-none rounded-full bg-[#bcb5a8]" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                      {t.titulo}
+                    </span>
+                    {proy && (
+                      <span className="flex flex-none items-center gap-1.5 text-[11.5px] text-muted-soft">
+                        <span
+                          className="inline-block h-2 w-2 rounded-[2px]"
+                          style={{ background: proy.color }}
+                        />
+                        {proy.nombre}
+                      </span>
+                    )}
+                    <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? '#c4bdb1'} size={26} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

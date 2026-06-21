@@ -1,0 +1,139 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  useComentariosParaPo,
+  useResolverPregunta,
+  useResponderPregunta,
+} from '../data/comentarios.ts'
+import { usePersonas } from '../data/personas.ts'
+import { useAuth } from '../auth/AuthProvider.tsx'
+
+export default function ParaMi() {
+  const navigate = useNavigate()
+  const { persona } = useAuth()
+  const { data: preguntas, isLoading } = useComentariosParaPo()
+  const { data: personas } = usePersonas()
+  const resolver = useResolverPregunta()
+  const responder = useResponderPregunta()
+  const [respuestas, setRespuestas] = useState<Record<string, string>>({})
+  const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
+
+  const count = preguntas?.length ?? 0
+
+  return (
+    <div className="mx-auto max-w-[780px] px-11 pb-[90px] pt-10">
+      <div className="mb-2 flex items-center gap-2.5">
+        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Para mí</h1>
+        {count > 0 && (
+          <span className="flex h-6 min-w-[24px] items-center justify-center rounded-xl bg-brand px-[7px] text-[13px] font-bold text-white">
+            {count}
+          </span>
+        )}
+      </div>
+      <p className="m-0 mb-[30px] text-sm text-muted-soft">
+        Preguntas marcadas para el Product Owner, de todos los proyectos.
+      </p>
+
+      {isLoading && <p className="text-sm text-muted">Cargando…</p>}
+
+      {!isLoading && count === 0 && (
+        <div className="rounded-2xl border border-line bg-surface px-5 py-[70px] text-center">
+          <div className="mx-auto mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#e7efe9]">
+            <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="#6fa07f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.5 8.5l3 3 6-6.5" />
+            </svg>
+          </div>
+          <div className="mb-[5px] text-base font-bold">Todo al día</div>
+          <div className="text-[13.5px] text-muted-soft">No hay preguntas pendientes para ti. Buen trabajo.</div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {(preguntas ?? []).map((q) => {
+          const autor = personaPorId.get(q.autor_id)
+          const tarea = q.tareas
+          const proy = tarea?.modulos?.proyectos
+          return (
+            <div key={q.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-[17px]">
+              <div className="mb-[11px] flex items-center gap-2 text-xs text-muted">
+                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? '#c4bdb1' }} />
+                <span className="font-semibold text-label">{proy?.nombre ?? 'Proyecto'}</span>
+                <span className="text-[#d6cfc4]">/</span>
+                <span>{tarea?.modulos?.nombre ?? ''}</span>
+              </div>
+              <div className="flex gap-3">
+                <div
+                  className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-[10px] font-bold text-white"
+                  style={{ background: autor?.color ?? '#c4bdb1' }}
+                >
+                  {(autor?.nombre ?? '—').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 text-[13px]">
+                    <span className="font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                  </div>
+                  <p className="m-0 mb-3 text-[14.5px] leading-[1.55] text-ink-soft">{q.texto}</p>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => proy && navigate(`/proyectos/${proy.id}`)}
+                      className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-[#4a463f] transition-colors hover:bg-[#f7f4ef]"
+                    >
+                      <span className="text-xs text-muted">↗</span> {tarea?.titulo ?? 'Ver tarea'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => resolver.mutate(q.id)}
+                      className="flex items-center gap-1.5 rounded-lg bg-[#e7efe9] px-[13px] py-1.5 text-[12.5px] font-semibold text-[#477155] transition-colors hover:bg-[#dce8df]"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3.5 8.5l3 3 6-6.5" />
+                      </svg>
+                      Resuelto
+                    </button>
+                  </div>
+                  {tarea && persona && (
+                    <div className="mt-3 border-t border-line pt-3">
+                      <textarea
+                        value={respuestas[q.id] ?? ''}
+                        onChange={(e) =>
+                          setRespuestas((r) => ({ ...r, [q.id]: e.target.value }))
+                        }
+                        placeholder="Responder…"
+                        rows={2}
+                        className="w-full resize-none rounded-lg border border-line bg-canvas px-3 py-2 text-[13.5px] text-ink outline-none placeholder:text-muted-soft focus:border-brand"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          disabled={!(respuestas[q.id]?.trim()) || responder.isPending}
+                          onClick={() => {
+                            const texto = respuestas[q.id]?.trim()
+                            if (!texto) return
+                            responder.mutate(
+                              { preguntaId: q.id, tareaId: tarea.id, autorId: persona.id, texto },
+                              {
+                                onSuccess: () =>
+                                  setRespuestas((r) => {
+                                    const { [q.id]: _, ...resto } = r
+                                    return resto
+                                  }),
+                              },
+                            )
+                          }}
+                          className="rounded-lg bg-brand px-[13px] py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
+                        >
+                          Responder
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,5 @@
+# Config de Cloudflare Pages. Permite `wrangler pages dev` / `deploy` por CLI
+# y deja explícita la carpeta de salida del build de Vite.
+name = "thread"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"

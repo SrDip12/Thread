@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+/* Tokens extraídos del export de Claude Design (/design) — fuente visual de la verdad.
+   Colores dinámicos (acento por proyecto, estados) se aplican inline desde src/lib/ui.ts. */
+@theme {
+  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Base */
+  --color-canvas: #faf9f7;
+  --color-surface: #ffffff;
+  --color-ink: #1c1b19;
+  --color-ink-soft: #33302b;
+  --color-line: #ece9e3;
+  --color-line-soft: #f3f1ec;
+  --color-hover: #f0ede8;
+  --color-row-hover: #faf8f4;
+  --color-track: #f0ede7;
+
+  /* Texto secundario */
+  --color-muted: #9a948a;
+  --color-muted-soft: #8a857d;
+  --color-faint: #b0a99e;
+  --color-label: #6f6a62;
+
+  /* Marca (terracota) */
+  --color-brand: #c96442;
+  --color-brand-strong: #b85636;
+  --color-brand-tint: #f8ece2;
+  --color-brand-deep: #bb6a3e;
+
+  /* Radios */
+  --radius-chip: 8px;
+  --radius-card: 13px;
+  --radius-card-lg: 15px;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #f1d9cf;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2ded6;
+  border-radius: 8px;
+  border: 3px solid var(--color-canvas);
+}

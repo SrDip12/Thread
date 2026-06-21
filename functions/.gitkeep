@@ -1,0 +1,2 @@
+# Cloudflare Pages Functions. Vacío por ahora.
+# Cada archivo .ts aquí se vuelve una ruta /api server-side. Docs: https://developers.cloudflare.com/pages/functions/
