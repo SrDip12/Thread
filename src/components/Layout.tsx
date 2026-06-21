@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
 import { Avatar } from './ui.tsx'
+import Onboarding, { onboardingPendiente } from './Onboarding.tsx'
 
 const iconProps = {
   width: 17,
@@ -91,9 +93,11 @@ export default function Layout() {
   const { persona, signOut } = useAuth()
   const { data: preguntas } = useComentariosParaPo()
   const poCount = preguntas?.length ?? 0
+  const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
 
   return (
     <div className="flex min-h-screen w-full bg-canvas">
+      <Onboarding abierto={tourAbierto} onCerrar={() => setTourAbierto(false)} />
       <aside className="sticky top-0 flex h-screen w-[248px] flex-none flex-col border-r border-line bg-canvas">
         <div className="flex items-center gap-2.5 px-[18px] pb-3.5 pt-[22px]">
           <div className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] bg-brand">
@@ -107,6 +111,7 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
+              data-tour={item.to.slice(1)}
               className={({ isActive }) =>
                 `flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm transition-colors hover:bg-hover ${
                   isActive ? 'bg-hover font-bold text-ink' : 'font-medium text-label'
@@ -133,6 +138,18 @@ export default function Layout() {
                 {persona?.rol === 'po' ? 'Product Owner' : 'Desarrollo'}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setTourAbierto(true)}
+              title="Ver el recorrido"
+              className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
+            >
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="8" cy="8" r="6.5" />
+                <path d="M6.2 6.2a1.8 1.8 0 113.1 1.2c-.6.5-1.3.8-1.3 1.6" />
+                <path d="M8 11.4h.01" />
+              </svg>
+            </button>
             <button
               type="button"
               onClick={() => void signOut()}

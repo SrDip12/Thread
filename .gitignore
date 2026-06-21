@@ -8,4 +8,5 @@ dist
 node_modules/.tmp
 .dev.vars
 .wrangler
-*.sql
+supabase/.temp/
+vite.dev.log
