@@ -12,13 +12,13 @@ import {
   useCorreccionesCliente,
 } from '../data/tareas.ts'
 import { usePersonas } from '../data/personas.ts'
+import { useMiembros, useAgregarMiembro, useQuitarMiembro } from '../data/miembros.ts'
 import { useReuniones } from '../data/reuniones.ts'
 import { useClientePorProyecto, useCrearCliente, useActualizarCliente } from '../data/clientes.ts'
 import { useComentariosModulo } from '../data/comentarios.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
 import { Avatar, AvatarStack, EstadoChip } from '../components/ui.tsx'
 import TareaPanel from '../components/TareaPanel.tsx'
-import ChatProyecto from '../components/ChatProyecto.tsx'
 
 type Modulo = Tables<'modulos'>
 type Persona = Tables<'personas'>
@@ -115,9 +115,6 @@ export default function ProyectoDetalle() {
   const mods = modulos ?? []
   const modsCerrados = mods.filter((m) => m.estado === 'cerrado').length
   const pct = mods.length > 0 ? Math.round((modsCerrados / mods.length) * 100) : 0
-  const miembros = [...new Set(tasks.map((t) => t.responsable_id).filter((x): x is string => Boolean(x)))]
-    .map((pid) => personaPorId.get(pid))
-    .filter((x): x is Persona => Boolean(x))
 
   return (
     <div ref={rootRef} className="flex">
@@ -145,6 +142,16 @@ export default function ProyectoDetalle() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                onClick={() => navigate(`/proyectos/${id}/gantt`)}
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 4h7M2 8h11M2 12h5" />
+                </svg>
+                Gantt
+              </button>
+              <button
+                type="button"
                 onClick={() => navigate(`/proyectos/${id}/sprint`)}
                 className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
               >
@@ -154,7 +161,7 @@ export default function ProyectoDetalle() {
                 Sprint
               </button>
               <EliminarProyecto proyectoId={id} nombre={proyecto.nombre} />
-              <AvatarStack personas={miembros.map((m) => ({ nombre: m.nombre, color: m.color }))} size={30} />
+              <EquipoProyecto proyectoId={id} personas={personas ?? []} />
             </div>
           </div>
 
@@ -222,8 +229,6 @@ export default function ProyectoDetalle() {
           onClose={() => setSel(null)}
         />
       )}
-
-      <ChatProyecto proyectoId={id} color={proyecto.color} />
     </div>
   )
 }
@@ -281,6 +286,84 @@ function Metrica({ valor, label, color }: { valor: number; label: string; color?
         {valor}
       </div>
       <div className="text-[11px] text-muted">{label}</div>
+    </div>
+  )
+}
+
+// Equipo del proyecto: AvatarStack que abre un popover para sumar/quitar miembros
+// (tabla proyecto_personas). Las personas disponibles salen del equipo global.
+function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas: Persona[] }) {
+  const { data: miembros } = useMiembros(proyectoId)
+  const agregar = useAgregarMiembro()
+  const quitar = useQuitarMiembro()
+  const [abierto, setAbierto] = useState(false)
+  const lista = miembros ?? []
+  const ids = new Set(lista.map((m) => m.id))
+  const disponibles = personas.filter((p) => !ids.has(p.id))
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        title="Equipo del proyecto"
+        className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 transition-colors hover:bg-hover"
+      >
+        {lista.length > 0 ? (
+          <AvatarStack personas={lista.map((m) => ({ nombre: m.nombre, color: m.color }))} size={28} />
+        ) : (
+          <span className="px-1 text-[13px] font-semibold text-muted">+ Equipo</span>
+        )}
+      </button>
+
+      {abierto && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
+          <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-[12px] border border-line bg-surface p-3 shadow-lg">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+              Equipo · {lista.length}
+            </div>
+            <div className="mb-2 flex flex-col gap-1">
+              {lista.length === 0 && (
+                <p className="px-1 py-1 text-[12.5px] text-faint">Nadie todavía.</p>
+              )}
+              {lista.map((m) => (
+                <div key={m.id} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-hover">
+                  <Avatar nombre={m.nombre} color={m.color} size={22} />
+                  <span className="flex-1 truncate text-[13px]">{m.nombre}</span>
+                  <button
+                    type="button"
+                    onClick={() => quitar.mutate({ proyectoId, personaId: m.id })}
+                    aria-label={`Quitar a ${m.nombre}`}
+                    className="flex h-5 w-5 items-center justify-center rounded text-muted transition-colors hover:bg-[#fbeee9] hover:text-[#b5532f]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                      <path d="M4 4l8 8M12 4l-8 8" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+            {disponibles.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const p = disponibles.find((d) => d.id === e.target.value)
+                  if (p) agregar.mutate({ proyectoId, persona: p })
+                }}
+                className="w-full rounded-lg border border-line bg-canvas px-2 py-1.5 text-[13px] outline-none focus:border-brand"
+              >
+                <option value="">+ Sumar persona…</option>
+                {disponibles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

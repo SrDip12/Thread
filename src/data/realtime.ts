@@ -37,6 +37,8 @@ export function useRealtimeProyecto(proyectoId: string, moduloIds: string[]) {
         () => {
           // Sin proyecto_id en comentarios; invalidamos el árbol (solo refetchea queries activas).
           void queryClient.invalidateQueries({ queryKey: qk.comentarios.all })
+          // La campana se alimenta de comentarios: que se actualice en vivo con el proyecto abierto.
+          void queryClient.invalidateQueries({ queryKey: qk.notificaciones.all })
         },
       )
       .subscribe()

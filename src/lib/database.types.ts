@@ -203,6 +203,7 @@ export interface Database {
           responsable_id: string | null
           estado: Database['public']['Enums']['estado_tarea']
           fecha: string | null
+          fecha_inicio: string | null
           sprint_id: string | null
           reunion_id: string | null
           tipo: Database['public']['Enums']['tipo_tarea']
@@ -218,6 +219,7 @@ export interface Database {
           responsable_id?: string | null
           estado?: Database['public']['Enums']['estado_tarea']
           fecha?: string | null
+          fecha_inicio?: string | null
           sprint_id?: string | null
           reunion_id?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
@@ -233,12 +235,31 @@ export interface Database {
           responsable_id?: string | null
           estado?: Database['public']['Enums']['estado_tarea']
           fecha?: string | null
+          fecha_inicio?: string | null
           sprint_id?: string | null
           reunion_id?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
           criterio?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      proyecto_personas: {
+        Relationships: []
+        Row: {
+          proyecto_id: string
+          persona_id: string
+          created_at: string
+        }
+        Insert: {
+          proyecto_id: string
+          persona_id: string
+          created_at?: string
+        }
+        Update: {
+          proyecto_id?: string
+          persona_id?: string
+          created_at?: string
         }
       }
       comentarios: {

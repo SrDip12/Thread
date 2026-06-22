@@ -8,6 +8,7 @@ import { useAuth } from './auth/AuthProvider.tsx'
 const Proyectos = lazy(() => import('./pages/Proyectos.tsx'))
 const ProyectoDetalle = lazy(() => import('./pages/ProyectoDetalle.tsx'))
 const Sprint = lazy(() => import('./pages/Sprint.tsx'))
+const ProyectoGantt = lazy(() => import('./pages/ProyectoGantt.tsx'))
 const MisTareas = lazy(() => import('./pages/MisTareas.tsx'))
 const ParaMi = lazy(() => import('./pages/ParaMi.tsx'))
 const Equipo = lazy(() => import('./pages/Equipo.tsx'))
@@ -37,6 +38,7 @@ function Rutas() {
           <Route path="/proyectos" element={<Proyectos />} />
           <Route path="/proyectos/:id" element={<ProyectoDetalle />} />
           <Route path="/proyectos/:id/sprint" element={<Sprint />} />
+          <Route path="/proyectos/:id/gantt" element={<ProyectoGantt />} />
           <Route path="/mis-tareas" element={<MisTareas />} />
           <Route path="/para-mi" element={<ParaMi />} />
           <Route path="/reuniones" element={<Reuniones />} />

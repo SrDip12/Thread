@@ -156,7 +156,17 @@ export default function TareaPanel({
             })()}
           </Fila>
 
-          <Fila etiqueta="Fecha">
+          <Fila etiqueta="Inicio">
+            <input
+              type="date"
+              value={tarea.fecha_inicio ?? ''}
+              onChange={(e) => setCambios({ fecha_inicio: e.target.value || null })}
+              className="rounded-md border border-line bg-surface px-2 py-1 text-[13.5px] font-semibold outline-none focus:border-brand"
+            />
+            {tarea.fecha_inicio && <span className="text-[12.5px] text-muted">{fmtFecha(tarea.fecha_inicio)}</span>}
+          </Fila>
+
+          <Fila etiqueta="Vence">
             <input
               type="date"
               value={tarea.fecha ?? ''}

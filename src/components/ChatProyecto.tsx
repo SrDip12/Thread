@@ -1,8 +1,11 @@
-// Chat de equipo del proyecto, en tiempo real. Widget flotante abajo a la derecha
-// (no pelea con el panel lateral de tareas). Mensajes vía src/data/mensajes.ts.
+// Chat de equipo, en tiempo real, disponible en toda la app. Widget flotante abajo
+// a la derecha con selector de proyecto (los mensajes siguen siendo por proyecto).
+// Montado una vez en Layout. Mensajes vía src/data/mensajes.ts.
 import { useEffect, useRef, useState } from 'react'
+import { useMatch } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
+import { useProyectos } from '../data/proyectos.ts'
 import { useCrearMensaje, useMensajes, useRealtimeChat } from '../data/mensajes.ts'
 import { Avatar } from './ui.tsx'
 
@@ -12,38 +15,62 @@ function hora(iso: string): string {
   return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function ChatProyecto({ proyectoId, color }: { proyectoId: string; color: string }) {
+const LS_KEY = 'chat:proyecto'
+
+export default function ChatProyecto() {
   const { persona } = useAuth()
   const { data: personas } = usePersonas()
+  const { data: proyectos } = useProyectos()
+  // Si estamos dentro de un proyecto, ese manda como default.
+  const rutaProyecto = useMatch('/proyectos/:id/*')?.params.id
+
+  const [abierto, setAbierto] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [elegido, setElegido] = useState<string | null>(null)
+  const finRef = useRef<HTMLDivElement>(null)
+
+  // Proyecto activo: ruta > elección manual > localStorage > primero.
+  const lista = proyectos ?? []
+  const proyectoId =
+    (rutaProyecto && lista.some((p) => p.id === rutaProyecto) ? rutaProyecto : null) ??
+    (elegido && lista.some((p) => p.id === elegido) ? elegido : null) ??
+    (typeof localStorage !== 'undefined' &&
+    lista.some((p) => p.id === localStorage.getItem(LS_KEY))
+      ? localStorage.getItem(LS_KEY)
+      : null) ??
+    lista[0]?.id ??
+    ''
+  const proyecto = lista.find((p) => p.id === proyectoId)
+  const color = proyecto?.color ?? '#c96442'
+
   const { data: mensajes } = useMensajes(proyectoId)
   const crear = useCrearMensaje()
   useRealtimeChat(proyectoId)
 
-  const [abierto, setAbierto] = useState(false)
-  const [texto, setTexto] = useState('')
-  const finRef = useRef<HTMLDivElement>(null)
-
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
-  const lista = mensajes ?? []
+  const msgs = mensajes ?? []
 
-  // Auto-scroll al fondo al llegar mensajes o al abrir.
+  // Auto-scroll al fondo al llegar mensajes, abrir o cambiar de proyecto.
   useEffect(() => {
     if (abierto) finRef.current?.scrollIntoView({ block: 'end' })
-  }, [lista.length, abierto])
+  }, [msgs.length, abierto, proyectoId])
 
   const enviar = () => {
     const t = texto.trim()
-    if (!t || !persona) return
+    if (!t || !persona || !proyectoId) return
     crear.mutate({ proyecto_id: proyectoId, autor_id: persona.id, texto: t })
     setTexto('')
   }
+
+  // Sin proyectos no hay dónde chatear.
+  if (lista.length === 0) return null
 
   if (!abierto) {
     return (
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        aria-label="Abrir chat del proyecto"
+        aria-label="Abrir chat del equipo"
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_8px_24px_-6px_rgba(40,35,30,0.4)] transition-transform hover:scale-105"
         style={{ background: color }}
       >
@@ -56,16 +83,34 @@ export default function ChatProyecto({ proyectoId, color }: { proyectoId: string
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex h-[480px] w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-[15px] border border-line bg-surface shadow-[0_20px_60px_-20px_rgba(40,35,30,0.45)]">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 flex-none rounded-[3px]" style={{ background: color }} />
-          <span className="text-[14px] font-bold text-ink">Chat del equipo</span>
+          <select
+            value={proyectoId}
+            onChange={(e) => {
+              setElegido(e.target.value)
+              try {
+                localStorage.setItem(LS_KEY, e.target.value)
+              } catch {
+                // localStorage puede fallar (modo privado); igual cambia en esta sesión.
+              }
+            }}
+            aria-label="Proyecto del chat"
+            className="min-w-0 truncate bg-transparent text-[14px] font-bold text-ink outline-none"
+          >
+            {lista.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="button"
           onClick={() => setAbierto(false)}
           aria-label="Cerrar chat"
-          className="rounded-lg p-1 text-muted transition-colors hover:bg-hover hover:text-ink"
+          className="flex-none rounded-lg p-1 text-muted transition-colors hover:bg-hover hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" />
@@ -74,12 +119,12 @@ export default function ChatProyecto({ proyectoId, color }: { proyectoId: string
       </div>
 
       <div className="flex-1 space-y-3 overflow-auto px-4 py-3.5">
-        {lista.length === 0 && (
+        {msgs.length === 0 && (
           <p className="mt-6 text-center text-[13px] text-faint">
             Sin mensajes todavía. Escribí el primero.
           </p>
         )}
-        {lista.map((m) => {
+        {msgs.map((m) => {
           const autor = personaPorId.get(m.autor_id)
           const mio = m.autor_id === persona?.id
           return (

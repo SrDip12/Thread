@@ -50,6 +50,14 @@ export const qk = {
     all: ['personas'] as const,
     list: () => [...qk.personas.all, 'list'] as const,
   },
+  miembros: {
+    all: ['miembros'] as const,
+    byProyecto: (proyectoId: string) => [...qk.miembros.all, { proyectoId }] as const,
+  },
+  notificaciones: {
+    all: ['notificaciones'] as const,
+    byPersona: (personaId: string) => [...qk.notificaciones.all, { personaId }] as const,
+  },
   clientes: {
     all: ['clientes'] as const,
     byProyecto: (proyectoId: string) => [...qk.clientes.all, { proyectoId }] as const,

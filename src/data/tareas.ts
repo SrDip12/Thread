@@ -264,6 +264,7 @@ export function useCrearTarea() {
         responsable_id: nueva.responsable_id ?? null,
         estado: nueva.estado ?? 'proximo',
         fecha: nueva.fecha ?? null,
+        fecha_inicio: nueva.fecha_inicio ?? null,
         sprint_id: nueva.sprint_id ?? null,
         reunion_id: nueva.reunion_id ?? null,
         tipo: nueva.tipo ?? 'tarea',

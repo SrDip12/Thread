@@ -14,6 +14,9 @@ const MAX_DOC = 48_000
 
 interface TareaPropuesta {
   titulo: string
+  descripcion: string | null
+  // "Cómo debería quedar": criterios de aceptación / definición de hecho.
+  criterio: string | null
 }
 interface ModuloPropuesto {
   nombre: string
@@ -43,8 +46,15 @@ function normalizarModulo(valor: unknown): ModuloPropuesto | null {
   const tareas: TareaPropuesta[] = []
   for (const t of tareasCrudas) {
     if (typeof t === 'object' && t !== null) {
-      const titulo = normalizarTexto((t as Record<string, unknown>).titulo)
-      if (titulo) tareas.push({ titulo })
+      const o2 = t as Record<string, unknown>
+      const titulo = normalizarTexto(o2.titulo)
+      if (titulo) {
+        tareas.push({
+          titulo,
+          descripcion: normalizarTexto(o2.descripcion),
+          criterio: normalizarTexto(o2.criterio),
+        })
+      }
     }
   }
   return { nombre, descripcion: normalizarTexto(o.descripcion), tareas }
@@ -60,10 +70,13 @@ function construirPrompt(documento: string): string {
     '- Agrupá tareas relacionadas en pocos módulos claros (típicamente 2 a 8). No inventes módulos vacíos.',
     '- Los títulos de tarea son cortos, en infinitivo y en español (ej. "Implementar login con email").',
     '- `descripcion` del módulo: una línea opcional; null si no aporta.',
-    '- No inventes funcionalidad que el documento no menciona.',
+    '- Cada tarea lleva ADEMÁS del título:',
+    '  - `descripcion`: 1-3 frases explicando QUÉ implica la tarea y el alcance (en español). null si el RF no da contexto.',
+    '  - `criterio`: CÓMO DEBERÍA QUEDAR — criterios de aceptación / definición de hecho concretos y verificables (en español, podés usar varias líneas con "- "). null si no se puede inferir.',
+    '- No inventes funcionalidad que el documento no menciona; derivá descripcion y criterio del propio RF.',
     '',
     'Devolvé SOLO JSON con esta forma exacta, sin texto adicional ni markdown:',
-    '{"modulos":[{"nombre":"...","descripcion":"<texto o null>","tareas":[{"titulo":"..."}]}]}',
+    '{"modulos":[{"nombre":"...","descripcion":"<texto o null>","tareas":[{"titulo":"...","descripcion":"<texto o null>","criterio":"<texto o null>"}]}]}',
     '',
     'DOCUMENTO DEL PROYECTO:',
     documento,

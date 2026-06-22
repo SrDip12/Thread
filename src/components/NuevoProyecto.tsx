@@ -87,7 +87,12 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
           orden: orden++,
         })
         for (const t of m.tareas) {
-          await crearTarea.mutateAsync({ modulo_id: modulo.id, titulo: t.titulo })
+          await crearTarea.mutateAsync({
+            modulo_id: modulo.id,
+            titulo: t.titulo,
+            descripcion: t.descripcion,
+            criterio: t.criterio,
+          })
         }
       }
       navigate(`/proyectos/${proyecto.id}`)
@@ -206,12 +211,23 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
                     </button>
                   </div>
                   {m.tareas.map((t, it) => (
-                    <div key={it} className="flex items-center gap-2 py-0.5 pl-3">
-                      <span className="flex-1 text-[13px] text-muted-soft">{t.titulo}</span>
+                    <div key={it} className="flex items-start gap-2 py-1 pl-3">
+                      <div className="flex-1">
+                        <span className="block text-[13px] text-muted-soft">{t.titulo}</span>
+                        {t.descripcion && (
+                          <span className="mt-0.5 block text-[12px] text-faint">{t.descripcion}</span>
+                        )}
+                        {t.criterio && (
+                          <span className="mt-0.5 block whitespace-pre-line text-[12px] text-faint">
+                            <span className="font-semibold">Cómo debería quedar: </span>
+                            {t.criterio}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => quitarTarea(im, it)}
-                        className="text-faint transition-colors hover:text-brand"
+                        className="mt-0.5 text-faint transition-colors hover:text-brand"
                         aria-label="Quitar tarea"
                       >
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

@@ -5,6 +5,8 @@ import { useComentariosParaPo } from '../data/comentarios.ts'
 import { useModulosEnRevision } from '../data/revisiones.ts'
 import { Avatar } from './ui.tsx'
 import CommandPalette from './CommandPalette.tsx'
+import ChatProyecto from './ChatProyecto.tsx'
+import Campana from './Notificaciones.tsx'
 import Onboarding, { onboardingPendiente } from './Onboarding.tsx'
 
 const iconProps = {
@@ -141,6 +143,7 @@ export default function Layout() {
             <div className="h-[9px] w-[9px] rounded-full bg-[#faf2ee]" />
           </div>
           <div className="text-base font-extrabold tracking-[-0.02em]">Thread</div>
+          <Campana />
         </div>
 
         <button
@@ -244,6 +247,8 @@ export default function Layout() {
       <main id="contenido" className="min-w-0 flex-1">
         <Outlet />
       </main>
+
+      <ChatProyecto />
     </div>
   )
 }

@@ -6,6 +6,9 @@
 
 export interface TareaPropuesta {
   titulo: string
+  descripcion: string | null
+  // "Cómo debería quedar": criterios de aceptación / definición de hecho.
+  criterio: string | null
 }
 export interface ModuloPropuesto {
   nombre: string
@@ -19,9 +22,15 @@ function esModuloPropuesto(x: unknown): x is ModuloPropuesto {
   if (typeof o.nombre !== 'string') return false
   if (o.descripcion !== null && typeof o.descripcion !== 'string') return false
   if (!Array.isArray(o.tareas)) return false
-  return o.tareas.every(
-    (t) => typeof t === 'object' && t !== null && typeof (t as Record<string, unknown>).titulo === 'string',
-  )
+  return o.tareas.every((t) => {
+    if (typeof t !== 'object' || t === null) return false
+    const tt = t as Record<string, unknown>
+    return (
+      typeof tt.titulo === 'string' &&
+      (tt.descripcion === null || typeof tt.descripcion === 'string') &&
+      (tt.criterio === null || typeof tt.criterio === 'string')
+    )
+  })
 }
 
 export async function analizarProyecto(documento: string): Promise<ModuloPropuesto[]> {
