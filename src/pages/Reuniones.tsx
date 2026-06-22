@@ -5,6 +5,7 @@ import { useProyectos } from '../data/proyectos.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useSprints } from '../data/sprints.ts'
 import { useReuniones, useCrearReunion } from '../data/reuniones.ts'
+import { ALERTAS, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
 import { Eyebrow, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type TipoReunion = Enums<'tipo_reunion'>
@@ -53,16 +54,29 @@ export default function Reuniones() {
             Una bitácora de reuniones por proyecto. Tomá notas y convertí los acuerdos en tareas.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreando((v) => !v)}
-          className="flex flex-none items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M8 3v10M3 8h10" />
-          </svg>
-          Nueva reunión
-        </button>
+        <div className="flex flex-none items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => navigate('/calendario')}
+            className="flex items-center gap-1.5 rounded-[9px] border border-line bg-surface px-[15px] py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:bg-hover"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+              <rect x="2" y="3" width="12" height="11" rx="1.6" />
+              <path d="M2 6.2h12M5.2 1.8v2.4M10.8 1.8v2.4" />
+            </svg>
+            Calendario
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreando((v) => !v)}
+            className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M8 3v10M3 8h10" />
+            </svg>
+            Nueva reunión
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex items-center gap-2.5">
@@ -193,7 +207,10 @@ function NuevaReunionForm({
   const [tipo, setTipo] = useState<TipoReunion>('sprint_planning')
   const [sprintId, setSprintId] = useState('')
   const [fecha, setFecha] = useState(hoy)
+  const [hora, setHora] = useState('')
+  const [alertaMin, setAlertaMin] = useState<number | null>(null)
   const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
   const [asistentes, setAsistentes] = useState<string[]>([])
 
   const { data: sprints } = useSprints(proyectoId)
@@ -220,13 +237,23 @@ function NuevaReunionForm({
           proyecto_id: proyectoId,
           tipo,
           titulo: tituloFinal,
+          descripcion: descripcion.trim() || null,
           fecha: new Date(`${fecha}T00:00:00`).toISOString(),
+          hora: hora || null,
+          alerta_min: alertaMin,
           sprint_id: sprintId || null,
         },
         asistentes,
       },
       { onSuccess: (reunion) => onCreada(reunion.id) },
     )
+  }
+
+  // Al elegir una alerta, pedimos permiso de notificaciones (gesto del usuario).
+  const onCambiarAlerta = (valor: string) => {
+    const min = valor === '' ? null : Number(valor)
+    setAlertaMin(min)
+    if (min !== null) void pedirPermisoNotificaciones()
   }
 
   return (
@@ -291,6 +318,27 @@ function NuevaReunionForm({
             className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
           />
         </Campo>
+
+        <Campo label="Hora (opcional)">
+          <input
+            type="time"
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
+          />
+        </Campo>
+
+        <Campo label="Alerta">
+          <select
+            value={alertaMin ?? ''}
+            onChange={(e) => onCambiarAlerta(e.target.value)}
+            className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
+          >
+            {ALERTAS.map((a) => (
+              <option key={a.label} value={a.min ?? ''}>{a.label}</option>
+            ))}
+          </select>
+        </Campo>
       </div>
 
       <Campo label="Título (opcional)">
@@ -301,6 +349,18 @@ function NuevaReunionForm({
           className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none placeholder:text-faint"
         />
       </Campo>
+
+      <div className="mt-4">
+        <Campo label="Descripción · qué se hará en la reunión (opcional)">
+          <textarea
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Agenda, objetivo, temas a tratar…"
+            rows={2}
+            className="w-full resize-y rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none placeholder:text-faint"
+          />
+        </Campo>
+      </div>
 
       <div className="mb-4 mt-4">
         <div className="mb-2 text-[12px] font-medium text-muted">Asistentes</div>

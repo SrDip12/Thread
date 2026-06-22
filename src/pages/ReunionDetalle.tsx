@@ -7,6 +7,7 @@ import { usePersonas } from '../data/personas.ts'
 import { useModulos, useActualizarModulo } from '../data/modulos.ts'
 import { useSprints } from '../data/sprints.ts'
 import { useReunion, useAsistentes, useActualizarReunion } from '../data/reuniones.ts'
+import { ALERTAS, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
 import { useCrearTarea, useTareasReunion } from '../data/tareas.ts'
 import { extraerTareas, type TareaPropuesta } from '../lib/extraer.ts'
 import { Avatar, AvatarStack, Skeleton, EmptyState } from '../components/ui.tsx'
@@ -90,6 +91,41 @@ export default function ReunionDetalle() {
   const onBlurNotas = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     guardarNotas(notas)
+  }
+
+  // --- Descripción (agenda) con autoguardado, mismo patrón que las notas ---
+  const [descripcion, setDescripcion] = useState('')
+  const descripcionReal = reunion?.descripcion ?? ''
+  useEffect(() => {
+    setDescripcion(descripcionReal)
+  }, [descripcionReal])
+
+  const descDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (descDebounceRef.current) clearTimeout(descDebounceRef.current)
+  }, [])
+
+  const guardarDescripcion = (valor: string) => {
+    if (!reunion || valor === descripcionReal) return
+    actualizar.mutate({ id: reunion.id, proyectoId: reunion.proyecto_id, cambios: { descripcion: valor || null } })
+  }
+
+  const onCambiarDescripcion = (valor: string) => {
+    setDescripcion(valor)
+    if (descDebounceRef.current) clearTimeout(descDebounceRef.current)
+    descDebounceRef.current = setTimeout(() => guardarDescripcion(valor), 700)
+  }
+
+  // Hora y alerta: guardan al instante (selects/inputs chicos).
+  const onCambiarHora = (valor: string) => {
+    if (!reunion) return
+    actualizar.mutate({ id: reunion.id, proyectoId: reunion.proyecto_id, cambios: { hora: valor || null } })
+  }
+  const onCambiarAlerta = (valor: string) => {
+    if (!reunion) return
+    const min = valor === '' ? null : Number(valor)
+    if (min !== null) void pedirPermisoNotificaciones()
+    actualizar.mutate({ id: reunion.id, proyectoId: reunion.proyecto_id, cambios: { alerta_min: min } })
   }
 
   // Reunión de cliente: la extracción produce CORRECCIONES (feedback del cliente).
@@ -295,6 +331,46 @@ export default function ReunionDetalle() {
             />
           </div>
         </div>
+
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-[12.5px] text-muted">
+            Hora
+            <input
+              type="time"
+              value={reunion.hora ? reunion.hora.slice(0, 5) : ''}
+              onChange={(e) => onCambiarHora(e.target.value)}
+              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-[#c96442]"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-[12.5px] text-muted">
+            Alerta
+            <select
+              value={reunion.alerta_min ?? ''}
+              onChange={(e) => onCambiarAlerta(e.target.value)}
+              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-[#c96442]"
+            >
+              {ALERTAS.map((a) => (
+                <option key={a.label} value={a.min ?? ''}>{a.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+          Descripción · qué se hará
+        </div>
+        <textarea
+          value={descripcion}
+          onChange={(e) => onCambiarDescripcion(e.target.value)}
+          onBlur={() => {
+            if (descDebounceRef.current) clearTimeout(descDebounceRef.current)
+            guardarDescripcion(descripcion)
+          }}
+          aria-label="Descripción de la reunión"
+          placeholder="Agenda, objetivo, temas a tratar…"
+          rows={3}
+          className="mb-7 w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[13px] text-sm leading-relaxed text-ink outline-none focus:border-[#c96442]"
+        />
 
         <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
           Notas de la reunión

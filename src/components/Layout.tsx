@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
 import { useModulosEnRevision } from '../data/revisiones.ts'
+import { useRecordatoriosReuniones } from '../data/recordatorios.ts'
 import { Avatar } from './ui.tsx'
 import CommandPalette from './CommandPalette.tsx'
 import ChatProyecto from './ChatProyecto.tsx'
@@ -70,6 +71,17 @@ const nav: NavItem[] = [
     ),
   },
   {
+    to: '/calendario',
+    label: 'Calendario',
+    icon: (
+      <svg {...iconProps} strokeLinecap="round">
+        <rect x="2" y="3" width="12" height="11" rx="1.6" />
+        <path d="M2 6.2h12M5.2 1.8v2.4M10.8 1.8v2.4" />
+        <path d="M5 9h2M9 9h2M5 11.5h2" />
+      </svg>
+    ),
+  },
+  {
     to: '/revisiones',
     label: 'Revisiones',
     icon: (
@@ -99,6 +111,7 @@ export default function Layout() {
   const poCount = preguntas?.length ?? 0
   const { data: enRevision } = useModulosEnRevision()
   const revCount = enRevision?.length ?? 0
+  useRecordatoriosReuniones() // alertas de reuniones mientras la app está abierta
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
   const [paletaAbierta, setPaletaAbierta] = useState(false)
   // El script de index.html ya fijó la clase antes del paint; acá solo reflejamos.

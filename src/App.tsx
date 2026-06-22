@@ -14,6 +14,7 @@ const ParaMi = lazy(() => import('./pages/ParaMi.tsx'))
 const Equipo = lazy(() => import('./pages/Equipo.tsx'))
 const Reuniones = lazy(() => import('./pages/Reuniones.tsx'))
 const ReunionDetalle = lazy(() => import('./pages/ReunionDetalle.tsx'))
+const Calendario = lazy(() => import('./pages/Calendario.tsx'))
 const Revisiones = lazy(() => import('./pages/Revisiones.tsx'))
 
 function CargandoRuta() {
@@ -43,6 +44,7 @@ function Rutas() {
           <Route path="/para-mi" element={<ParaMi />} />
           <Route path="/reuniones" element={<Reuniones />} />
           <Route path="/reuniones/:id" element={<ReunionDetalle />} />
+          <Route path="/calendario" element={<Calendario />} />
           <Route path="/revisiones" element={<Revisiones />} />
           <Route path="/equipo" element={<Equipo />} />
         </Route>

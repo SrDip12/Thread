@@ -169,7 +169,10 @@ export interface Database {
           tipo: Database['public']['Enums']['tipo_reunion']
           titulo: string
           fecha: string
+          hora: string | null
           notas: string | null
+          descripcion: string | null
+          alerta_min: number | null
           created_at: string
         }
         Insert: {
@@ -179,7 +182,10 @@ export interface Database {
           tipo: Database['public']['Enums']['tipo_reunion']
           titulo: string
           fecha?: string
+          hora?: string | null
           notas?: string | null
+          descripcion?: string | null
+          alerta_min?: number | null
           created_at?: string
         }
         Update: {
@@ -189,7 +195,10 @@ export interface Database {
           tipo?: Database['public']['Enums']['tipo_reunion']
           titulo?: string
           fecha?: string
+          hora?: string | null
           notas?: string | null
+          descripcion?: string | null
+          alerta_min?: number | null
           created_at?: string
         }
       }
