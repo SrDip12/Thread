@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
+import { useModulosEnRevision } from '../data/revisiones.ts'
 import { Avatar } from './ui.tsx'
+import CommandPalette from './CommandPalette.tsx'
 import Onboarding, { onboardingPendiente } from './Onboarding.tsx'
 
 const iconProps = {
@@ -93,11 +95,46 @@ export default function Layout() {
   const { persona, signOut } = useAuth()
   const { data: preguntas } = useComentariosParaPo()
   const poCount = preguntas?.length ?? 0
+  const { data: enRevision } = useModulosEnRevision()
+  const revCount = enRevision?.length ?? 0
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
+  const [paletaAbierta, setPaletaAbierta] = useState(false)
+  // El script de index.html ya fijó la clase antes del paint; acá solo reflejamos.
+  const [oscuro, setOscuro] = useState(() => document.documentElement.classList.contains('dark'))
+
+  const alternarTema = () => {
+    const next = !oscuro
+    setOscuro(next)
+    document.documentElement.classList.toggle('dark', next)
+    try {
+      localStorage.setItem('tema', next ? 'oscuro' : 'claro')
+    } catch {
+      // localStorage puede fallar (modo privado); el tema igual aplica en esta sesión.
+    }
+  }
+
+  // Cmd/Ctrl+K alterna la paleta de comandos desde cualquier vista.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletaAbierta((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div className="flex min-h-screen w-full bg-canvas">
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        Saltar al contenido
+      </a>
       <Onboarding abierto={tourAbierto} onCerrar={() => setTourAbierto(false)} />
+      <CommandPalette abierto={paletaAbierta} onCerrar={() => setPaletaAbierta(false)} />
       <aside className="sticky top-0 flex h-screen w-[248px] flex-none flex-col border-r border-line bg-canvas">
         <div className="flex items-center gap-2.5 px-[18px] pb-3.5 pt-[22px]">
           <div className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] bg-brand">
@@ -106,27 +143,48 @@ export default function Layout() {
           <div className="text-base font-extrabold tracking-[-0.02em]">Thread</div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setPaletaAbierta(true)}
+          className="mx-3 mb-1 mt-1.5 flex items-center gap-2.5 rounded-[9px] border border-line bg-surface px-[11px] py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-ink"
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="M13.5 13.5L10.5 10.5" />
+          </svg>
+          <span className="flex-1 text-left">Buscar…</span>
+          <span className="flex-none font-mono text-[11px] text-faint">⌘K</span>
+        </button>
+
         <nav className="flex flex-col gap-0.5 px-3 py-1.5">
-          {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              data-tour={item.to.slice(1)}
-              className={({ isActive }) =>
-                `flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm transition-colors hover:bg-hover ${
-                  isActive ? 'bg-hover font-bold text-ink' : 'font-medium text-label'
-                }`
-              }
-            >
-              {item.icon}
-              <span className="flex-1">{item.label}</span>
-              {item.badge && poCount > 0 && (
-                <span className="flex h-[19px] min-w-[19px] flex-none items-center justify-center rounded-[10px] bg-brand px-[5px] text-[11px] font-bold text-white">
-                  {poCount}
-                </span>
-              )}
-            </NavLink>
-          ))}
+          {nav.map((item) => {
+            const esRev = item.to === '/revisiones'
+            const count = esRev ? revCount : item.badge ? poCount : 0
+            const countLabel = esRev ? `${count} en revisión` : `${count} preguntas para vos`
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                data-tour={item.to.slice(1)}
+                className={({ isActive }) =>
+                  `flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm transition-colors hover:bg-hover ${
+                    isActive ? 'bg-hover font-bold text-ink' : 'font-medium text-label'
+                  }`
+                }
+              >
+                {item.icon}
+                <span className="flex-1">{item.label}</span>
+                {count > 0 && (
+                  <span
+                    aria-label={countLabel}
+                    className="flex h-[19px] min-w-[19px] flex-none items-center justify-center rounded-[10px] bg-brand px-[5px] text-[11px] font-bold text-white"
+                  >
+                    {count}
+                  </span>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
 
         <div className="mt-auto p-3">
@@ -138,6 +196,24 @@ export default function Layout() {
                 {persona?.rol === 'po' ? 'Product Owner' : 'Desarrollo'}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={alternarTema}
+              title={oscuro ? 'Modo claro' : 'Modo oscuro'}
+              aria-label={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
+            >
+              {oscuro ? (
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="8" r="3.2" />
+                  <path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1" />
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13.5 9.2A5.5 5.5 0 016.8 2.5a5.5 5.5 0 106.7 6.7z" />
+                </svg>
+              )}
+            </button>
             <button
               type="button"
               onClick={() => setTourAbierto(true)}
@@ -165,7 +241,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1">
+      <main id="contenido" className="min-w-0 flex-1">
         <Outlet />
       </main>
     </div>

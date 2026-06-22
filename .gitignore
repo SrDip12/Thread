@@ -9,3 +9,5 @@ node_modules/.tmp
 .vercel
 supabase/.temp/
 vite.dev.log
+.claude
+.dev.vars

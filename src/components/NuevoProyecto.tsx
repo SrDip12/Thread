@@ -66,6 +66,12 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
     setError('')
     setCreando(true)
     try {
+      // Si hay doc sin analizar, analizalo antes de crear (no se pierde el RF).
+      let propuesta = modulos
+      if (propuesta === null && tieneDoc) {
+        propuesta = await analizarProyecto(docTexto)
+        setModulos(propuesta)
+      }
       const proyecto = await crearProyecto.mutateAsync({
         nombre: nombre.trim(),
         descripcion: descripcion.trim() || null,
@@ -73,7 +79,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
       })
       // Crea módulos y sus tareas en orden (operación única, no perf-crítica).
       let orden = 0
-      for (const m of modulos ?? []) {
+      for (const m of propuesta ?? []) {
         const modulo = await crearModulo.mutateAsync({
           proyecto_id: proyecto.id,
           nombre: m.nombre,

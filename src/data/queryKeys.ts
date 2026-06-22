@@ -54,4 +54,8 @@ export const qk = {
     all: ['clientes'] as const,
     byProyecto: (proyectoId: string) => [...qk.clientes.all, { proyectoId }] as const,
   },
+  mensajes: {
+    all: ['mensajes'] as const,
+    byProyecto: (proyectoId: string) => [...qk.mensajes.all, { proyectoId }] as const,
+  },
 } as const

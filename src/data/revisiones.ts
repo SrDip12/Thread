@@ -24,7 +24,8 @@ export function useModulosEnRevision() {
         .from('modulos')
         .select('*, proyectos(*)')
         .eq('estado', 'en_revision')
-        .order('orden', { ascending: true })
+        // Más antiguo primero: lo que lleva más esperando se revisa antes.
+        .order('en_revision_at', { ascending: true, nullsFirst: false })
       if (error) throw error
       return (data ?? []) as unknown as ModuloEnRevision[]
     },

@@ -49,6 +49,7 @@ export function useCrearModulo() {
         descripcion: nuevo.descripcion ?? null,
         orden: nuevo.orden ?? 0,
         estado: nuevo.estado ?? 'abierto',
+        en_revision_at: nuevo.en_revision_at ?? null,
       }
       queryClient.setQueryData<Modulo[]>(queryKey, (viejo) => [...(viejo ?? []), optimista])
       return { previo, queryKey }
@@ -101,6 +102,8 @@ export function useActualizarModulo() {
     },
     onSettled: (_data, _error, { proyectoId }) => {
       void queryClient.invalidateQueries({ queryKey: qk.modulos.byProyecto(proyectoId) })
+      // El estado pudo cambiar a/desde 'en_revision': refrescar bandeja + badge.
+      void queryClient.invalidateQueries({ queryKey: qk.revisiones.enRevision() })
     },
   })
 }

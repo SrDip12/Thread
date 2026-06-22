@@ -3,7 +3,7 @@ import { fmtFecha } from '../lib/ui.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useMisTareas, type TareaConProyecto } from '../data/tareas.ts'
 import { estadoVM } from '../lib/ui.ts'
-import { Eyebrow, EstadoChip } from '../components/ui.tsx'
+import { Eyebrow, EstadoChip, Skeleton, EmptyState } from '../components/ui.tsx'
 
 interface Grupo {
   proyectoId: string
@@ -33,9 +33,34 @@ export default function MisTareas() {
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Mis tareas</h1>
       </div>
 
-      {isLoading && <p className="text-sm text-muted">Cargando…</p>}
+      {isLoading && (
+        <div className="space-y-[26px]">
+          {[0, 1].map((i) => (
+            <div key={i}>
+              <div className="mb-[9px] flex items-center gap-[9px] px-0.5">
+                <Skeleton className="h-2.5 w-2.5 rounded-[3px]" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
+                {[0, 1, 2].map((j) => (
+                  <Skeleton key={j} className="h-[43px] rounded-none border-b border-line-soft" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {!isLoading && (tareas?.length ?? 0) === 0 && (
-        <p className="text-sm text-muted">No tenés tareas asignadas.</p>
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.5 8.5l3 3 6-6.5" />
+              <circle cx="8" cy="8" r="6.5" />
+            </svg>
+          }
+          titulo="No tenés tareas asignadas"
+          descripcion="Cuando alguien te asigne una tarea en cualquier proyecto, aparecerá acá."
+        />
       )}
 
       {[...grupos.values()].map((g) => (

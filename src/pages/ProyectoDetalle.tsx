@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { Tables } from '../lib/database.types.ts'
+import type { Tables, TablesUpdate } from '../lib/database.types.ts'
 import { estadoVM, fmtFecha, ESTADOS } from '../lib/ui.ts'
-import { useProyectos, useActualizarProyecto } from '../data/proyectos.ts'
+import { useProyectos, useActualizarProyecto, useEliminarProyecto } from '../data/proyectos.ts'
 import { useModulos, useCrearModulo, useActualizarModulo } from '../data/modulos.ts'
 import {
   useTareas,
@@ -18,6 +18,7 @@ import { useComentariosModulo } from '../data/comentarios.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
 import { Avatar, AvatarStack, EstadoChip } from '../components/ui.tsx'
 import TareaPanel from '../components/TareaPanel.tsx'
+import ChatProyecto from '../components/ChatProyecto.tsx'
 
 type Modulo = Tables<'modulos'>
 type Persona = Tables<'personas'>
@@ -152,6 +153,7 @@ export default function ProyectoDetalle() {
                 </svg>
                 Sprint
               </button>
+              <EliminarProyecto proyectoId={id} nombre={proyecto.nombre} />
               <AvatarStack personas={miembros.map((m) => ({ nombre: m.nombre, color: m.color }))} size={30} />
             </div>
           </div>
@@ -220,7 +222,55 @@ export default function ProyectoDetalle() {
           onClose={() => setSel(null)}
         />
       )}
+
+      <ChatProyecto proyectoId={id} color={proyecto.color} />
     </div>
+  )
+}
+
+// Borrar proyecto con confirmación inline (el delete cascada borra módulos/tareas).
+function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: string }) {
+  const navigate = useNavigate()
+  const eliminar = useEliminarProyecto()
+  const [confirmando, setConfirmando] = useState(false)
+
+  if (confirmando) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-[#e6c9bf] bg-[#fbeee8] px-2.5 py-1.5">
+        <span className="text-[12px] font-semibold text-brand-strong">¿Eliminar «{nombre}»?</span>
+        <button
+          type="button"
+          onClick={() => {
+            eliminar.mutate(proyectoId)
+            navigate('/proyectos')
+          }}
+          className="rounded-md bg-brand px-2 py-[3px] text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+        >
+          Sí, eliminar
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirmando(false)}
+          className="text-[11px] font-semibold text-muted transition-colors hover:text-ink"
+        >
+          Cancelar
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirmando(true)}
+      title="Eliminar proyecto"
+      aria-label="Eliminar proyecto"
+      className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-[#e6c9bf] hover:bg-[#fbeee8] hover:text-brand"
+    >
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 4.5h10M6.5 4V2.8h3V4M5 4.5l.5 8.5h5l.5-8.5M6.7 6.5v5M9.3 6.5v5" />
+      </svg>
+    </button>
   )
 }
 
@@ -456,7 +506,11 @@ function ModuloSeccion({
   const colapsado = cerrado && !abiertoManual
 
   const cambiarEstado = (estado: EstadoModulo) => {
-    actualizarModulo.mutate({ id: modulo.id, proyectoId: modulo.proyecto_id, cambios: { estado } })
+    // Al entrar a revisión, marcar el instante para priorizar la bandeja.
+    // ponytail: set app-side; un único punto de transición. Si aparecen más, mover a trigger.
+    const cambios: TablesUpdate<'modulos'> =
+      estado === 'en_revision' ? { estado, en_revision_at: new Date().toISOString() } : { estado }
+    actualizarModulo.mutate({ id: modulo.id, proyectoId: modulo.proyecto_id, cambios })
     if (estado === 'cerrado') setAbiertoManual(false)
   }
 
@@ -600,7 +654,7 @@ function FeedbackModulo({
   const visibles = expandido ? lista : lista.slice(-1)
 
   return (
-    <div className="mb-2.5 rounded-[11px] border border-[#e7e3db] bg-[#faf7f2] px-3.5 py-2.5">
+    <div className="mb-2.5 rounded-[11px] border border-line bg-row-hover px-3.5 py-2.5">
       <div className="mb-1.5 flex items-center gap-2">
         <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-faint">
           Feedback de revisión

@@ -53,3 +53,17 @@ export function fmtFecha(iso: string | null): string | null {
   if (Number.isNaN(d.getTime())) return null
   return `${d.getDate()} ${MESES[d.getMonth()]}`
 }
+
+// Tiempo relativo en español ("hace 3 días", "hace 4 h", "ahora").
+// Acepta timestamptz ISO (con hora), no la fecha sola de fmtFecha.
+const RTF = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
+export function fmtRelativo(iso: string | null): string | null {
+  if (!iso) return null
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return null
+  const min = Math.round((t - Date.now()) / 60000) // negativo = pasado
+  if (Math.abs(min) < 60) return RTF.format(min, 'minute')
+  const h = Math.round(min / 60)
+  if (Math.abs(h) < 24) return RTF.format(h, 'hour')
+  return RTF.format(Math.round(h / 24), 'day')
+}

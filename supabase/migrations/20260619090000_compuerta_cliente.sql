@@ -22,6 +22,9 @@ create index if not exists idx_clientes_proyecto on clientes (proyecto_id);
 -- ── RLS permisivo (mismo patrón que el resto: authenticated lee/escribe todo) ──
 alter table clientes enable row level security;
 
+-- Grant de tabla (las tablas creadas después del init no heredan el grant base de Supabase).
+grant select, insert, update, delete on clientes to authenticated;
+
 do $$
 begin
   if not exists (

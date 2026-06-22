@@ -9,7 +9,7 @@ import {
 } from '../data/comentarios.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
-import { Avatar, InlineEdit } from './ui.tsx'
+import { Avatar, InlineEdit, Skeleton } from './ui.tsx'
 
 type Tarea = Tables<'tareas'>
 type Proyecto = Tables<'proyectos'>
@@ -42,10 +42,29 @@ export default function TareaPanel({
 
   const tarea = (tareas ?? []).find((t) => t.id === taskId)
   if (!tarea) {
-    // La tarea desapareció (borrada o aún cargando tras navegar). Cerrar limpio.
+    // La tarea desapareció (borrada o aún cargando tras navegar). Placeholder limpio.
     return (
-      <aside className="flex h-screen w-[430px] flex-none items-center justify-center border-l border-line bg-surface text-sm text-muted">
-        …
+      <aside
+        aria-busy="true"
+        aria-label="Cargando tarea"
+        className="flex h-screen w-[430px] flex-none flex-col border-l border-line bg-surface"
+      >
+        <div className="flex items-center justify-between border-b border-line-soft px-[22px] py-4">
+          <Skeleton className="h-3.5 w-40" />
+          <Skeleton className="h-7 w-7 rounded-lg" />
+        </div>
+        <div className="border-b border-line-soft px-[22px] pb-[18px] pt-[22px]">
+          <Skeleton className="mb-[18px] h-6 w-3/4" />
+          <div className="flex flex-col gap-[13px]">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-7 w-56" />
+            ))}
+          </div>
+        </div>
+        <div className="px-[22px] pt-5">
+          <Skeleton className="mb-3 h-3 w-24" />
+          <Skeleton className="h-16 w-full rounded-[10px]" />
+        </div>
       </aside>
     )
   }
@@ -67,9 +86,10 @@ export default function TareaPanel({
         <button
           type="button"
           onClick={onClose}
+          aria-label="Cerrar panel"
           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </button>
@@ -246,7 +266,7 @@ function Comentarios({
                         className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold"
                         style={{ color: pendiente ? '#bb6a3e' : '#7e8a7e' }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                           <path d="M4 2.5v11" strokeLinecap="round" />
                           <path d="M4 3.2h8.2l-2 2.4 2 2.4H4" strokeLinejoin="round" />
                         </svg>
@@ -267,7 +287,7 @@ function Comentarios({
                           }
                           className="inline-flex items-center gap-1.5 rounded-lg border border-[#e0bfac] bg-surface px-[11px] py-[5px] text-xs font-semibold text-brand-deep transition-colors hover:bg-[#fdf6f1]"
                         >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M3.5 8.5l3 3 6-6.5" />
                           </svg>
                           Marcar resuelto

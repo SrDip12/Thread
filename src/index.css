@@ -35,6 +35,30 @@
   --radius-card-lg: 15px;
 }
 
+/* Modo oscuro: re-mapea los tokens de @theme. Toda la UI basada en
+   bg-canvas/surface/text-ink/border-line/… hereda el cambio sin tocar componentes.
+   :root.dark gana en cascada al :root que emite @theme. */
+:root.dark {
+  color-scheme: dark;
+
+  --color-canvas: #1a1815;
+  --color-surface: #232120;
+  --color-ink: #f3efe8;
+  --color-ink-soft: #d6d1c8;
+  --color-line: #34312c;
+  --color-line-soft: #2a2723;
+  --color-hover: #2d2a26;
+  --color-row-hover: #211f1d;
+  --color-track: #322f2a;
+
+  --color-muted: #9c958a;
+  --color-muted-soft: #aaa298;
+  --color-faint: #6f695f;
+  --color-label: #b3aca1;
+
+  --color-brand-tint: #3a2a20;
+}
+
 body {
   margin: 0;
   background: var(--color-canvas);
@@ -46,6 +70,31 @@ body {
 
 ::selection {
   background: #f1d9cf;
+}
+:root.dark ::selection {
+  background: #5a3a2c;
+}
+:root.dark ::-webkit-scrollbar-thumb {
+  background: #3a372f;
+}
+
+/* Foco visible solo en navegación por teclado (no estorba al mouse). a11y. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+
+/* Respeta a quien pide menos movimiento: corta animaciones/transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 ::-webkit-scrollbar {
   width: 10px;

@@ -5,7 +5,7 @@ import { useProyectos } from '../data/proyectos.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useSprints } from '../data/sprints.ts'
 import { useReuniones, useCrearReunion } from '../data/reuniones.ts'
-import { Eyebrow } from '../components/ui.tsx'
+import { Eyebrow, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type TipoReunion = Enums<'tipo_reunion'>
 
@@ -58,7 +58,7 @@ export default function Reuniones() {
           onClick={() => setCreando((v) => !v)}
           className="flex flex-none items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M8 3v10M3 8h10" />
           </svg>
           Nueva reunión
@@ -66,8 +66,9 @@ export default function Reuniones() {
       </div>
 
       <div className="mb-6 flex items-center gap-2.5">
-        <label className="text-xs font-medium text-muted">Proyecto</label>
+        <label htmlFor="filtro-proyecto" className="text-xs font-medium text-muted">Proyecto</label>
         <select
+          id="filtro-proyecto"
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
           className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
@@ -89,11 +90,38 @@ export default function Reuniones() {
         />
       )}
 
-      {isLoading && <p className="text-sm text-muted">Cargando reuniones…</p>}
-      {!isLoading && (reuniones?.length ?? 0) === 0 && (
-        <div className="rounded-[13px] border border-dashed border-line px-5 py-[18px] text-center text-[13px] text-faint">
-          Sin reuniones todavía · creá la primera
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-[88px] rounded-[14px]" />
+          ))}
         </div>
+      )}
+      {!isLoading && (reuniones?.length ?? 0) === 0 && (
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 3.5h11v9h-7l-3 2.5z" />
+              <path d="M5 6.5h6M5 9h4" />
+            </svg>
+          }
+          titulo="Sin reuniones todavía"
+          descripcion="Registrá una reunión para tomar notas y convertir los acuerdos en tareas."
+          accion={
+            !creando ? (
+              <button
+                type="button"
+                onClick={() => setCreando(true)}
+                className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M8 3v10M3 8h10" />
+                </svg>
+                Nueva reunión
+              </button>
+            ) : undefined
+          }
+        />
       )}
 
       <div className="flex flex-col gap-3">

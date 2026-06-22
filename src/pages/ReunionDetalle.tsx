@@ -9,7 +9,7 @@ import { useSprints } from '../data/sprints.ts'
 import { useReunion, useAsistentes, useActualizarReunion } from '../data/reuniones.ts'
 import { useCrearTarea, useTareasReunion } from '../data/tareas.ts'
 import { extraerTareas, type TareaPropuesta } from '../lib/extraer.ts'
-import { Avatar, AvatarStack } from '../components/ui.tsx'
+import { Avatar, AvatarStack, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type TipoReunion = Enums<'tipo_reunion'>
 
@@ -199,10 +199,42 @@ export default function ReunionDetalle() {
   }
 
   if (isLoading) {
-    return <div className="p-11 text-sm text-muted">Cargando reunión…</div>
+    return (
+      <div className="h-screen overflow-auto">
+        <div className="mx-auto max-w-[780px] px-11 pb-24 pt-[34px]">
+          <Skeleton className="mb-[18px] h-4 w-24 rounded" />
+          <Skeleton className="mb-[7px] h-6 w-64 rounded" />
+          <Skeleton className="mb-[26px] h-8 w-80 rounded" />
+          <Skeleton className="mb-2.5 h-3 w-40 rounded" />
+          <Skeleton className="h-48 w-full rounded-[13px]" />
+        </div>
+      </div>
+    )
   }
   if (!reunion) {
-    return <div className="p-11 text-sm text-muted">Reunión no encontrada.</div>
+    return (
+      <div className="mx-auto max-w-[780px] px-11 pt-[60px]">
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 3.5h11v9h-7l-3 2.5z" />
+              <path d="M8 6v2.5M8 10.5h.01" />
+            </svg>
+          }
+          titulo="Reunión no encontrada"
+          descripcion="Puede que se haya eliminado o que el enlace no sea válido."
+          accion={
+            <button
+              type="button"
+              onClick={() => navigate('/reuniones')}
+              className="rounded-[9px] border border-line bg-canvas px-[15px] py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-hover"
+            >
+              Volver a reuniones
+            </button>
+          }
+        />
+      </div>
+    )
   }
 
   const tipo = TIPOS[reunion.tipo]
@@ -226,7 +258,7 @@ export default function ReunionDetalle() {
           onClick={() => navigate('/reuniones')}
           className="mb-[18px] flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 3L5 8l5 5" />
           </svg>
           Reuniones
@@ -271,6 +303,7 @@ export default function ReunionDetalle() {
           value={notas}
           onChange={(e) => onCambiarNotas(e.target.value)}
           onBlur={onBlurNotas}
+          aria-label="Notas de la reunión"
           placeholder="Anotá lo que se habló: decisiones, pendientes, quién hace qué y para cuándo…"
           rows={9}
           className="w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[15px] text-sm leading-relaxed text-ink outline-none focus:border-[#c96442]"
@@ -285,12 +318,12 @@ export default function ReunionDetalle() {
           >
             {cargandoIA ? (
               <>
-                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
                 Analizando notas…
               </>
             ) : (
               <>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M8 1.5l1.6 3.5L13.5 6.5 10.7 9.2l.7 3.9L8 11.3 3.6 13.1l.7-3.9L1.5 6.5l3.9-1.5z" />
                 </svg>
                 Extraer tareas con IA
@@ -328,7 +361,7 @@ export default function ReunionDetalle() {
         {revision && (
           <div className="mt-6 overflow-hidden rounded-[15px] border border-line bg-canvas">
             <div className="flex items-center gap-2 border-b border-line-soft bg-surface px-[18px] py-3.5">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bb6a3e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bb6a3e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M8 1.5l1.6 3.5L13.5 6.5 10.7 9.2l.7 3.9L8 11.3 3.6 13.1l.7-3.9L1.5 6.5l3.9-1.5z" />
               </svg>
               <span className="text-[13.5px] font-bold">
@@ -359,6 +392,7 @@ export default function ReunionDetalle() {
                   <input
                     value={f.titulo}
                     onChange={(e) => actualizarFila(f.id, { titulo: e.target.value })}
+                    aria-label="Título de la tarea"
                     className="min-w-0 flex-1 rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-sm font-medium text-ink outline-none focus:border-[#c96442]"
                   />
                 </label>
@@ -366,6 +400,7 @@ export default function ReunionDetalle() {
                   <select
                     value={f.responsableId}
                     onChange={(e) => actualizarFila(f.id, { responsableId: e.target.value })}
+                    aria-label="Responsable"
                     className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
                   >
                     <option value="">Sin responsable</option>
@@ -378,6 +413,7 @@ export default function ReunionDetalle() {
                   <select
                     value={f.moduloId}
                     onChange={(e) => actualizarFila(f.id, { moduloId: e.target.value })}
+                    aria-label="Módulo"
                     className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
                   >
                     {(modulos ?? []).map((m) => (
@@ -390,6 +426,7 @@ export default function ReunionDetalle() {
                     type="date"
                     value={f.fecha}
                     onChange={(e) => actualizarFila(f.id, { fecha: e.target.value })}
+                    aria-label="Fecha de la tarea"
                     className="rounded-[8px] border border-line bg-surface px-2 py-1.5 text-[12.5px] text-ink outline-none"
                   />
                 </div>
@@ -410,7 +447,7 @@ export default function ReunionDetalle() {
                 disabled={incluidas.length === 0}
                 className="flex items-center gap-1.5 rounded-[9px] bg-[#c96442] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#b85636] disabled:opacity-50"
               >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M8 3v10M3 8h10" />
                 </svg>
                 Crear {incluidas.length}{' '}

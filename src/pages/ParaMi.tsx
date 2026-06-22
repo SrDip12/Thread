@@ -7,6 +7,7 @@ import {
 } from '../data/comentarios.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
+import { Skeleton, EmptyState } from '../components/ui.tsx'
 
 export default function ParaMi() {
   const navigate = useNavigate()
@@ -34,18 +35,34 @@ export default function ParaMi() {
         Preguntas marcadas para el Product Owner, de todos los proyectos.
       </p>
 
-      {isLoading && <p className="text-sm text-muted">Cargando…</p>}
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="rounded-[13px] border border-line bg-surface px-[18px] py-[17px]">
+              <Skeleton className="mb-[11px] h-3.5 w-48" />
+              <div className="flex gap-3">
+                <Skeleton className="h-[30px] w-[30px] flex-none rounded-full" />
+                <div className="min-w-0 flex-1">
+                  <Skeleton className="mb-2 h-3.5 w-28" />
+                  <Skeleton className="mb-1.5 h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!isLoading && count === 0 && (
-        <div className="rounded-2xl border border-line bg-surface px-5 py-[70px] text-center">
-          <div className="mx-auto mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#e7efe9]">
-            <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="#6fa07f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3.5 8.5l3 3 6-6.5" />
             </svg>
-          </div>
-          <div className="mb-[5px] text-base font-bold">Todo al día</div>
-          <div className="text-[13.5px] text-muted-soft">No hay preguntas pendientes para ti. Buen trabajo.</div>
-        </div>
+          }
+          titulo="Todo al día"
+          descripcion="No hay preguntas pendientes para ti. Buen trabajo."
+        />
       )}
 
       <div className="flex flex-col gap-3">
@@ -86,7 +103,7 @@ export default function ParaMi() {
                       onClick={() => resolver.mutate(q.id)}
                       className="flex items-center gap-1.5 rounded-lg bg-[#e7efe9] px-[13px] py-1.5 text-[12.5px] font-semibold text-[#477155] transition-colors hover:bg-[#dce8df]"
                     >
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M3.5 8.5l3 3 6-6.5" />
                       </svg>
                       Resuelto

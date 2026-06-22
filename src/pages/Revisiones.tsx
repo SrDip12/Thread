@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Tables } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha } from '../lib/ui.ts'
+import { estadoVM, fmtFecha, fmtRelativo } from '../lib/ui.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
 import { useTareas } from '../data/tareas.ts'
@@ -10,7 +10,7 @@ import {
   useResolverRevision,
   type ModuloEnRevision,
 } from '../data/revisiones.ts'
-import { Avatar, Eyebrow } from '../components/ui.tsx'
+import { Avatar, Eyebrow, Skeleton, EmptyState, ProgressBar } from '../components/ui.tsx'
 
 type Persona = Tables<'personas'>
 
@@ -33,10 +33,24 @@ export default function Revisiones() {
           </p>
         </div>
 
-        {isLoading && <div className="px-6 text-sm text-muted">Cargando…</div>}
+        {isLoading && (
+          <div className="flex flex-col gap-2 px-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[58px] rounded-[11px]" />
+            ))}
+          </div>
+        )}
         {!isLoading && lista.length === 0 && (
-          <div className="mx-6 rounded-[13px] border border-dashed border-line px-5 py-[18px] text-center text-[13px] text-faint">
-            Nada en revisión · todo al día
+          <div className="px-4">
+            <EmptyState
+              icon={
+                <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3.5 8.5l3 3 6-6.5" />
+                </svg>
+              }
+              titulo="Todo al día"
+              descripcion="No hay módulos esperando revisión por ahora."
+            />
           </div>
         )}
 
@@ -62,6 +76,11 @@ export default function Revisiones() {
                   </span>
                 </div>
                 <div className="text-sm font-bold tracking-[-0.01em]">{m.nombre}</div>
+                {fmtRelativo(m.en_revision_at) && (
+                  <div className="mt-1 font-mono text-[10.5px] text-faint">
+                    en revisión {fmtRelativo(m.en_revision_at)}
+                  </div>
+                )}
               </button>
             )
           })}
@@ -72,8 +91,16 @@ export default function Revisiones() {
         {seleccionado ? (
           <DetalleRevision key={seleccionado.id} modulo={seleccionado} />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            Elegí un módulo en revisión.
+          <div className="flex h-full items-center justify-center px-11">
+            <EmptyState
+              icon={
+                <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 5.5h10M3 8h7M3 10.5h5" />
+                </svg>
+              }
+              titulo="Nada para revisar"
+              descripcion="Cuando un módulo pase a revisión, vas a poder aprobarlo o devolverlo desde acá."
+            />
           </div>
         )}
       </div>
@@ -86,6 +113,10 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
   const { data: personas } = usePersonas()
   const { data: tareas } = useTareas(modulo.id)
   const resolver = useResolverRevision()
+  const crear = useCrearComentario()
+  const [pendienteConfirmar, setPendienteConfirmar] = useState(false)
+  const [devolviendo, setDevolviendo] = useState(false)
+  const [motivo, setMotivo] = useState('')
 
   const proyecto = modulo.proyectos
   const personaPorId = useMemo(
@@ -111,6 +142,28 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
   }
 
   const listaTareas = tareas ?? []
+  const total = listaTareas.length
+  const hechas = listaTareas.filter((t) => t.estado === 'hecho').length
+  const pendientes = total - hechas
+  const pct = total ? Math.round((hechas / total) * 100) : 0
+
+  // Aprobar: si hay tareas sin terminar, pedir confirmación una vez antes de cerrar.
+  const aprobar = () => {
+    if (!esResponsableVision || resolver.isPending) return
+    if (pendientes > 0 && !pendienteConfirmar) {
+      setPendienteConfirmar(true)
+      return
+    }
+    decidir('aprobado')
+  }
+
+  // Devolver: el motivo es obligatorio y vuelve con el módulo como feedback.
+  const devolverConMotivo = () => {
+    const m = motivo.trim()
+    if (!esResponsableVision || resolver.isPending || !m || !yo) return
+    crear.mutate({ modulo_id: modulo.id, autor_id: yo.id, texto: m })
+    decidir('devuelto')
+  }
 
   return (
     <div className="mx-auto max-w-[820px] px-11 pb-24 pt-[34px]">
@@ -150,12 +203,22 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
       </div>
 
       {/* Tareas del módulo. */}
-      <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-        Tareas del módulo · {listaTareas.length}
+      <div className="mb-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+        <span>Tareas del módulo · {total}</span>
+        {total > 0 && (
+          <span className="font-mono normal-case tracking-normal text-muted">
+            {hechas}/{total} hechas
+          </span>
+        )}
       </div>
+      {total > 0 && (
+        <div className="mb-3">
+          <ProgressBar pct={pct} color={pendientes === 0 ? '#477155' : proyecto?.color ?? '#c96442'} />
+        </div>
+      )}
       <div className="mb-7 overflow-hidden rounded-[13px] border border-line bg-surface">
         {listaTareas.length === 0 && (
-          <div className="px-4 py-5 text-center text-[13px] text-faint">Sin tareas.</div>
+          <div className="px-4 py-5 text-center text-[13px] text-faint">Este módulo no tiene tareas.</div>
         )}
         {listaTareas.map((t) => {
           const vm = estadoVM(t.estado)
@@ -206,27 +269,77 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
             en el hilo de arriba.
           </div>
         )}
-        <div className="flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={() => decidir('devuelto')}
-            disabled={!esResponsableVision || resolver.isPending}
-            className="rounded-[9px] border border-line bg-canvas px-4 py-2 text-[13.5px] font-semibold text-[#b5532f] transition-colors hover:bg-hover disabled:opacity-50"
-          >
-            Devolver
-          </button>
-          <button
-            type="button"
-            onClick={() => decidir('aprobado')}
-            disabled={!esResponsableVision || resolver.isPending}
-            className="flex items-center gap-1.5 rounded-[9px] bg-[#477155] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3.5 8.5l3 3 6-6.5" />
-            </svg>
-            Aprobar
-          </button>
-        </div>
+
+        {esResponsableVision && devolviendo ? (
+          // Devolver exige motivo: se guarda como feedback y vuelve con el módulo.
+          <div>
+            <div className="mb-2 text-[13px] font-semibold text-ink">¿Qué hay que corregir?</div>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              autoFocus
+              aria-label="Motivo de la devolución"
+              placeholder="El motivo vuelve con el módulo como feedback…"
+              rows={3}
+              className="w-full resize-none rounded-[10px] border border-line bg-canvas px-[11px] py-[9px] text-[13.5px] outline-none focus:border-brand focus:bg-surface"
+            />
+            <div className="mt-2.5 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setDevolviendo(false)
+                  setMotivo('')
+                }}
+                className="rounded-[9px] border border-line bg-canvas px-4 py-2 text-[13.5px] font-semibold text-muted transition-colors hover:bg-hover"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={devolverConMotivo}
+                disabled={!motivo.trim() || resolver.isPending}
+                className="rounded-[9px] bg-[#b5532f] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
+              >
+                Devolver con motivo
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {pendienteConfirmar && (
+              <div
+                className="mb-3.5 rounded-[10px] px-3.5 py-2.5 text-[13px] font-medium"
+                style={{ background: '#f9ecdc', color: '#a96a23' }}
+              >
+                {pendientes === 1
+                  ? '1 tarea sin terminar.'
+                  : `${pendientes} tareas sin terminar.`}{' '}
+                ¿Aprobar el módulo igual?
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDevolviendo(true)}
+                disabled={!esResponsableVision || resolver.isPending}
+                className="rounded-[9px] border border-line bg-canvas px-4 py-2 text-[13.5px] font-semibold text-[#b5532f] transition-colors hover:bg-hover disabled:opacity-50"
+              >
+                Devolver
+              </button>
+              <button
+                type="button"
+                onClick={aprobar}
+                disabled={!esResponsableVision || resolver.isPending}
+                className="flex items-center gap-1.5 rounded-[9px] bg-[#477155] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3.5 8.5l3 3 6-6.5" />
+                </svg>
+                {pendienteConfirmar ? 'Aprobar igual' : 'Aprobar'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -298,6 +411,7 @@ function HiloModulo({
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
+            aria-label="Feedback de la revisión"
             placeholder="Dejá feedback de la revisión…"
             rows={2}
             className="w-full resize-none rounded-[10px] border border-line bg-canvas px-[11px] py-[9px] text-[13.5px] outline-none focus:border-brand focus:bg-surface"

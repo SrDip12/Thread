@@ -61,7 +61,7 @@ Estructura en `/supabase`:
 
 ### Esquema (resumen)
 
-`personas` · `proyectos` · `modulos`(→proyecto) · `sprints`(→proyecto) · `reuniones`(→proyecto, →sprint?) · `tareas`(→modulo, →persona?, →sprint?, →reunion?) · `comentarios`(→tarea, →persona) · `pulsos`(→sprint, →persona) · `reunion_asistentes`(→reunion, →persona, PK compuesta).
+`personas` · `proyectos` · `modulos`(→proyecto) · `sprints`(→proyecto) · `reuniones`(→proyecto, →sprint?) · `tareas`(→modulo, →persona?, →sprint?, →reunion?) · `comentarios`(→tarea, →persona) · `pulsos`(→sprint, →persona) · `reunion_asistentes`(→reunion, →persona, PK compuesta) · `mensajes`(→proyecto, →persona) chat de equipo.
 
 Campos acotados como **enums** Postgres: `rol_persona`, `estado_proyecto`, `estado_tarea`, `estado_sprint`, `tipo_reunion`. Borrado: FKs de jerarquía en `cascade`; referencias opcionales en `set null`. `tareas.updated_at` lo mantiene el trigger `tareas_set_updated_at`.
 
@@ -127,6 +127,8 @@ Registra reuniones (no las agenda) y convierte notas en tareas. Datos `src/data/
 Cambios en `tareas` y `comentarios` se reflejan en vivo entre miembros. Hook `src/data/realtime.ts` → `useRealtimeProyecto(proyectoId, moduloIds)`: se suscribe a `postgres_changes` e **invalida** las queries de TanStack (`qk.tareas.all` / `qk.comentarios.all`), que solo refetchean las vistas montadas. Montado en `ProyectoDetalle` y `Sprint`, así la suscripción vive solo con el proyecto abierto. Filtra tareas por `modulo_id` del proyecto en el cliente (Realtime solo filtra por una columna en server).
 
 Requiere la migración `…_realtime.sql` (agrega las tablas a la publicación `supabase_realtime` + `replica identity full`). Aplicar en el SQL editor o `supabase db push`.
+
+**Chat de equipo (tiempo real)** → tabla `mensajes`(→proyecto, →persona), datos en `src/data/mensajes.ts` (listar + `useCrearMensaje` optimista + `useRealtimeChat`). UI: widget flotante `src/components/ChatProyecto.tsx`, montado en `ProyectoDetalle` (scoped al proyecto abierto). Realtime filtra por `proyecto_id` server-side (postgres_changes, una columna). Migración `…_chat.sql` agrega `mensajes` a la publicación `supabase_realtime`. **Aplicar con `supabase db push` (o SQL editor) antes de usar.**
 
 ## Deploy (Vercel)
 

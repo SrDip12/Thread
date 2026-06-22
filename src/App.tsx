@@ -1,31 +1,49 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import Login from './components/Login.tsx'
-import Proyectos from './pages/Proyectos.tsx'
-import ProyectoDetalle from './pages/ProyectoDetalle.tsx'
-import Sprint from './pages/Sprint.tsx'
-import MisTareas from './pages/MisTareas.tsx'
-import ParaMi from './pages/ParaMi.tsx'
-import Equipo from './pages/Equipo.tsx'
-import Reuniones from './pages/Reuniones.tsx'
-import ReunionDetalle from './pages/ReunionDetalle.tsx'
-import Revisiones from './pages/Revisiones.tsx'
 import { useAuth } from './auth/AuthProvider.tsx'
+
+// Cada ruta en su propio chunk: el bundle inicial solo carga la vista abierta.
+const Proyectos = lazy(() => import('./pages/Proyectos.tsx'))
+const ProyectoDetalle = lazy(() => import('./pages/ProyectoDetalle.tsx'))
+const Sprint = lazy(() => import('./pages/Sprint.tsx'))
+const MisTareas = lazy(() => import('./pages/MisTareas.tsx'))
+const ParaMi = lazy(() => import('./pages/ParaMi.tsx'))
+const Equipo = lazy(() => import('./pages/Equipo.tsx'))
+const Reuniones = lazy(() => import('./pages/Reuniones.tsx'))
+const ReunionDetalle = lazy(() => import('./pages/ReunionDetalle.tsx'))
+const Revisiones = lazy(() => import('./pages/Revisiones.tsx'))
+
+function CargandoRuta() {
+  return <div className="px-11 pt-10 text-sm text-muted">Cargando…</div>
+}
 
 function Rutas() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/proyectos" replace />} />
-        <Route path="/proyectos" element={<Proyectos />} />
-        <Route path="/proyectos/:id" element={<ProyectoDetalle />} />
-        <Route path="/proyectos/:id/sprint" element={<Sprint />} />
-        <Route path="/mis-tareas" element={<MisTareas />} />
-        <Route path="/para-mi" element={<ParaMi />} />
-        <Route path="/reuniones" element={<Reuniones />} />
-        <Route path="/reuniones/:id" element={<ReunionDetalle />} />
-        <Route path="/revisiones" element={<Revisiones />} />
-        <Route path="/equipo" element={<Equipo />} />
+        <Route
+          index
+          element={<Navigate to="/proyectos" replace />}
+        />
+        <Route
+          element={
+            <Suspense fallback={<CargandoRuta />}>
+              <Outlet />
+            </Suspense>
+          }
+        >
+          <Route path="/proyectos" element={<Proyectos />} />
+          <Route path="/proyectos/:id" element={<ProyectoDetalle />} />
+          <Route path="/proyectos/:id/sprint" element={<Sprint />} />
+          <Route path="/mis-tareas" element={<MisTareas />} />
+          <Route path="/para-mi" element={<ParaMi />} />
+          <Route path="/reuniones" element={<Reuniones />} />
+          <Route path="/reuniones/:id" element={<ReunionDetalle />} />
+          <Route path="/revisiones" element={<Revisiones />} />
+          <Route path="/equipo" element={<Equipo />} />
+        </Route>
         <Route path="*" element={<NoEncontrado />} />
       </Route>
     </Routes>

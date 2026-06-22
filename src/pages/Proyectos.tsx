@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProyectos } from '../data/proyectos.ts'
 import { useEstadisticasProyectos } from '../data/tareas.ts'
 import { usePersonas } from '../data/personas.ts'
-import { AvatarStack, Eyebrow, ProgressBar } from '../components/ui.tsx'
+import { AvatarStack, EmptyState, Eyebrow, ProgressBar, Skeleton } from '../components/ui.tsx'
 import NuevoProyecto from '../components/NuevoProyecto.tsx'
 
 export default function Proyectos() {
@@ -12,6 +12,16 @@ export default function Proyectos() {
   const { data: stats } = useEstadisticasProyectos()
   const { data: personas } = usePersonas()
   const [creando, setCreando] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // La paleta de comandos abre el modal con ?nuevo=1; lo consumimos y limpiamos.
+  useEffect(() => {
+    if (searchParams.get('nuevo') === '1') {
+      setCreando(true)
+      searchParams.delete('nuevo')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
 
@@ -33,9 +43,36 @@ export default function Proyectos() {
 
       {creando && <NuevoProyecto onCerrar={() => setCreando(false)} />}
 
-      {isLoading && <p className="text-sm text-muted">Cargando proyectos…</p>}
+      {isLoading && (
+        <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(310px,1fr))]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[176px] rounded-[15px]" />
+          ))}
+        </div>
+      )}
+
       {!isLoading && (proyectos?.length ?? 0) === 0 && (
-        <p className="text-sm text-muted">No hay proyectos todavía.</p>
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+              <rect x="2" y="2" width="5" height="5" rx="1.2" />
+              <rect x="9" y="2" width="5" height="5" rx="1.2" />
+              <rect x="2" y="9" width="5" height="5" rx="1.2" />
+              <rect x="9" y="9" width="5" height="5" rx="1.2" />
+            </svg>
+          }
+          titulo="Todavía no hay proyectos"
+          descripcion="Creá el primero y, si querés, subí un documento de requisitos para que la IA arme los módulos."
+          accion={
+            <button
+              type="button"
+              onClick={() => setCreando(true)}
+              className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              + Nuevo proyecto
+            </button>
+          }
+        />
       )}
 
       <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(310px,1fr))]">

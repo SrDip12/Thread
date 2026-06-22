@@ -6,7 +6,7 @@ import {
   useActualizarPersona,
   useEliminarPersona,
 } from '../data/personas.ts'
-import { Avatar, Eyebrow } from '../components/ui.tsx'
+import { Avatar, Eyebrow, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type Persona = Tables<'personas'>
 type Rol = Persona['rol']
@@ -78,13 +78,48 @@ export default function Equipo() {
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-muted">Cargando…</p>}
+      {isLoading && (
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-[15px] border border-line bg-surface p-5">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-[46px] w-[46px] flex-none rounded-full" />
+                <div className="min-w-0 flex-1">
+                  <Skeleton className="mb-2 h-4 w-32" />
+                  <Skeleton className="mb-1.5 h-3 w-40" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Skeleton className="h-8 flex-1 rounded-lg" />
+                <Skeleton className="h-8 w-16 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-        {(personas ?? []).map((p) => (
-          <PersonaCard key={p.id} persona={p} />
-        ))}
-      </div>
+      {!isLoading && (personas?.length ?? 0) === 0 && (
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6" cy="5.5" r="2.5" />
+              <path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" />
+              <path d="M11 4.2a2.3 2.3 0 0 1 0 4.1M13 13.5c0-1.9-1-3.2-2.6-3.8" />
+            </svg>
+          }
+          titulo="Todavía no hay nadie en el equipo"
+          descripcion="Agregá a la primera persona con el formulario de arriba."
+        />
+      )}
+
+      {!isLoading && (personas?.length ?? 0) > 0 && (
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+          {(personas ?? []).map((p) => (
+            <PersonaCard key={p.id} persona={p} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

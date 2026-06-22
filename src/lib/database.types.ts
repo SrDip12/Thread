@@ -97,6 +97,7 @@ export interface Database {
           descripcion: string | null
           orden: number
           estado: Database['public']['Enums']['estado_modulo']
+          en_revision_at: string | null
         }
         Insert: {
           id?: string
@@ -105,6 +106,7 @@ export interface Database {
           descripcion?: string | null
           orden?: number
           estado?: Database['public']['Enums']['estado_modulo']
+          en_revision_at?: string | null
         }
         Update: {
           id?: string
@@ -113,6 +115,7 @@ export interface Database {
           descripcion?: string | null
           orden?: number
           estado?: Database['public']['Enums']['estado_modulo']
+          en_revision_at?: string | null
         }
       }
       sprints: {
@@ -316,6 +319,30 @@ export interface Database {
           nombre?: string
           contacto?: string | null
           proyecto_id?: string
+          created_at?: string
+        }
+      }
+      mensajes: {
+        Relationships: []
+        Row: {
+          id: string
+          proyecto_id: string
+          autor_id: string
+          texto: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          proyecto_id: string
+          autor_id: string
+          texto: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          proyecto_id?: string
+          autor_id?: string
+          texto?: string
           created_at?: string
         }
       }

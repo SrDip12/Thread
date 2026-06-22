@@ -180,3 +180,34 @@ export function ProgressBar({ pct, color }: { pct: number; color: string }) {
     </div>
   )
 }
+
+// Bloque de carga (shimmer). animate-pulse es nativo de Tailwind; reduced-motion lo apaga.
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-track ${className}`} />
+}
+
+// Estado vacío con icono, copy y CTA opcional. Cálido y centrado, fiel al /design.
+export function EmptyState({
+  icon,
+  titulo,
+  descripcion,
+  accion,
+}: {
+  icon?: React.ReactNode
+  titulo: string
+  descripcion?: string
+  accion?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-[15px] border border-dashed border-line px-6 py-14 text-center">
+      {icon && (
+        <div className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-tint text-brand">
+          {icon}
+        </div>
+      )}
+      <p className="m-0 text-[15px] font-bold tracking-[-0.01em] text-ink">{titulo}</p>
+      {descripcion && <p className="mb-0 mt-1 max-w-[340px] text-[13px] text-muted">{descripcion}</p>}
+      {accion && <div className="mt-5">{accion}</div>}
+    </div>
+  )
+}

@@ -21,7 +21,7 @@ import {
 } from '../data/tareas.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
-import { Avatar, EstadoChip, InlineEdit } from '../components/ui.tsx'
+import { Avatar, EstadoChip, InlineEdit, EmptyState } from '../components/ui.tsx'
 
 type Sprint = Tables<'sprints'>
 type Persona = Tables<'personas'>
@@ -51,7 +51,7 @@ export default function Sprint() {
           to={`/proyectos/${id}`}
           className="mb-[18px] inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 3L5 8l5 5" />
           </svg>
           {proyecto?.nombre ?? 'Proyecto'}
@@ -131,6 +131,7 @@ function CrearSprintRapido({ proyectoId }: { proyectoId: string }) {
           value={objetivo}
           onChange={(e) => setObjetivo(e.target.value)}
           onKeyDown={onEnter}
+          aria-label="Objetivo del sprint"
           placeholder="Objetivo del sprint…"
           className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
         />
@@ -305,7 +306,7 @@ function TareasSprint({
         ))}
 
         <div className="flex items-center gap-2.5 border-t border-line-soft px-4 py-2.5">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none" aria-hidden="true">
             <path d="M8 3.5v9M3.5 8h9" />
           </svg>
           <input
@@ -313,6 +314,7 @@ function TareasSprint({
             onChange={(e) => setTitulo(e.target.value)}
             onKeyDown={agregar}
             disabled={mods.length === 0}
+            aria-label="Agregar tarea al sprint"
             placeholder={mods.length === 0 ? 'Creá un módulo primero' : 'Agregar tarea al sprint…'}
             className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint disabled:cursor-not-allowed"
           />
@@ -320,6 +322,7 @@ function TareasSprint({
             <select
               value={moduloElegido}
               onChange={(e) => setModuloId(e.target.value)}
+              aria-label="Módulo de la tarea"
               className="flex-none rounded-lg border border-line bg-canvas px-2 py-1 text-[12.5px] text-muted outline-none focus:border-brand"
             >
               {mods.map((m) => (
@@ -355,11 +358,19 @@ function Backlog({
   return (
     <section>
       <SeccionTitulo titulo="Backlog" extra={`${lista.length}`} />
-      <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
-        {lista.length === 0 ? (
-          <div className="px-4 py-3 text-[13px] text-faint">Sin tareas en el backlog.</div>
-        ) : (
-          lista.map((t) => {
+      {lista.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 4.5h10M3 8h10M3 11.5h6" />
+            </svg>
+          }
+          titulo="Backlog vacío"
+          descripcion="Las tareas sin sprint aparecen acá, listas para sumar al sprint activo."
+        />
+      ) : (
+        <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
+          {lista.map((t) => {
             const vm = estadoVM(t.estado)
             const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
             return (
@@ -384,9 +395,9 @@ function Backlog({
                 </button>
               </div>
             )
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </section>
   )
 }
@@ -424,7 +435,9 @@ function PulsoEquipo({
       <SeccionTitulo titulo="Pulso del equipo" />
       <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
         {lista.length === 0 ? (
-          <div className="px-4 py-3 text-[13px] text-faint">Todavía no hay pulsos.</div>
+          <div className="px-4 py-4 text-center text-[13px] text-faint">
+            Todavía no hay pulsos · contá tu avance o bloqueo.
+          </div>
         ) : (
           lista.map((p) => {
             const autor = personaPorId.get(p.persona_id)
@@ -447,6 +460,7 @@ function PulsoEquipo({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={enviar}
+              aria-label="Tu pulso del sprint"
               placeholder={miPulso ? 'Actualizá tu pulso…' : 'Tu pulso (avance o bloqueo)…'}
               className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
             />
