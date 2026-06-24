@@ -265,10 +265,12 @@ function Comentarios({
                     className="rounded-[10px] text-[13.5px] leading-[1.55] text-ink-soft"
                     style={{
                       padding: c.para_po ? '10px 12px' : 0,
-                      background: pendiente ? '#fbf2ec' : c.resuelto && c.para_po ? '#f1f4f0' : 'transparent',
-                      border: c.para_po
-                        ? `1px solid ${pendiente ? '#f0dccd' : '#e3e8e1'}`
-                        : 'none',
+                      background: pendiente
+                        ? 'var(--color-brand-tint)'
+                        : c.resuelto && c.para_po
+                          ? 'var(--color-hover)'
+                          : 'transparent',
+                      border: c.para_po ? '1px solid var(--color-line)' : 'none',
                     }}
                   >
                     {c.para_po && (

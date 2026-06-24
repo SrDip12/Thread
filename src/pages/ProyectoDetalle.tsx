@@ -143,7 +143,7 @@ export default function ProyectoDetalle() {
               <button
                 type="button"
                 onClick={() => navigate(`/proyectos/${id}/gantt`)}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 4h7M2 8h11M2 12h5" />
@@ -153,7 +153,7 @@ export default function ProyectoDetalle() {
               <button
                 type="button"
                 onClick={() => navigate(`/proyectos/${id}/sprint`)}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 8h12M8 2v12" />
@@ -670,12 +670,12 @@ function ModuloSeccion({
               data-taskrow
               onClick={() => onAbrir(t.id)}
               className="flex w-full items-center gap-3 border-b border-line-soft px-4 py-[11px] text-left transition-colors hover:bg-row-hover focus:bg-row-hover focus:outline-none"
-              style={{ background: seleccionado === t.id ? '#f7f2ec' : undefined }}
+              style={{ background: seleccionado === t.id ? 'var(--color-hover)' : undefined }}
             >
               <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
               <span
                 className="min-w-0 flex-1 truncate text-sm font-medium"
-                style={{ color: vm.done ? '#a39d92' : '#1c1b19' }}
+                style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
               >
                 {t.titulo}
               </span>

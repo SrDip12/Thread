@@ -82,7 +82,7 @@ export default function MisTareas() {
                   <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
                   <span
                     className="min-w-0 flex-1 truncate text-sm font-medium"
-                    style={{ color: vm.done ? '#a39d92' : '#1c1b19' }}
+                    style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
                   >
                     {t.titulo}
                   </span>

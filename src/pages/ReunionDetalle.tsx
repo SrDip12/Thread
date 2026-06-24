@@ -302,7 +302,7 @@ export default function ReunionDetalle() {
 
         <div className="mb-[7px] flex flex-wrap items-center gap-2.5">
           {proyecto && (
-            <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-[#4a463f]">
+            <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-ink-soft">
               <span className="inline-block h-[9px] w-[9px] flex-none rounded-[2px]" style={{ background: proyecto.color }} />
               {proyecto.nombre}
             </span>
@@ -513,7 +513,7 @@ export default function ReunionDetalle() {
               <button
                 type="button"
                 onClick={() => setRevision(null)}
-                className="rounded-[9px] border border-line bg-surface px-[15px] py-2 text-[13.5px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+                className="rounded-[9px] border border-line bg-surface px-[15px] py-2 text-[13.5px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 Descartar
               </button>

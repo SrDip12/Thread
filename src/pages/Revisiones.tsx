@@ -169,7 +169,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
     <div className="mx-auto max-w-[820px] px-11 pb-24 pt-[34px]">
       <div className="mb-[7px] flex flex-wrap items-center gap-2.5">
         {proyecto && (
-          <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-[#4a463f]">
+          <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-ink-soft">
             <span
               className="inline-block h-[9px] w-[9px] flex-none rounded-[2px]"
               style={{ background: proyecto.color }}

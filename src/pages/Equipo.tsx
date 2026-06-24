@@ -204,7 +204,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
         <button
           type="button"
           onClick={() => setEditando(true)}
-          className="flex-1 rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold text-[#4a463f] transition-colors hover:bg-hover"
+          className="flex-1 rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
         >
           Editar
         </button>

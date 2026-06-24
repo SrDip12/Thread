@@ -94,7 +94,7 @@ export default function ParaMi() {
                     <button
                       type="button"
                       onClick={() => proy && navigate(`/proyectos/${proy.id}`)}
-                      className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-[#4a463f] transition-colors hover:bg-[#f7f4ef]"
+                      className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[#f7f4ef]"
                     >
                       <span className="text-xs text-muted">↗</span> {tarea?.titulo ?? 'Ver tarea'}
                     </button>

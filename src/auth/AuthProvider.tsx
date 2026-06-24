@@ -38,10 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let activo = true
+    let userActual: string | undefined
 
     async function resolverSesion(nuevaSesion: Session | null) {
       const res = await buscarPersona(nuevaSesion?.user.email)
       if (!activo) return
+      userActual = nuevaSesion?.user.id
       setSession(nuevaSesion)
       setPersona(res.persona)
       setError(res.error)
@@ -52,8 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void resolverSesion(data.session)
     })
 
+    // Supabase emite SIGNED_IN/TOKEN_REFRESHED al volver el foco a la pestaña.
+    // No tocar `cargando` acá: flipearlo desmonta <Rutas/> y pierde el estado
+    // local de la vista (ej. panel de tarea abierto). Si el usuario no cambió,
+    // solo refrescamos el token; no re-resolvemos persona.
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, nuevaSesion) => {
-      setCargando(true)
+      if (nuevaSesion?.user.id === userActual) {
+        setSession(nuevaSesion)
+        return
+      }
       void resolverSesion(nuevaSesion)
     })
 
