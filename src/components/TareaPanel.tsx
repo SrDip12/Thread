@@ -359,12 +359,82 @@ function Comentarios({
   const [texto, setTexto] = useState('')
   const [paraPo, setParaPo] = useState(false)
 
+  // Estados para autocompletar menciones con @
+  const [mostrarMentions, setMostrarMentions] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  const personasFiltradas = Array.from(personaPorId.values()).filter((p) => {
+    if (p.id === yoId) return false
+    const term = searchQuery.toLowerCase()
+    return p.nombre.toLowerCase().includes(term) || p.email.toLowerCase().includes(term)
+  })
+
+  const handleChangeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setTexto(val)
+
+    const start = e.target.selectionStart
+    const textBeforeCursor = val.slice(0, start)
+    const match = textBeforeCursor.match(/@([a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9_]*)$/)
+
+    if (match) {
+      setMostrarMentions(true)
+      setSearchQuery(match[1])
+      setSelectedIndex(0)
+    } else {
+      setMostrarMentions(false)
+    }
+  }
+
+  const handleKeyDownTextarea = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!mostrarMentions || personasFiltradas.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev + 1) % personasFiltradas.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev - 1 + personasFiltradas.length) % personasFiltradas.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      insertarMencion(personasFiltradas[selectedIndex])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setMostrarMentions(false)
+    }
+  }
+
+  const insertarMencion = (persona: Tables<'personas'>) => {
+    const textarea = document.getElementById('comentario-textarea') as HTMLTextAreaElement
+    if (!textarea) return
+
+    const val = texto
+    const start = textarea.selectionStart
+    const textBeforeCursor = val.slice(0, start)
+    const textAfterCursor = val.slice(start)
+
+    const lastAtIdx = textBeforeCursor.lastIndexOf('@')
+    if (lastAtIdx === -1) return
+
+    const nuevoTexto = textBeforeCursor.slice(0, lastAtIdx) + `@${persona.nombre} ` + textAfterCursor
+    setTexto(nuevoTexto)
+    setMostrarMentions(false)
+
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = lastAtIdx + persona.nombre.length + 2 // @ + nombre + espacio
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
   const enviar = () => {
     const t = texto.trim()
     if (!t || !yoId) return
     crear.mutate({ tarea_id: tarea.id, autor_id: yoId, texto: t, para_po: paraPo })
     setTexto('')
     setParaPo(false)
+    setMostrarMentions(false)
   }
 
   return (
@@ -447,14 +517,47 @@ function Comentarios({
 
       <div className="flex items-start gap-2.5 pt-1">
         <Avatar nombre={yoId ? personaPorId.get(yoId)?.nombre ?? 'Yo' : 'Yo'} color="#c96442" size={28} />
-        <div className="flex-1">
+        <div className="relative flex-1">
           <textarea
+            id="comentario-textarea"
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={handleChangeTextarea}
+            onKeyDown={handleKeyDownTextarea}
             placeholder="Escribe un comentario…"
             rows={2}
             className="w-full resize-none rounded-[10px] border border-line bg-canvas px-[11px] py-[9px] text-[13.5px] outline-none focus:border-brand focus:bg-surface"
           />
+
+          {mostrarMentions && personasFiltradas.length > 0 && (
+            <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-[240px] rounded-xl border border-line bg-surface p-1 shadow-xl max-h-[160px] overflow-y-auto">
+              {personasFiltradas.map((p, idx) => {
+                const seleccionado = idx === selectedIndex
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      insertarMencion(p)
+                    }}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                      seleccionado ? 'bg-brand text-white font-bold' : 'hover:bg-hover text-ink font-medium'
+                    }`}
+                  >
+                    <Avatar nombre={p.nombre} color={p.color} size={20} />
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate ${seleccionado ? 'text-white' : 'text-ink'}`}>{p.nombre}</div>
+                      <div className={`truncate ${seleccionado ? 'text-white/80' : 'text-muted-soft'}`} style={{ fontSize: '10px' }}>
+                        {p.rol === 'po' ? 'Product Owner' : 'Developer'}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           <div className="mt-2 flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-[7px] text-[12.5px] text-label">
               <input

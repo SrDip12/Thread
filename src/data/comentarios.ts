@@ -309,6 +309,9 @@ export function useCrearComentario() {
                 }
               }
 
+              const autorPersona = personas?.find((p) => p.id === data.autor_id)
+              const autorNombre = autorPersona?.nombre ?? 'Un miembro del equipo'
+
               // Crear notificaciones de mención
               for (const pid of menciones) {
                 await supabase.from('notificaciones').insert({
@@ -320,6 +323,26 @@ export function useCrearComentario() {
                   proyecto_id: proyectoId,
                   leido: false,
                 })
+
+                const mentionedUser = personas?.find((p) => p.id === pid)
+                if (mentionedUser?.email && proyectos) {
+                  await fetch('/api/enviar-correo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      tipo: 'mencion',
+                      destinatarioEmail: mentionedUser.email,
+                      destinatarioNombre: mentionedUser.nombre,
+                      autorNombre,
+                      proyectoNombre: proyectos.nombre,
+                      proyectoId: proyectos.id,
+                      tareaTitulo: taskData.titulo,
+                      tareaId: data.tarea_id,
+                      comentarioTexto: data.texto,
+                      appUrl: window.location.origin,
+                    }),
+                  })
+                }
               }
 
               // Si es pregunta para el PO y el PO no es el autor y no fue mencionado

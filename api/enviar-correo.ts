@@ -1,5 +1,5 @@
 // Vercel Edge Function: POST /api/enviar-correo
-// Recibe los datos de una pregunta o respuesta y envía una notificación por correo.
+// Recibe los datos de una pregunta, respuesta o mención y envía una notificación por correo.
 // Si no hay RESEND_API_KEY configurada, realiza una simulación en la consola.
 
 export const config = { runtime: 'edge' }
@@ -12,7 +12,7 @@ function json(cuerpo: unknown, status = 200): Response {
 }
 
 interface CuerpoCorreo {
-  tipo: 'pregunta' | 'respuesta'
+  tipo: 'pregunta' | 'respuesta' | 'mencion'
   destinatarioEmail: string
   destinatarioNombre: string
   autorNombre: string
@@ -59,15 +59,42 @@ export default async function handler(request: Request): Promise<Response> {
 
   let emailHtml = ''
   let subject = ''
+  let accentColor = '#c96442' // Default PO orange
+  let badgeLabel = 'Pregunta PO'
+  let badgeBg = '#fdf2f0'
+  let introText = ''
+  let buttonLabel = 'Responder Pregunta'
 
   if (tipo === 'pregunta') {
     subject = `[Thread] Nueva pregunta de ${autorNombre} en ${proyectoNombre}`
+    accentColor = '#c96442'
+    badgeLabel = 'Pregunta PO'
+    badgeBg = '#fdf2f0'
+    introText = `<strong>${autorNombre}</strong> ha dejado una pregunta marcada para el Product Owner en el proyecto <strong>${proyectoNombre}</strong>.`
+    buttonLabel = 'Responder Pregunta'
+  } else if (tipo === 'respuesta') {
+    subject = `[Thread] Respuesta a tu pregunta en ${proyectoNombre}`
+    accentColor = '#2e9e7b'
+    badgeLabel = 'Pregunta Resuelta'
+    badgeBg = '#edfcf7'
+    introText = `<strong>${autorNombre}</strong> ha respondido a tu pregunta en el proyecto <strong>${proyectoNombre}</strong>.`
+    buttonLabel = 'Ver en Thread'
+  } else if (tipo === 'mencion') {
+    subject = `[Thread] Te mencionaron en la tarea "${tareaTitulo}"`
+    accentColor = '#9a5cc4' // Purple accent
+    badgeLabel = 'Mención'
+    badgeBg = '#f7f0fc'
+    introText = `<strong>${autorNombre}</strong> te ha mencionado en un comentario en el proyecto <strong>${proyectoNombre}</strong>.`
+    buttonLabel = 'Ver Comentario'
+  }
+
+  if (tipo === 'pregunta' || tipo === 'mencion') {
     emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Nueva pregunta para el PO</title>
+  <title>${subject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 20px;">
@@ -75,7 +102,7 @@ export default async function handler(request: Request): Promise<Response> {
       <td align="center">
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
           <tr>
-            <td style="background-color: #c96442; height: 6px; padding: 0;"></td>
+            <td style="background-color: ${accentColor}; height: 6px; padding: 0;"></td>
           </tr>
           <tr>
             <td style="padding: 40px 32px;">
@@ -83,7 +110,7 @@ export default async function handler(request: Request): Promise<Response> {
                 <tr>
                   <td>
                     <span style="font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.025em;">Thread</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #c96442; background-color: #fdf2f0; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">Pregunta PO</span>
+                    <span style="font-size: 12px; font-weight: 600; color: ${accentColor}; background-color: ${badgeBg}; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">${badgeLabel}</span>
                   </td>
                 </tr>
               </table>
@@ -91,24 +118,24 @@ export default async function handler(request: Request): Promise<Response> {
                 Hola <strong>${destinatarioNombre}</strong>,
               </p>
               <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-                <strong>${autorNombre}</strong> ha dejado una pregunta marcada para el Product Owner en el proyecto <strong>${proyectoNombre}</strong>.
+                ${introText}
               </p>
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 32px;">
                 <tr>
                   <td style="padding: 20px 24px;">
-                    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #c96442; letter-spacing: 0.05em; margin-bottom: 8px;">Tarea</div>
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${accentColor}; letter-spacing: 0.05em; margin-bottom: 8px;">Tarea</div>
                     <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 12px; line-height: 1.4;">${tareaTitulo}</div>
                     <div style="border-top: 1px dashed #e2e8f0; margin: 12px 0;"></div>
-                    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 8px;">Pregunta</div>
-                    <div style="font-size: 14.5px; line-height: 1.6; color: #334155; font-style: italic; white-space: pre-wrap;">"${comentarioTexto}"</div>
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 8px;">Comentario</div>
+                    <div style="font-size: 14px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${comentarioTexto}</div>
                   </td>
                 </tr>
               </table>
               <table border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: #c96442; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(201, 100, 66, 0.2); transition: background-color 0.2s ease;">
-                      Responder Pregunta
+                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background-color 0.2s ease;">
+                      ${buttonLabel}
                     </a>
                   </td>
                 </tr>
@@ -118,7 +145,7 @@ export default async function handler(request: Request): Promise<Response> {
           <tr>
             <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px 32px; text-align: center;">
               <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5;">
-                Recibes este correo porque eres el responsable de visión de este proyecto.<br>
+                Recibes este correo porque eres miembro del proyecto.<br>
                 Thread App · Gestión de proyectos simple y enfocada.
               </p>
             </td>
@@ -132,13 +159,12 @@ export default async function handler(request: Request): Promise<Response> {
     `
   } else {
     // tipo === 'respuesta'
-    subject = `[Thread] Respuesta a tu pregunta en ${proyectoNombre}`
     emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Respuesta a tu pregunta</title>
+  <title>${subject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 20px;">
@@ -146,7 +172,7 @@ export default async function handler(request: Request): Promise<Response> {
       <td align="center">
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
           <tr>
-            <td style="background-color: #2e9e7b; height: 6px; padding: 0;"></td>
+            <td style="background-color: ${accentColor}; height: 6px; padding: 0;"></td>
           </tr>
           <tr>
             <td style="padding: 40px 32px;">
@@ -154,7 +180,7 @@ export default async function handler(request: Request): Promise<Response> {
                 <tr>
                   <td>
                     <span style="font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.025em;">Thread</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #2e9e7b; background-color: #edfcf7; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">Pregunta Resuelta</span>
+                    <span style="font-size: 12px; font-weight: 600; color: ${accentColor}; background-color: ${badgeBg}; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">${badgeLabel}</span>
                   </td>
                 </tr>
               </table>
@@ -162,7 +188,7 @@ export default async function handler(request: Request): Promise<Response> {
                 Hola <strong>${destinatarioNombre}</strong>,
               </p>
               <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-                <strong>${autorNombre}</strong> ha respondido a tu pregunta en el proyecto <strong>${proyectoNombre}</strong>.
+                ${introText}
               </p>
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 32px;">
                 <tr>
@@ -177,7 +203,7 @@ export default async function handler(request: Request): Promise<Response> {
                     
                     <div style="border-top: 1px dashed #e2e8f0; margin: 12px 0;"></div>
                     
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #2e9e7b; letter-spacing: 0.05em; margin-bottom: 4px;">Respuesta de ${autorNombre}</div>
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${accentColor}; letter-spacing: 0.05em; margin-bottom: 4px;">Respuesta de ${autorNombre}</div>
                     <div style="font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 500; white-space: pre-wrap;">"${comentarioTexto}"</div>
                   </td>
                 </tr>
@@ -185,8 +211,8 @@ export default async function handler(request: Request): Promise<Response> {
               <table border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: #2e9e7b; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(46, 158, 123, 0.2); transition: background-color 0.2s ease;">
-                      Ver en Thread
+                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background-color 0.2s ease;">
+                      ${buttonLabel}
                     </a>
                   </td>
                 </tr>
@@ -224,7 +250,7 @@ export default async function handler(request: Request): Promise<Response> {
       console.log(`Pregunta original: "${preguntaTexto}"`)
       console.log(`Respuesta: "${comentarioTexto}"`)
     } else {
-      console.log(`Pregunta: "${comentarioTexto}"`)
+      console.log(`Comentario: "${comentarioTexto}"`)
     }
     console.log(`Enlace: ${taskUrl}`)
     console.log('==================================================\n')
