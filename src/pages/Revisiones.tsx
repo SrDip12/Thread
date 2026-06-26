@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Tables } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha, fmtRelativo } from '../lib/ui.ts'
+import { estadoVM, fmtFecha, fmtRelativo, fmtFechaHora } from '../lib/ui.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
 import { useTareas } from '../data/tareas.ts'
@@ -396,7 +396,14 @@ function HiloModulo({
               <div key={c.id} className="flex gap-[11px]">
                 <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={28} />
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</div>
+                  <div className="mb-1 flex items-baseline gap-2">
+                    <span className="text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                    {c.created_at && (
+                      <span className="text-[11px] font-mono text-faint">
+                        {fmtFechaHora(c.created_at)}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[13.5px] leading-[1.55] text-ink-soft">{c.texto}</div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Tables, TablesUpdate } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha, ESTADOS } from '../lib/ui.ts'
+import { estadoVM, fmtFecha, ESTADOS, fmtFechaHora } from '../lib/ui.ts'
 import { useProyectos, useActualizarProyecto, useEliminarProyecto } from '../data/proyectos.ts'
 import { useModulos, useCrearModulo, useActualizarModulo } from '../data/modulos.ts'
 import {
@@ -10,6 +10,7 @@ import {
   useActualizarTarea,
   useTareasPorProyecto,
   useCorreccionesCliente,
+  useProyectoDependencias,
 } from '../data/tareas.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useMiembros, useAgregarMiembro, useQuitarMiembro } from '../data/miembros.ts'
@@ -19,6 +20,7 @@ import { useComentariosModulo } from '../data/comentarios.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
 import { Avatar, AvatarStack, EstadoChip } from '../components/ui.tsx'
 import TareaPanel from '../components/TareaPanel.tsx'
+import KanbanBoard from '../components/KanbanBoard.tsx'
 
 type Modulo = Tables<'modulos'>
 type Persona = Tables<'personas'>
@@ -50,6 +52,52 @@ export default function ProyectoDetalle() {
   const { data: tareasProyecto } = useTareasPorProyecto(id)
   const { data: personas } = usePersonas()
   const [sel, setSel] = useState<Seleccion | null>(null)
+  const { data: proyectoDeps } = useProyectoDependencias(id)
+  const actualizar = useActualizarTarea()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tareaIdParam = searchParams.get('tarea')
+
+  const [vista, setVista] = useState<'lista' | 'kanban'>(() => {
+    try {
+      return (localStorage.getItem('preferencia_vista') as 'lista' | 'kanban') || 'lista'
+    } catch {
+      return 'lista'
+    }
+  })
+  const [moduloFiltro, setModuloFiltro] = useState<string>('todos')
+  
+  const cambiarVista = (v: 'lista' | 'kanban') => {
+    setVista(v)
+    try {
+      localStorage.setItem('preferencia_vista', v)
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (tareaIdParam && tareasProyecto && modulos) {
+      const t = tareasProyecto.find((x) => x.id === tareaIdParam)
+      if (t) {
+        const m = modulos.find((x) => x.id === t.modulo_id)
+        setSel({
+          taskId: t.id,
+          moduloId: t.modulo_id,
+          moduloNombre: m ? m.nombre : 'Módulo',
+        })
+      }
+    }
+  }, [tareaIdParam, tareasProyecto, modulos])
+
+  const onCerrarPanel = () => {
+    setSel(null)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('tarea')
+        return next
+      },
+      { replace: true }
+    )
+  }
   const [nuevoModulo, setNuevoModulo] = useState('')
   const crearModulo = useCrearModulo()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -140,6 +188,26 @@ export default function ProyectoDetalle() {
               <div className="pl-[25px] text-sm text-muted-soft">{proyecto.descripcion ?? ''}</div>
             </div>
             <div className="flex items-center gap-3">
+              <div className="flex rounded-lg border border-line bg-surface p-0.5 mr-1">
+                <button
+                  type="button"
+                  onClick={() => cambiarVista('lista')}
+                  className={`rounded-[6px] px-2.5 py-1 text-xs font-bold transition-colors ${
+                    vista === 'lista' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cambiarVista('kanban')}
+                  className={`rounded-[6px] px-2.5 py-1 text-xs font-bold transition-colors ${
+                    vista === 'kanban' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  Tablero
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => navigate(`/proyectos/${id}/gantt`)}
@@ -191,32 +259,93 @@ export default function ProyectoDetalle() {
 
           <CorreccionesClienteSeccion proyectoId={id} personaPorId={personaPorId} />
 
-          {(modulos ?? []).map((m) => (
-            <ModuloSeccion
-              key={m.id}
-              modulo={m}
-              personaPorId={personaPorId}
-              seleccionado={sel?.taskId ?? null}
-              onAbrir={(taskId) =>
-                setSel({ taskId, moduloId: m.id, moduloNombre: m.nombre })
-              }
-            />
-          ))}
-          <div className="flex items-center gap-[11px] px-0.5 py-1">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
-              <path d="M8 3.5v9M3.5 8h9" />
-            </svg>
-            <input
-              value={nuevoModulo}
-              onChange={(e) => setNuevoModulo(e.target.value)}
-              onKeyDown={agregarModulo}
-              placeholder="Agregar módulo…"
-              className="flex-1 bg-transparent text-[13px] font-semibold uppercase tracking-[0.02em] text-label outline-none placeholder:text-faint placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
-            />
-            {nuevoModulo.trim() && (
-              <span className="flex-none font-mono text-[11px] text-faint">Enter ↵</span>
-            )}
-          </div>
+          {vista === 'kanban' ? (
+            <div className="flex flex-col gap-4">
+              {/* Filtro por Módulo */}
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                  Filtrar por Módulo
+                  <select
+                    value={moduloFiltro}
+                    onChange={(e) => setModuloFiltro(e.target.value)}
+                    className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
+                  >
+                    <option value="todos">Todos los módulos</option>
+                    {(modulos ?? []).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <KanbanBoard
+                tareas={
+                  moduloFiltro === 'todos'
+                    ? (tareasProyecto ?? [])
+                    : (tareasProyecto ?? []).filter((t) => t.modulo_id === moduloFiltro)
+                }
+                personaPorId={personaPorId}
+                proyectoId={id}
+                proyectoDeps={proyectoDeps ?? []}
+                todasLasTareas={tareasProyecto ?? []}
+                moduloNombres={new Map((modulos ?? []).map((m) => [m.id, m.nombre]))}
+                onAbrir={(taskId) => {
+                  const t = (tareasProyecto ?? []).find((x) => x.id === taskId)
+                  if (t) {
+                    const m = (modulos ?? []).find((x) => x.id === t.modulo_id)
+                    setSel({
+                      taskId: t.id,
+                      moduloId: t.modulo_id,
+                      moduloNombre: m ? m.nombre : 'Módulo',
+                    })
+                  }
+                }}
+                onMoverTarea={(taskId, nuevoEstado) => {
+                  const t = (tareasProyecto ?? []).find((x) => x.id === taskId)
+                  if (t) {
+                    actualizar.mutate({
+                      id: taskId,
+                      moduloId: t.modulo_id,
+                      cambios: { estado: nuevoEstado },
+                    })
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              {(modulos ?? []).map((m) => (
+                <ModuloSeccion
+                  key={m.id}
+                  modulo={m}
+                  personaPorId={personaPorId}
+                  seleccionado={sel?.taskId ?? null}
+                  onAbrir={(taskId) =>
+                    setSel({ taskId, moduloId: m.id, moduloNombre: m.nombre })
+                  }
+                  todasLasTareas={tareasProyecto ?? []}
+                  proyectoDeps={proyectoDeps ?? []}
+                />
+              ))}
+              <div className="flex items-center gap-[11px] px-0.5 py-1">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
+                  <path d="M8 3.5v9M3.5 8h9" />
+                </svg>
+                <input
+                  value={nuevoModulo}
+                  onChange={(e) => setNuevoModulo(e.target.value)}
+                  onKeyDown={agregarModulo}
+                  placeholder="Agregar módulo…"
+                  className="flex-1 bg-transparent text-[13px] font-semibold uppercase tracking-[0.02em] text-label outline-none placeholder:text-faint placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                />
+                {nuevoModulo.trim() && (
+                  <span className="flex-none font-mono text-[11px] text-faint">Enter ↵</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -226,7 +355,7 @@ export default function ProyectoDetalle() {
           moduloId={sel.moduloId}
           moduloNombre={sel.moduloNombre}
           proyecto={proyecto}
-          onClose={() => setSel(null)}
+          onClose={onCerrarPanel}
         />
       )}
     </div>
@@ -567,11 +696,15 @@ function ModuloSeccion({
   personaPorId,
   seleccionado,
   onAbrir,
+  todasLasTareas,
+  proyectoDeps,
 }: {
   modulo: Modulo
   personaPorId: Map<string, Persona>
   seleccionado: string | null
   onAbrir: (taskId: string) => void
+  todasLasTareas: Tables<'tareas'>[]
+  proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
 }) {
   const { data: tareas } = useTareas(modulo.id)
   const crear = useCrearTarea()
@@ -663,6 +796,14 @@ function ModuloSeccion({
           const vm = estadoVM(t.estado)
           const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
           const fecha = fmtFecha(t.fecha)
+
+          const isBlocked = proyectoDeps
+            .filter((d) => d.bloqueada_id === t.id)
+            .some((d) => {
+              const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
+              return b ? b.estado !== 'hecho' : false
+            })
+
           return (
             <button
               key={t.id}
@@ -674,9 +815,17 @@ function ModuloSeccion({
             >
               <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
               <span
-                className="min-w-0 flex-1 truncate text-sm font-medium"
+                className="min-w-0 flex-1 truncate text-sm font-medium flex items-center gap-1.5"
                 style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
               >
+                {isBlocked && (
+                  <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="inline">
+                      <rect x="3" y="11" width="10" height="4" rx="1" />
+                      <path d="M4 11V6a4 4 0 0 1 8 0v5" />
+                    </svg>
+                  </span>
+                )}
                 {t.titulo}
               </span>
               {t.tipo === 'correccion' && (
@@ -759,7 +908,14 @@ function FeedbackModulo({
             <div key={c.id} className="flex gap-2.5">
               <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={22} />
               <div className="min-w-0 flex-1">
-                <span className="mr-1.5 text-[12px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                <div className="mb-0.5 flex items-baseline gap-2">
+                  <span className="text-[12px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                  {c.created_at && (
+                    <span className="text-[10px] font-mono text-faint">
+                      {fmtFechaHora(c.created_at)}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[12.5px] leading-[1.5] text-ink-soft">{c.texto}</span>
               </div>
             </div>

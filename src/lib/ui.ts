@@ -11,11 +11,13 @@ export interface EstadoVM {
   done: boolean
 }
 
-// Estados gris / azul / verde, según /design.
+// Estados gris / azul / naranja / verde, según /design.
 export function estadoVM(estado: EstadoTarea): EstadoVM {
   switch (estado) {
     case 'hecho':
       return { label: 'Hecho', bg: '#e7efe9', fg: '#477155', dot: '#6fa07f', done: true }
+    case 'revision':
+      return { label: 'En revisión', bg: '#fdf6f1', fg: '#c96442', dot: '#c96442', done: false }
     case 'en_curso':
       return { label: 'En curso', bg: '#e8eef6', fg: '#43618f', dot: '#6c8ac4', done: false }
     default:
@@ -23,7 +25,7 @@ export function estadoVM(estado: EstadoTarea): EstadoVM {
   }
 }
 
-export const ESTADOS: EstadoTarea[] = ['proximo', 'en_curso', 'hecho']
+export const ESTADOS: EstadoTarea[] = ['proximo', 'en_curso', 'revision', 'hecho']
 
 // Paleta de acentos por proyecto (un color por proyecto, según /design).
 // El primero (terracota) es el acento de marca y el default.
@@ -52,6 +54,18 @@ export function fmtFecha(iso: string | null): string | null {
   const d = new Date(`${iso}T00:00:00`)
   if (Number.isNaN(d.getTime())) return null
   return `${d.getDate()} ${MESES[d.getMonth()]}`
+}
+
+// Fecha y hora "12 jun, 18:30" desde un timestamp ISO. null si no hay.
+export function fmtFechaHora(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const dia = d.getDate()
+  const mes = MESES[d.getMonth()]
+  const hs = d.getHours().toString().padStart(2, '0')
+  const min = d.getMinutes().toString().padStart(2, '0')
+  return `${dia} ${mes}, ${hs}:${min}`
 }
 
 // Tiempo relativo en español ("hace 3 días", "hace 4 h", "ahora").

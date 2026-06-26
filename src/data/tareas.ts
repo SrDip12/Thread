@@ -307,6 +307,16 @@ export function useActualizarTarea() {
       moduloId: string
       cambios: TablesUpdate<'tareas'>
     }): Promise<Tarea> => {
+      // 1. Obtener la tarea actual antes de actualizar
+      const { data: tareaActual, error: errGet } = await supabase
+        .from('tareas')
+        .select('responsable_id, titulo, modulo_id')
+        .eq('id', id)
+        .single()
+      
+      if (errGet) throw errGet
+
+      // 2. Realizar la actualización
       const { data, error } = await supabase
         .from('tareas')
         .update(cambios)
@@ -314,6 +324,48 @@ export function useActualizarTarea() {
         .select()
         .single()
       if (error) throw error
+
+      // 3. Si cambió el responsable y el nuevo responsable no es nulo
+      if (cambios.responsable_id && cambios.responsable_id !== tareaActual.responsable_id) {
+        try {
+          // Obtener el módulo para saber el proyecto_id
+          const { data: mod } = await supabase
+            .from('modulos')
+            .select('proyecto_id')
+            .eq('id', tareaActual.modulo_id)
+            .single()
+
+          // Obtener el usuario autenticado para saber quién hace la asignación
+          const { data: authUser } = await supabase.auth.getUser()
+          const email = authUser.user?.email
+          
+          let autorId: string | null = null
+          if (email) {
+            const { data: pers } = await supabase
+              .from('personas')
+              .select('id')
+              .eq('email', email)
+              .single()
+            autorId = pers?.id ?? null
+          }
+
+          // Si el asignador no es el mismo asignado
+          if (cambios.responsable_id !== autorId) {
+            await supabase.from('notificaciones').insert({
+              persona_id: cambios.responsable_id,
+              autor_id: autorId,
+              tipo: 'asignacion',
+              texto: `Te asignó la tarea "${tareaActual.titulo}"`,
+              tarea_id: id,
+              proyecto_id: mod?.proyecto_id ?? null,
+              leido: false,
+            })
+          }
+        } catch (e) {
+          console.error('Error al insertar notificación de asignación:', e)
+        }
+      }
+
       return data
     },
     onMutate: async ({ id, cambios }) => {
@@ -358,3 +410,71 @@ export function useEliminarTarea() {
     },
   })
 }
+
+// ── Hooks de dependencias entre tareas ──────────────────────────────────────────
+
+export function useDependenciasTarea(tareaId: string) {
+  return useQuery({
+    queryKey: ['tarea_dependencias', tareaId],
+    queryFn: async (): Promise<{ bloqueadora_id: string; bloqueada_id: string }[]> => {
+      const { data, error } = await supabase
+        .from('tarea_dependencias')
+        .select('bloqueadora_id, bloqueada_id')
+        .or(`bloqueadora_id.eq.${tareaId},bloqueada_id.eq.${tareaId}`)
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: Boolean(tareaId),
+  })
+}
+
+export function useProyectoDependencias(proyectoId: string) {
+  return useQuery({
+    queryKey: ['proyecto_dependencias', proyectoId],
+    queryFn: async (): Promise<{ bloqueadora_id: string; bloqueada_id: string }[]> => {
+      const { data, error } = await supabase
+        .from('tarea_dependencias')
+        .select('bloqueadora_id, bloqueada_id')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: Boolean(proyectoId),
+  })
+}
+
+export function useCrearDependencia() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (dep: { bloqueadora_id: string; bloqueada_id: string }): Promise<void> => {
+      const { error } = await supabase.from('tarea_dependencias').insert(dep)
+      if (error) throw error
+    },
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['tarea_dependencias', variables.bloqueada_id] })
+      void queryClient.invalidateQueries({ queryKey: ['tarea_dependencias', variables.bloqueadora_id] })
+      void queryClient.invalidateQueries({ queryKey: ['proyecto_dependencias'] })
+      void queryClient.invalidateQueries({ queryKey: qk.tareas.all })
+    },
+  })
+}
+
+export function useEliminarDependencia() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (dep: { bloqueadora_id: string; bloqueada_id: string }): Promise<void> => {
+      const { error } = await supabase
+        .from('tarea_dependencias')
+        .delete()
+        .eq('bloqueadora_id', dep.bloqueadora_id)
+        .eq('bloqueada_id', dep.bloqueada_id)
+      if (error) throw error
+    },
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['tarea_dependencias', variables.bloqueada_id] })
+      void queryClient.invalidateQueries({ queryKey: ['tarea_dependencias', variables.bloqueadora_id] })
+      void queryClient.invalidateQueries({ queryKey: ['proyecto_dependencias'] })
+      void queryClient.invalidateQueries({ queryKey: qk.tareas.all })
+    },
+  })
+}
+

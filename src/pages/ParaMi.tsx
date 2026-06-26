@@ -8,6 +8,7 @@ import {
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { Skeleton, EmptyState } from '../components/ui.tsx'
+import { fmtFechaHora } from '../lib/ui.ts'
 
 export default function ParaMi() {
   const navigate = useNavigate()
@@ -86,14 +87,19 @@ export default function ParaMi() {
                   {(autor?.nombre ?? '—').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1.5 text-[13px]">
+                  <div className="mb-1.5 flex items-baseline gap-2 text-[13px]">
                     <span className="font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                    {q.created_at && (
+                      <span className="text-[11px] font-mono text-faint">
+                        {fmtFechaHora(q.created_at)}
+                      </span>
+                    )}
                   </div>
                   <p className="m-0 mb-3 text-[14.5px] leading-[1.55] text-ink-soft">{q.texto}</p>
                   <div className="flex items-center gap-2.5">
                     <button
                       type="button"
-                      onClick={() => proy && navigate(`/proyectos/${proy.id}`)}
+                      onClick={() => proy && tarea && navigate(`/proyectos/${proy.id}?tarea=${tarea.id}`)}
                       className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[#f7f4ef]"
                     >
                       <span className="text-xs text-muted">↗</span> {tarea?.titulo ?? 'Ver tarea'}

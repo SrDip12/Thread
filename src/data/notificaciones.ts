@@ -1,76 +1,157 @@
-// Notificaciones del usuario, DERIVADAS de datos existentes (sin tabla propia):
-// comentarios de OTRAS personas en tareas donde sos responsable.
-// El "leído" es local (localStorage), no compartido entre dispositivos.
-// ponytail: feed derivado, sin triggers ni tabla; si hace falta read-state
-// compartido o notifs de no-comentario, recién ahí una tabla `notificaciones`.
-
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { qk } from './queryKeys.ts'
+import type { TablesInsert } from '../lib/database.types.ts'
+import { useMisTareas } from './tareas.ts'
+import { fmtFecha } from '../lib/ui.ts'
 
 export interface Notif {
-  id: string // = comentario id
-  ts: string // created_at del comentario
-  autorId: string
-  texto: string
-  tareaId: string
-  tareaTitulo: string
-  proyectoId: string
-  proyectoNombre: string
-  proyectoColor: string
-  esPregunta: boolean // para_po
-}
-
-interface TareaMeta {
   id: string
-  titulo: string
-  modulos: { proyectos: { id: string; nombre: string; color: string } | null } | null
+  created_at: string
+  autor_id: string | null
+  autor_nombre: string
+  autor_color: string
+  texto: string
+  leido: boolean
+  tarea_id: string | null
+  tarea_titulo: string
+  proyecto_id: string | null
+  proyecto_nombre: string
+  proyecto_color: string
+  tipo: string
 }
 
 export function useNotificaciones(personaId: string) {
   return useQuery({
     queryKey: qk.notificaciones.byPersona(personaId),
     queryFn: async (): Promise<Notif[]> => {
-      const { data: misTareas, error: e1 } = await supabase
-        .from('tareas')
-        .select('id, titulo, modulos(proyectos(id, nombre, color))')
-        .eq('responsable_id', personaId)
-      if (e1) throw e1
-      const tareas = (misTareas ?? []) as unknown as TareaMeta[]
-      if (tareas.length === 0) return []
-
-      const meta = new Map(tareas.map((t) => [t.id, t]))
-      const { data: coms, error: e2 } = await supabase
-        .from('comentarios')
-        .select('id, tarea_id, autor_id, texto, para_po, created_at')
-        .in('tarea_id', [...meta.keys()])
-        .neq('autor_id', personaId)
+      const { data, error } = await supabase
+        .from('notificaciones')
+        .select(`
+          id,
+          created_at,
+          autor_id,
+          tipo,
+          texto,
+          leido,
+          tarea_id,
+          proyecto_id,
+          personas:autor_id(nombre, color),
+          tareas(titulo),
+          proyectos(nombre, color)
+        `)
+        .eq('persona_id', personaId)
         .order('created_at', { ascending: false })
-        .limit(40)
-      if (e2) throw e2
+        .limit(50)
 
-      return (coms ?? []).flatMap((c) => {
-        const t = c.tarea_id ? meta.get(c.tarea_id) : undefined
-        if (!t || !c.tarea_id) return []
-        const proy = t.modulos?.proyectos
-        return [{
-          id: c.id,
-          ts: c.created_at,
-          autorId: c.autor_id,
-          texto: c.texto,
-          tareaId: c.tarea_id,
-          tareaTitulo: t.titulo,
-          proyectoId: proy?.id ?? '',
-          proyectoNombre: proy?.nombre ?? 'Proyecto',
-          proyectoColor: proy?.color ?? '#c4bdb1',
-          esPregunta: c.para_po,
-        }]
-      })
+      if (error) throw error
+
+      return (data ?? []).map((n: any) => ({
+        id: n.id,
+        created_at: n.created_at,
+        autor_id: n.autor_id,
+        autor_nombre: n.personas?.nombre ?? 'Sistema',
+        autor_color: n.personas?.color ?? '#c4bdb1',
+        texto: n.texto,
+        leido: n.leido,
+        tarea_id: n.tarea_id,
+        tarea_titulo: n.tareas?.titulo ?? '',
+        proyecto_id: n.proyecto_id,
+        proyecto_nombre: n.proyectos?.nombre ?? '',
+        proyecto_color: n.proyectos?.color ?? '#c4bdb1',
+        tipo: n.tipo,
+      }))
     },
     enabled: Boolean(personaId),
-    // Sin realtime global: refrescamos al volver a la pestaña. La campana vive en
-    // todas las vistas; el Realtime por-proyecto solo invalida en el proyecto abierto.
-    refetchOnWindowFocus: true,
-    staleTime: 60_000,
+    staleTime: 30000,
   })
+}
+
+export function useMarcarLeida() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; personaId: string }): Promise<void> => {
+      const { error } = await supabase
+        .from('notificaciones')
+        .update({ leido: true })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: qk.notificaciones.byPersona(variables.personaId),
+      })
+    },
+  })
+}
+
+export function useMarcarTodasLeidas() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (personaId: string): Promise<void> => {
+      const { error } = await supabase
+        .from('notificaciones')
+        .update({ leido: true })
+        .eq('persona_id', personaId)
+        .eq('leido', false)
+      if (error) throw error
+    },
+    onSuccess: (_data, personaId) => {
+      void queryClient.invalidateQueries({
+        queryKey: qk.notificaciones.byPersona(personaId),
+      })
+    },
+  })
+}
+
+export function useCrearNotificacion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (nueva: TablesInsert<'notificaciones'>): Promise<void> => {
+      const { error } = await supabase.from('notificaciones').insert(nueva)
+      if (error) throw error
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: qk.notificaciones.byPersona(variables.persona_id),
+      })
+    },
+  })
+}
+
+export function useChequearVencimientos(personaId: string) {
+  const { data: misTareas } = useMisTareas(personaId)
+  const { data: notifs } = useNotificaciones(personaId)
+  const crearNotif = useCrearNotificacion()
+
+  useEffect(() => {
+    if (!personaId || !misTareas || !notifs) return
+
+    const ahora = new Date()
+    ahora.setHours(0, 0, 0, 0)
+
+    const vencenPronto = misTareas.filter((t) => {
+      if (t.estado === 'hecho' || !t.fecha) return false
+      const fVence = new Date(t.fecha + 'T00:00:00')
+      const diffTiempo = fVence.getTime() - ahora.getTime()
+      const diffDias = diffTiempo / (1000 * 3600 * 24)
+      return diffDias <= 2 // vence hoy, mañana o ya vencida
+    })
+
+    for (const t of vencenPronto) {
+      const existeNotif = notifs.some((n) => n.tipo === 'vencimiento' && n.tarea_id === t.id)
+      if (!existeNotif) {
+        crearNotif.mutate({
+          persona_id: personaId,
+          autor_id: null,
+          tipo: 'vencimiento',
+          texto: `La tarea "${t.titulo}" vence pronto o ya expiró (${fmtFecha(t.fecha)})`,
+          tarea_id: t.id,
+          proyecto_id: t.modulos?.proyectos?.id ?? null,
+          leido: false,
+        })
+      }
+    }
+  }, [misTareas, notifs, personaId, crearNotif])
 }

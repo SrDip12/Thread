@@ -1,47 +1,33 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
-import { usePersonas } from '../data/personas.ts'
-import { useNotificaciones } from '../data/notificaciones.ts'
+import { useNotificaciones, useMarcarLeida, useMarcarTodasLeidas } from '../data/notificaciones.ts'
+import { useRealtimeNotificaciones } from '../data/realtime.ts'
 import { fmtRelativo } from '../lib/ui.ts'
 import { Avatar } from './ui.tsx'
-
-// "Visto hasta" por persona, en localStorage. Lo nuevo (ts > visto) cuenta como no leído.
-function leerVisto(personaId: string): number {
-  try {
-    return Number(localStorage.getItem(`notif_visto_${personaId}`)) || 0
-  } catch {
-    return 0
-  }
-}
-function guardarVisto(personaId: string, ms: number) {
-  try {
-    localStorage.setItem(`notif_visto_${personaId}`, String(ms))
-  } catch {
-    // localStorage puede fallar (modo privado); el badge igual baja en esta sesión.
-  }
-}
 
 export default function Campana() {
   const navigate = useNavigate()
   const { persona } = useAuth()
   const personaId = persona?.id ?? ''
+
+  // Suscripción Realtime para notificaciones de la persona
+  useRealtimeNotificaciones(personaId)
+
   const { data: notifs } = useNotificaciones(personaId)
-  const { data: personas } = usePersonas()
-  const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
+  const marcarLeida = useMarcarLeida()
+  const marcarTodasLeidas = useMarcarTodasLeidas()
 
   const [abierto, setAbierto] = useState(false)
-  const [visto, setVisto] = useState(() => leerVisto(personaId))
 
   const lista = notifs ?? []
-  const noLeidas = lista.filter((n) => new Date(n.ts).getTime() > visto).length
+  const noLeidas = lista.filter((n) => !n.leido).length
 
   const abrir = () => {
     setAbierto(true)
-    // Al abrir, marcamos todo como leído (el más reciente fija el corte).
-    const masReciente = lista[0] ? new Date(lista[0].ts).getTime() : Date.now()
-    guardarVisto(personaId, masReciente)
-    setVisto(masReciente)
+    if (noLeidas > 0) {
+      marcarTodasLeidas.mutate(personaId)
+    }
   }
 
   return (
@@ -75,29 +61,54 @@ export default function Campana() {
             ) : (
               <div className="flex max-h-[60vh] flex-col gap-0.5 overflow-auto">
                 {lista.map((n) => {
-                  const autor = personaPorId.get(n.autorId)
                   return (
                     <button
                       key={n.id}
                       type="button"
                       onClick={() => {
                         setAbierto(false)
-                        if (n.proyectoId) navigate(`/proyectos/${n.proyectoId}`)
+                        if (!n.leido) {
+                          marcarLeida.mutate({ id: n.id, personaId })
+                        }
+                        if (n.proyecto_id) {
+                          if (n.tarea_id) {
+                            navigate(`/proyectos/${n.proyecto_id}?tarea=${n.tarea_id}`)
+                          } else {
+                            navigate(`/proyectos/${n.proyecto_id}`)
+                          }
+                        }
                       }}
-                      className="flex w-full gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
+                      className={`flex w-full gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover ${
+                        !n.leido ? 'bg-[#fdf6f1]/60' : ''
+                      }`}
                     >
-                      <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={26} />
+                      <Avatar nombre={n.autor_nombre} color={n.autor_color} size={26} />
                       <div className="min-w-0 flex-1">
                         <div className="text-[12.5px] leading-snug text-ink">
-                          <span className="font-bold">{autor?.nombre ?? 'Alguien'}</span>{' '}
-                          {n.esPregunta ? 'preguntó en' : 'comentó en'}{' '}
-                          <span className="font-semibold">{n.tareaTitulo}</span>
+                          {n.tipo === 'vencimiento' ? (
+                            <span className="text-muted font-normal">{n.texto}</span>
+                          ) : (
+                            <>
+                              <span className="font-bold">{n.autor_nombre}</span>{' '}
+                              {n.tipo === 'mencion' && <>te mencionó en <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'pregunta' && <>te preguntó en <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'comentario' && <>comentó en <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'asignacion' && <>te asignó la tarea <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {!['mencion', 'pregunta', 'comentario', 'asignacion'].includes(n.tipo) && n.texto}
+                            </>
+                          )}
                         </div>
                         <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
-                          <span className="inline-block h-1.5 w-1.5 flex-none rounded-[1px]" style={{ background: n.proyectoColor }} />
-                          <span className="truncate">{n.proyectoNombre}</span>
+                          <span className="inline-block h-1.5 w-1.5 flex-none rounded-[1px]" style={{ background: n.proyecto_color }} />
+                          <span className="truncate">{n.proyecto_nombre}</span>
                           <span className="text-[#d6cfc4]">·</span>
-                          <span className="flex-none">{fmtRelativo(n.ts)}</span>
+                          <span className="flex-none">{fmtRelativo(n.created_at)}</span>
+                          {!n.leido && (
+                            <>
+                              <span className="text-[#d6cfc4]">·</span>
+                              <span className="h-1.5 w-1.5 rounded-full bg-brand flex-none" />
+                            </>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -111,3 +122,4 @@ export default function Campana() {
     </div>
   )
 }
+

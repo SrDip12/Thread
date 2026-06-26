@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProyectos } from '../data/proyectos.ts'
+import { useBuscarGlobal } from '../data/buscar.ts'
 
 type Item = {
   id: string
@@ -20,12 +21,20 @@ export default function CommandPalette({
   onCerrar: () => void
 }) {
   const [q, setQ] = useState('')
+  const [qDebounced, setQDebounced] = useState('')
   const [idx, setIdx] = useState(0)
   const navigate = useNavigate()
   const { data: proyectos } = useProyectos()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const cerrar = onCerrar
+
+  useEffect(() => {
+    const handler = setTimeout(() => setQDebounced(q), 150)
+    return () => clearTimeout(handler)
+  }, [q])
+
+  const { data: dbResults } = useBuscarGlobal(qDebounced)
 
   const items = useMemo<Item[]>(() => {
     const base: Item[] = [
@@ -36,19 +45,74 @@ export default function CommandPalette({
       { id: 'nav-rev', label: 'Revisiones', hint: 'Ir a', run: () => navigate('/revisiones') },
       { id: 'nav-eq', label: 'Equipo', hint: 'Ir a', run: () => navigate('/equipo') },
       { id: 'act-nuevo', label: 'Nuevo proyecto', hint: 'Crear', run: () => navigate('/proyectos?nuevo=1') },
-      ...(proyectos ?? []).map((p) => ({
-        id: `proy-${p.id}`,
-        label: p.nombre,
-        hint: 'Proyecto',
-        color: p.color,
-        run: () => navigate(`/proyectos/${p.id}`),
-      })),
     ]
     const term = q.trim().toLowerCase()
-    if (!term) return base
-    return base.filter((it) => it.label.toLowerCase().includes(term))
-    // ponytail: filtro substring en cliente; si crecen los proyectos, pasar a fuzzy/server.
-  }, [proyectos, q, navigate])
+    
+    // Si la búsqueda es muy corta, solo filtramos navegación base y proyectos cacheados
+    if (term.length < 2) {
+      const filteredBase = base.filter((it) => it.label.toLowerCase().includes(term))
+      const filteredProys = (proyectos ?? [])
+        .filter((p) => p.nombre.toLowerCase().includes(term))
+        .map((p) => ({
+          id: `proy-${p.id}`,
+          label: p.nombre,
+          hint: 'Proyecto',
+          color: p.color,
+          run: () => navigate(`/proyectos/${p.id}`),
+        }))
+      return [...filteredBase, ...filteredProys]
+    }
+
+    const res: Item[] = []
+    if (dbResults) {
+      // 1. Proyectos
+      dbResults.proyectos.forEach((p) => {
+        res.push({
+          id: `db-proy-${p.id}`,
+          label: p.nombre,
+          hint: 'Proyecto',
+          color: p.color,
+          run: () => navigate(`/proyectos/${p.id}`),
+        })
+      })
+
+      // 2. Tareas
+      dbResults.tareas.forEach((t) => {
+        res.push({
+          id: `db-tarea-${t.id}`,
+          label: t.titulo,
+          hint: `Tarea en ${t.proyecto_nombre} (${t.modulo_nombre})`,
+          color: t.proyecto_color,
+          run: () => navigate(`/proyectos/${t.proyecto_id}?tarea=${t.id}`),
+        })
+      })
+
+      // 3. Comentarios
+      dbResults.comentarios.forEach((c) => {
+        const textoCorto = c.texto.length > 50 ? `${c.texto.slice(0, 50)}...` : c.texto
+        res.push({
+          id: `db-com-${c.id}`,
+          label: `«${textoCorto}»`,
+          hint: `Comentario en "${c.tarea_titulo}" (${c.proyecto_nombre})`,
+          color: c.proyecto_color,
+          run: () => navigate(`/proyectos/${c.proyecto_id}?tarea=${c.tarea_id}`),
+        })
+      })
+
+      // 4. Personas
+      dbResults.personas.forEach((p) => {
+        res.push({
+          id: `db-pers-${p.id}`,
+          label: p.nombre,
+          hint: `Miembro (${p.email})`,
+          color: p.color,
+          run: () => navigate(`/equipo`),
+        })
+      })
+    }
+
+    return res
+  }, [proyectos, dbResults, q, navigate])
 
   useEffect(() => setIdx(0), [q])
   // Al abrir: limpiar búsqueda y enfocar.

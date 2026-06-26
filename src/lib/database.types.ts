@@ -415,6 +415,57 @@ export interface Database {
           persona_id?: string
         }
       }
+      tarea_dependencias: {
+        Relationships: []
+        Row: {
+          bloqueadora_id: string
+          bloqueada_id: string
+        }
+        Insert: {
+          bloqueadora_id: string
+          bloqueada_id: string
+        }
+        Update: {
+          bloqueadora_id?: string
+          bloqueada_id?: string
+        }
+      }
+      notificaciones: {
+        Relationships: []
+        Row: {
+          id: string
+          persona_id: string
+          autor_id: string | null
+          tipo: string
+          texto: string
+          leido: boolean
+          tarea_id: string | null
+          proyecto_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          persona_id: string
+          autor_id?: string | null
+          tipo: string
+          texto: string
+          leido?: boolean
+          tarea_id?: string | null
+          proyecto_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          persona_id?: string
+          autor_id?: string | null
+          tipo?: string
+          texto?: string
+          leido?: boolean
+          tarea_id?: string | null
+          proyecto_id?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: Record<never, never>
     Functions: Record<never, never>
@@ -422,7 +473,7 @@ export interface Database {
       rol_persona: 'po' | 'dev'
       estado_proyecto: 'activo' | 'pausado' | 'cerrado'
       estado_modulo: 'abierto' | 'en_revision' | 'cerrado'
-      estado_tarea: 'proximo' | 'en_curso' | 'hecho'
+      estado_tarea: 'proximo' | 'en_curso' | 'revision' | 'hecho'
       estado_sprint: 'planificado' | 'activo' | 'cerrado'
       tipo_reunion: 'sprint_planning' | 'retro' | 'sync' | 'otro' | 'cliente'
       tipo_tarea: 'tarea' | 'correccion'

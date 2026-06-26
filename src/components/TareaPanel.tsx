@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import type { Tables } from '../lib/database.types.ts'
-import { ESTADOS, estadoVM, fmtFecha } from '../lib/ui.ts'
-import { useActualizarTarea, useTareas } from '../data/tareas.ts'
+import { ESTADOS, estadoVM, fmtFecha, fmtFechaHora } from '../lib/ui.ts'
+import {
+  useActualizarTarea,
+  useTareas,
+  useTareasPorProyecto,
+  useDependenciasTarea,
+  useCrearDependencia,
+  useEliminarDependencia,
+} from '../data/tareas.ts'
 import {
   useComentarios,
   useCrearComentario,
@@ -74,6 +81,31 @@ export default function TareaPanel({
 
   const responsable = tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined
 
+  const { data: deps } = useDependenciasTarea(tarea.id)
+  const { data: todasLasTareas } = useTareasPorProyecto(proyecto.id)
+  const crearDep = useCrearDependencia()
+  const elimDep = useEliminarDependencia()
+
+  const dependencias = deps ?? []
+  const tareasProyecto = todasLasTareas ?? []
+  const tareasMap = new Map(tareasProyecto.map((t) => [t.id, t]))
+
+  // Tareas que bloquean a la actual
+  const bloqueadores = dependencias
+    .filter((d) => d.bloqueada_id === tarea.id)
+    .map((d) => tareasMap.get(d.bloqueadora_id))
+    .filter(Boolean) as Tarea[]
+
+  // Tareas que la actual bloquea
+  const bloqueados = dependencias
+    .filter((d) => d.bloqueadora_id === tarea.id)
+    .map((d) => tareasMap.get(d.bloqueada_id))
+    .filter(Boolean) as Tarea[]
+
+  // ¿Está la tarea bloqueada por tareas incompletas?
+  const blockersIncompletos = bloqueadores.filter((b) => b.estado !== 'hecho')
+  const estaBloqueada = blockersIncompletos.length > 0
+
   return (
     <aside className="flex h-screen w-[430px] flex-none flex-col overflow-auto border-l border-line bg-surface">
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-soft bg-surface px-[22px] py-4">
@@ -94,6 +126,26 @@ export default function TareaPanel({
           </svg>
         </button>
       </div>
+
+      {estaBloqueada && (
+        <div className="mx-[22px] mt-4 rounded-lg border border-[#e6c9bf] bg-[#fbeee8] p-3 text-xs text-brand-strong flex-none">
+          <div className="flex items-center gap-1.5 font-bold mb-1">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="10" height="4" rx="1" />
+              <path d="M4 11V6a4 4 0 0 1 8 0v5" />
+            </svg>
+            Tarea Bloqueada
+          </div>
+          Esta tarea no debería empezar hasta completar:
+          <ul className="list-disc list-inside mt-1 font-semibold space-y-0.5">
+            {blockersIncompletos.map((b) => (
+              <li key={b.id}>
+                {b.titulo} <span className="font-normal text-muted">({estadoVM(b.estado).label})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="border-b border-line-soft px-[22px] pb-[18px] pt-[22px]">
         <div className="mb-[18px]">
@@ -206,6 +258,78 @@ export default function TareaPanel({
         />
       </div>
 
+      {/* Sección de Dependencias */}
+      <div className="border-b border-line-soft px-[22px] pb-[18px] pt-5">
+        <div className="mb-[9px] text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+          Dependencias
+        </div>
+        
+        {/* Lista de bloqueadores */}
+        <div className="mb-3 space-y-1.5">
+          <div className="text-[12px] font-bold text-muted mb-1">Bloqueada por (tareas previas):</div>
+          {bloqueadores.length === 0 ? (
+            <div className="text-[12.5px] text-faint italic pl-1">Sin bloqueadores.</div>
+          ) : (
+            bloqueadores.map((b) => (
+              <div key={b.id} className="flex items-center justify-between rounded-lg bg-canvas px-2.5 py-1.5 text-xs">
+                <span className="truncate font-medium text-ink flex-1 mr-2">{b.titulo}</span>
+                <span className="flex-none font-mono text-[10px] px-1.5 py-0.5 rounded mr-2" style={{ background: estadoVM(b.estado).bg, color: estadoVM(b.estado).fg }}>
+                  {estadoVM(b.estado).label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => elimDep.mutate({ bloqueadora_id: b.id, bloqueada_id: tarea.id })}
+                  className="text-faint hover:text-brand-strong font-bold px-1"
+                  title="Eliminar bloqueo"
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Agregar bloqueador */}
+        <div className="mt-3 flex items-center gap-2">
+          <select
+            value=""
+            onChange={(e) => {
+              const val = e.target.value
+              if (val) {
+                crearDep.mutate({ bloqueadora_id: val, bloqueada_id: tarea.id })
+              }
+            }}
+            className="flex-1 rounded-md border border-line bg-surface px-2 py-1 text-[12.5px] outline-none focus:border-brand"
+          >
+            <option value="">+ Agregar tarea bloqueadora...</option>
+            {tareasProyecto
+              .filter((t) => t.id !== tarea.id && !bloqueadores.some((b) => b.id === t.id) && !bloqueados.some((b) => b.id === t.id))
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.titulo}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Lista de tareas bloqueadas */}
+        {bloqueados.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[12px] font-bold text-muted mb-1.5">Bloquea a (tareas que dependen de esta):</div>
+            <div className="space-y-1.5">
+              {bloqueados.map((b) => (
+                <div key={b.id} className="flex items-center justify-between rounded-lg bg-canvas px-2.5 py-1.5 text-xs">
+                  <span className="truncate font-medium text-ink flex-1 mr-2">{b.titulo}</span>
+                  <span className="flex-none font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: estadoVM(b.estado).bg, color: estadoVM(b.estado).fg }}>
+                    {estadoVM(b.estado).label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <Comentarios tarea={tarea} yoId={yo?.id ?? null} personaPorId={personaPorId} />
     </aside>
   )
@@ -260,7 +384,14 @@ function Comentarios({
               <div key={c.id} className="flex gap-[11px]">
                 <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={28} />
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</div>
+                  <div className="mb-1 flex items-baseline gap-2">
+                    <span className="text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                    {c.created_at && (
+                      <span className="text-[11px] font-mono text-faint">
+                        {fmtFechaHora(c.created_at)}
+                      </span>
+                    )}
+                  </div>
                   <div
                     className="rounded-[10px] text-[13.5px] leading-[1.55] text-ink-soft"
                     style={{

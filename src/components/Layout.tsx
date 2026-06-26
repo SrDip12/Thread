@@ -9,6 +9,7 @@ import CommandPalette from './CommandPalette.tsx'
 import ChatProyecto from './ChatProyecto.tsx'
 import Campana from './Notificaciones.tsx'
 import Onboarding, { onboardingPendiente } from './Onboarding.tsx'
+import { useChequearVencimientos } from '../data/notificaciones.ts'
 
 const iconProps = {
   width: 17,
@@ -111,7 +112,8 @@ export default function Layout() {
   const poCount = preguntas?.length ?? 0
   const { data: enRevision } = useModulosEnRevision()
   const revCount = enRevision?.length ?? 0
-  useRecordatoriosReuniones() // alertas de reuniones mientras la app está abierta
+  useRecordatoriosReuniones() // Alertas de reuniones mientras la app está abierta
+  useChequearVencimientos(persona?.id ?? '')
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
   const [paletaAbierta, setPaletaAbierta] = useState(false)
   // El script de index.html ya fijó la clase antes del paint; acá solo reflejamos.

@@ -49,3 +49,31 @@ export function useRealtimeProyecto(proyectoId: string, moduloIds: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyectoId, idsKey, queryClient])
 }
+
+export function useRealtimeNotificaciones(personaId: string) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!personaId) return
+
+    const channel = supabase
+      .channel(`notificaciones:${personaId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notificaciones',
+          filter: `persona_id=eq.${personaId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: qk.notificaciones.all })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [personaId, queryClient])
+}

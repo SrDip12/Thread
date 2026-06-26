@@ -76,7 +76,7 @@ export default function MisTareas() {
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => navigate(`/proyectos/${g.proyectoId}`)}
+                  onClick={() => navigate(`/proyectos/${g.proyectoId}?tarea=${t.id}`)}
                   className="flex w-full items-center gap-3 border-b border-line-soft px-4 py-[11px] text-left transition-colors hover:bg-row-hover"
                 >
                   <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />

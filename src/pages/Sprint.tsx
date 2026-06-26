@@ -1,10 +1,11 @@
 import { useState, type KeyboardEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM, ESTADOS } from '../lib/ui.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { useModulos } from '../data/modulos.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
+import KanbanBoard from '../components/KanbanBoard.tsx'
 import {
   useSprints,
   useSprintActivo,
@@ -18,6 +19,8 @@ import {
   useCrearTarea,
   useActualizarTarea,
   type TareaConModulo,
+  useProyectoDependencias,
+  useTareasPorProyecto,
 } from '../data/tareas.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
@@ -157,9 +160,30 @@ function SprintActivo({
   proyectoId: string
   acento: string
 }) {
+  const navigate = useNavigate()
   const { data: personas } = usePersonas()
   const actualizarSprint = useActualizarSprint()
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
+  const { data: proyectoDeps } = useProyectoDependencias(proyectoId)
+  const { data: todasLasTareas } = useTareasPorProyecto(proyectoId)
+  const { data: sprintTareas } = useTareasSprint(sprint.id)
+  const { data: modulos } = useModulos(proyectoId)
+  const actualizarTarea = useActualizarTarea()
+
+  const [vista, setVista] = useState<'lista' | 'kanban'>(() => {
+    try {
+      return (localStorage.getItem('preferencia_vista_sprint') as 'lista' | 'kanban') || 'lista'
+    } catch {
+      return 'lista'
+    }
+  })
+
+  const cambiarVista = (v: 'lista' | 'kanban') => {
+    setVista(v)
+    try {
+      localStorage.setItem('preferencia_vista_sprint', v)
+    } catch {}
+  }
 
   const guardarFecha = (campo: 'fecha_inicio' | 'fecha_fin', valor: string) => {
     actualizarSprint.mutate({
@@ -215,8 +239,72 @@ function SprintActivo({
         </div>
       </div>
 
-      <TareasSprint sprint={sprint} proyectoId={proyectoId} personaPorId={personaPorId} />
-      <Backlog sprint={sprint} proyectoId={proyectoId} personaPorId={personaPorId} />
+      <div>
+        <div className="flex items-center justify-between mb-4 px-0.5">
+          <div className="text-xs font-semibold uppercase tracking-[0.04em] text-faint">Tareas del sprint</div>
+          <div className="flex rounded-lg border border-line bg-surface p-0.5">
+            <button
+              type="button"
+              onClick={() => cambiarVista('lista')}
+              className={`rounded-[6px] px-2.5 py-1 text-xs font-bold transition-colors ${
+                vista === 'lista' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
+              }`}
+            >
+              Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => cambiarVista('kanban')}
+              className={`rounded-[6px] px-2.5 py-1 text-xs font-bold transition-colors ${
+                vista === 'kanban' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
+              }`}
+            >
+              Tablero
+            </button>
+          </div>
+        </div>
+
+        {vista === 'kanban' ? (
+          <div className="rounded-[13px] border border-line bg-surface p-4">
+            <KanbanBoard
+              tareas={sprintTareas ?? []}
+              personaPorId={personaPorId}
+              proyectoId={proyectoId}
+              proyectoDeps={proyectoDeps ?? []}
+              todasLasTareas={todasLasTareas ?? []}
+              moduloNombres={new Map((modulos ?? []).map((m) => [m.id, m.nombre]))}
+              onAbrir={(taskId) => {
+                navigate(`/proyectos/${proyectoId}?tarea=${taskId}`)
+              }}
+              onMoverTarea={(taskId, nuevoEstado) => {
+                const t = (todasLasTareas ?? []).find((x) => x.id === taskId)
+                if (t) {
+                  actualizarTarea.mutate({
+                    id: taskId,
+                    moduloId: t.modulo_id,
+                    cambios: { estado: nuevoEstado },
+                  })
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <TareasSprint
+            sprint={sprint}
+            proyectoId={proyectoId}
+            personaPorId={personaPorId}
+            proyectoDeps={proyectoDeps ?? []}
+            todasLasTareas={todasLasTareas ?? []}
+          />
+        )}
+      </div>
+      <Backlog
+        sprint={sprint}
+        proyectoId={proyectoId}
+        personaPorId={personaPorId}
+        proyectoDeps={proyectoDeps ?? []}
+        todasLasTareas={todasLasTareas ?? []}
+      />
       <PulsoEquipo sprint={sprint} personaPorId={personaPorId} />
       <CierreSprint sprint={sprint} proyectoId={proyectoId} acento={acento} />
     </div>
@@ -228,21 +316,34 @@ function FilaTarea({
   tarea,
   persona,
   onCiclar,
+  proyectoId,
+  isBlocked,
 }: {
   tarea: TareaConModulo
   persona: Persona | undefined
   onCiclar: () => void
+  proyectoId: string
+  isBlocked: boolean
 }) {
   const vm = estadoVM(tarea.estado)
   return (
     <div className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0">
       <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
-      <span
-        className="min-w-0 flex-1 truncate text-sm font-medium"
+      <Link
+        to={`/proyectos/${proyectoId}?tarea=${tarea.id}`}
+        className="min-w-0 flex-1 truncate text-sm font-medium hover:underline hover:text-brand flex items-center gap-1.5"
         style={{ color: vm.done ? '#a39d92' : '#1c1b19' }}
       >
+        {isBlocked && (
+          <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="inline">
+              <rect x="3" y="11" width="10" height="4" rx="1" />
+              <path d="M4 11V6a4 4 0 0 1 8 0v5" />
+            </svg>
+          </span>
+        )}
         {tarea.titulo}
-      </span>
+      </Link>
       {tarea.modulos?.nombre && (
         <span className="flex-none rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted">
           {tarea.modulos.nombre}
@@ -262,10 +363,14 @@ function TareasSprint({
   sprint,
   proyectoId,
   personaPorId,
+  proyectoDeps,
+  todasLasTareas,
 }: {
   sprint: Sprint
   proyectoId: string
   personaPorId: Map<string, Persona>
+  proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
+  todasLasTareas: Tables<'tareas'>[]
 }) {
   const { data: tareas } = useTareasSprint(sprint.id)
   const { data: modulos } = useModulos(proyectoId)
@@ -296,14 +401,25 @@ function TareasSprint({
     <section>
       <SeccionTitulo titulo="Tareas del sprint" extra={`${hechas}/${lista.length}`} />
       <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
-        {lista.map((t) => (
-          <FilaTarea
-            key={t.id}
-            tarea={t}
-            persona={t.responsable_id ? personaPorId.get(t.responsable_id) : undefined}
-            onCiclar={() => ciclar(t)}
-          />
-        ))}
+        {lista.map((t) => {
+          const isBlocked = proyectoDeps
+            .filter((d) => d.bloqueada_id === t.id)
+            .some((d) => {
+              const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
+              return b ? b.estado !== 'hecho' : false
+            })
+
+          return (
+            <FilaTarea
+              key={t.id}
+              tarea={t}
+              persona={t.responsable_id ? personaPorId.get(t.responsable_id) : undefined}
+              onCiclar={() => ciclar(t)}
+              proyectoId={proyectoId}
+              isBlocked={isBlocked}
+            />
+          )
+        })}
 
         <div className="flex items-center gap-2.5 border-t border-line-soft px-4 py-2.5">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none" aria-hidden="true">
@@ -342,10 +458,14 @@ function Backlog({
   sprint,
   proyectoId,
   personaPorId,
+  proyectoDeps,
+  todasLasTareas,
 }: {
   sprint: Sprint
   proyectoId: string
   personaPorId: Map<string, Persona>
+  proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
+  todasLasTareas: Tables<'tareas'>[]
 }) {
   const { data: tareas } = useTareasBacklog(proyectoId)
   const actualizar = useActualizarTarea()
@@ -373,13 +493,33 @@ function Backlog({
           {lista.map((t) => {
             const vm = estadoVM(t.estado)
             const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+            const isBlocked = proyectoDeps
+              .filter((d) => d.bloqueada_id === t.id)
+              .some((d) => {
+                const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
+                return b ? b.estado !== 'hecho' : false
+              })
+
             return (
               <div
                 key={t.id}
                 className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0"
               >
                 <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{t.titulo}</span>
+                <Link
+                  to={`/proyectos/${proyectoId}?tarea=${t.id}`}
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:underline hover:text-brand flex items-center gap-1.5"
+                >
+                  {isBlocked && (
+                    <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="inline">
+                        <rect x="3" y="11" width="10" height="4" rx="1" />
+                        <path d="M4 11V6a4 4 0 0 1 8 0v5" />
+                      </svg>
+                    </span>
+                  )}
+                  {t.titulo}
+                </Link>
                 {t.modulos?.nombre && (
                   <span className="flex-none rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted">
                     {t.modulos.nombre}
