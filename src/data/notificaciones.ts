@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { qk } from './queryKeys.ts'
@@ -125,8 +125,24 @@ export function useChequearVencimientos(personaId: string) {
   const { data: notifs } = useNotificaciones(personaId)
   const crearNotif = useCrearNotificacion()
 
+  // Registro de notificaciones de vencimiento ya solicitadas en esta sesión
+  const creadosRef = useRef<Set<string>>(new Set())
+  const ultimoPersonaIdRef = useRef<string | null>(null)
+
   useEffect(() => {
-    if (!personaId || !misTareas || !notifs) return
+    if (!personaId) {
+      creadosRef.current.clear()
+      ultimoPersonaIdRef.current = null
+      return
+    }
+
+    // Si cambia de usuario, limpiar el registro
+    if (ultimoPersonaIdRef.current !== personaId) {
+      creadosRef.current.clear()
+      ultimoPersonaIdRef.current = personaId
+    }
+
+    if (!misTareas || !notifs) return
 
     const ahora = new Date()
     ahora.setHours(0, 0, 0, 0)
@@ -141,7 +157,10 @@ export function useChequearVencimientos(personaId: string) {
 
     for (const t of vencenPronto) {
       const existeNotif = notifs.some((n) => n.tipo === 'vencimiento' && n.tarea_id === t.id)
-      if (!existeNotif) {
+      
+      // Solo disparar la mutación si no existe en BD y no ha sido solicitada en esta sesión
+      if (!existeNotif && !creadosRef.current.has(t.id)) {
+        creadosRef.current.add(t.id)
         crearNotif.mutate({
           persona_id: personaId,
           autor_id: null,
