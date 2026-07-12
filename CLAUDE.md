@@ -103,12 +103,13 @@ Para una entidad/operación nueva: agregá el hook en su módulo de `src/data/`,
 
 - Tokens estáticos → `src/index.css` (`@theme`): `bg-canvas`, `text-ink`, `border-line`, `bg-surface`, `text-muted`, `bg-brand`, `bg-track`, etc.
 - Colores dinámicos (acento por proyecto, estados de tarea) → inline desde `src/lib/ui.ts` (`estadoVM`, `iniciales`, `fmtFecha`).
-- Presentacionales reutilizables → `src/components/ui.tsx` (`Avatar`, `AvatarStack`, `EstadoChip`, `ProgressBar`, `Eyebrow`).
-- Pantallas en `src/pages/`: `Proyectos`, `ProyectoDetalle` (módulos = secciones, filas densas, panel lateral `TareaPanel`), `MisTareas`, `ParaMi`, `Equipo`. `Reuniones` sigue como placeholder.
+- Presentacionales reutilizables → `src/components/ui.tsx` (`Avatar`, `AvatarStack`, `EstadoChip`, `FechaTag`, `ProgressBar`, `Eyebrow`, `InlineEdit`, `Skeleton`, `EmptyState`).
+- Señal de vencimiento: `fechaVM`/`diasHasta` en `src/lib/ui.ts` + `FechaTag` (rojo vencida, marca hoy, ámbar mañana). Usada en todas las filas de tarea.
+- Pantallas en `src/pages/`: `Hoy` (home: vencidas/para hoy/semana/reuniones del día), `Proyectos`, `ProyectoDetalle` (módulos = secciones, filas densas, panel lateral `TareaPanel`, vista Kanban), `Sprint`, `ProyectoGantt`, `MisTareas` (filtros pendientes/hechas, orden por vencimiento), `ParaMi`, `Reuniones`, `ReunionDetalle`, `Calendario` (reuniones + mis vencimientos), `Revisiones` (tabs: **Tareas** en estado `revision` para aprobar/devolver con motivo + **Módulos** con la compuerta del responsable de visión), `Equipo`.
 
 ## Sprints (liviano)
 
-Ventana de tiempo **ortogonal a los módulos**: la tarea sigue en su módulo y gana `sprint_id` opcional; el backlog = tareas sin sprint. Sin story points / velocity / burndown. Datos en `src/data/sprints.ts` + `src/data/pulsos.ts`; UI en `src/pages/Sprint.tsx` (ruta `/proyectos/:id/sprint`, link desde el detalle de proyecto). Incluye: crear sprint rápido ("Sprint N", fechas hoy..+14, objetivo de una línea), vista del sprint activo (tareas de todos los módulos, chip de estado que cicla), quick-add al sprint, mover backlog↔sprint, **pulso async** (reemplaza el daily; una línea por persona) y **cierre** (3 campos: logros/pegados/cambio; al cerrar, las no terminadas vuelven al backlog).
+Ventana de tiempo **ortogonal a los módulos**: la tarea sigue en su módulo y gana `sprint_id` opcional; el backlog = tareas sin sprint. Sin story points / velocity / burndown. Datos en `src/data/sprints.ts` + `src/data/pulsos.ts`; UI en `src/pages/Sprint.tsx` (ruta `/proyectos/:id/sprint`). La página muestra **todos** los sprints del proyecto (selector de pills; ninguno queda invisible aunque esté `planificado`/`cerrado`): planificados se pueden **Iniciar** (bloqueado si hay otro activo), cerrados quedan read-only con su resumen de cierre. Incluye: crear sprint rápido (entra `planificado` si ya hay uno activo), progreso (hechas/total) + chip de plazo, quick-add, mover backlog↔sprint, **pulso async** y **cierre** (logros/pegados/cambio; `useCerrarSprint` devuelve las no terminadas al backlog en un UPDATE).
 
 ## Reuniones + extracción con IA
 
@@ -156,4 +157,4 @@ Para `vercel dev` con el secret local: `vercel env add GROQ_API_KEY` (remoto) o 
 
 ## Navegación base
 
-Sidebar: Proyectos · Mis tareas · Para mí · Reuniones · Equipo. `/` redirige a `/proyectos`.
+Sidebar: Hoy · Proyectos · Mis tareas · Para mí · Reuniones · Calendario · Revisiones · Equipo. `/` redirige a `/hoy`.

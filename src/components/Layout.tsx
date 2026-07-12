@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
 import { useModulosEnRevision } from '../data/revisiones.ts'
+import { useTareasEnRevision } from '../data/tareas.ts'
 import { useRecordatoriosReuniones } from '../data/recordatorios.ts'
 import { Avatar } from './ui.tsx'
 import CommandPalette from './CommandPalette.tsx'
@@ -28,6 +29,16 @@ interface NavItem {
 }
 
 const nav: NavItem[] = [
+  {
+    to: '/hoy',
+    label: 'Hoy',
+    icon: (
+      <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="3.2" />
+        <path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1" />
+      </svg>
+    ),
+  },
   {
     to: '/proyectos',
     label: 'Proyectos',
@@ -111,7 +122,9 @@ export default function Layout() {
   const { data: preguntas } = useComentariosParaPo()
   const poCount = preguntas?.length ?? 0
   const { data: enRevision } = useModulosEnRevision()
-  const revCount = enRevision?.length ?? 0
+  const { data: tareasEnRevision } = useTareasEnRevision()
+  // La bandeja de revisiones junta módulos y tareas esperando decisión.
+  const revCount = (enRevision?.length ?? 0) + (tareasEnRevision?.length ?? 0)
   useRecordatoriosReuniones() // Alertas de reuniones mientras la app está abierta
   useChequearVencimientos(persona?.id ?? '')
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)

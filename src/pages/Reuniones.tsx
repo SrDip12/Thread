@@ -6,30 +6,15 @@ import { usePersonas } from '../data/personas.ts'
 import { useSprints } from '../data/sprints.ts'
 import { useReuniones, useCrearReunion } from '../data/reuniones.ts'
 import { ALERTAS, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
+import { TIPOS_REUNION, fmtFechaCompleta } from '../lib/ui.ts'
 import { Eyebrow, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type TipoReunion = Enums<'tipo_reunion'>
 
-// Mapa de tipo de reunión → etiqueta + colores (chip).
-const TIPOS: Record<TipoReunion, { label: string; color: string; tint: string }> = {
-  sprint_planning: { label: 'Sprint planning', color: '#bb6a3e', tint: '#f8ece2' },
-  retro: { label: 'Retro', color: '#477155', tint: '#e7efe9' },
-  sync: { label: 'Sync', color: '#43618f', tint: '#e8eef6' },
-  cliente: { label: 'Cliente', color: '#a96a23', tint: '#f9ecdc' },
-  otro: { label: 'Otro', color: '#7a5a8c', tint: '#f0e9f3' },
-}
+// Mapa de tipo de reunión → etiqueta + colores (chip), compartido en lib/ui.
+const TIPOS = TIPOS_REUNION
 
 const ORDEN_TIPOS: TipoReunion[] = ['sprint_planning', 'retro', 'sync', 'cliente', 'otro']
-
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-
-// Fecha completa "12 jun 2026" a partir de un timestamptz (o date). null si no hay.
-function fmtFechaCompleta(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`
-}
 
 export default function Reuniones() {
   const navigate = useNavigate()

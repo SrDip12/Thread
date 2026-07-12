@@ -4,7 +4,9 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 // el elemento [data-tour=...] con un box-shadow gigante que oscurece el resto.
 // Se marca como visto en localStorage; el botón "?" del sidebar lo reabre.
 
-const CLAVE_VISTO = 'thread_onboarding_visto'
+// v2: al renovarse la app, el tour se muestra una vez más a todos (clave nueva)
+// y arranca con "qué hay de nuevo".
+const CLAVE_VISTO = 'thread_onboarding_visto_v2'
 
 type Paso = {
   target: string | null // selector [data-tour]; null = paso centrado sin spotlight
@@ -15,20 +17,27 @@ type Paso = {
 const PASOS: Paso[] = [
   {
     target: null,
-    titulo: 'Bienvenido a Thread',
+    titulo: 'Thread se renovó',
     texto:
-      'Tu espacio para gestionar proyectos, tareas y reuniones del equipo. Te muestro las secciones en 1 minuto.',
+      'Nueva vista Hoy, vencimientos visibles en toda la app, sprints renovados y revisión de tareas. Te muestro qué hay de nuevo en 1 minuto.',
+  },
+  {
+    target: '[data-tour="hoy"]',
+    titulo: 'Hoy · nuevo',
+    texto:
+      'Tu plan del día: tareas vencidas, las que vencen hoy y esta semana, y las reuniones del día. Cambiá el estado de una tarea directo desde la fila. Es la pantalla de inicio.',
   },
   {
     target: '[data-tour="proyectos"]',
     titulo: 'Proyectos',
     texto:
-      'Cada proyecto se divide en módulos, y cada módulo en tareas. Entrá a un proyecto para ver las filas de tareas y abrir el panel lateral con el detalle de cada una.',
+      'Cada proyecto se divide en módulos, y cada módulo en tareas. Ahora las fechas vencidas se ven en rojo en todas las filas, y cada tarjeta muestra cuántas tareas vencidas tiene el proyecto.',
   },
   {
     target: '[data-tour="mis-tareas"]',
-    titulo: 'Mis tareas',
-    texto: 'Todo lo que tenés asignado a vos, de todos los proyectos, en una sola lista.',
+    titulo: 'Mis tareas · renovada',
+    texto:
+      'Filtros Pendientes/Hechas, orden por vencimiento (lo vencido primero) y cambio de estado con un clic en el chip.',
   },
   {
     target: '[data-tour="para-mi"]',
@@ -43,10 +52,16 @@ const PASOS: Paso[] = [
       'Registrá las notas de una reunión y la IA extrae las acciones concretas como tareas propuestas. Las revisás (responsable, módulo, fecha) antes de crearlas.',
   },
   {
-    target: '[data-tour="revisiones"]',
-    titulo: 'Revisiones',
+    target: '[data-tour="calendario"]',
+    titulo: 'Calendario · ahora con tareas',
     texto:
-      'La compuerta de calidad: módulos en revisión que se aprueban o se devuelven, y el feedback del cliente que entra como correcciones.',
+      'Además de las reuniones, ahora ves los vencimientos de tus tareas en el mes. Podés apagarlos con el toggle «Mis vencimientos».',
+  },
+  {
+    target: '[data-tour="revisiones"]',
+    titulo: 'Revisiones · ahora también de tareas',
+    texto:
+      'Dos bandejas: TAREAS que el equipo marcó «En revisión» (aprobá → hecho, o devolvé con motivo) y MÓDULOS esperando el visto bueno del responsable de visión.',
   },
   {
     target: '[data-tour="equipo"]',
@@ -56,7 +71,8 @@ const PASOS: Paso[] = [
   {
     target: null,
     titulo: '¡Listo!',
-    texto: 'Eso es todo. Podés volver a ver este recorrido cuando quieras con el botón "?" del menú.',
+    texto:
+      'Atajos útiles: ⌘K (o Ctrl+K) busca y navega a cualquier cosa; «n» crea una tarea dentro de un proyecto. Volvé a ver este recorrido con el botón "?" del menú.',
   },
 ]
 

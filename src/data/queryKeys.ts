@@ -20,11 +20,11 @@ export const qk = {
     byReunion: (reunionId: string) => [...qk.tareas.all, 'reunion', { reunionId }] as const,
     correcciones: (proyectoId: string) => [...qk.tareas.all, 'correcciones', { proyectoId }] as const,
     statsProyectos: () => [...qk.tareas.all, 'stats-proyectos'] as const,
+    enRevision: () => [...qk.tareas.all, 'en-revision'] as const,
   },
   sprints: {
     all: ['sprints'] as const,
     byProyecto: (proyectoId: string) => [...qk.sprints.all, { proyectoId }] as const,
-    activo: (proyectoId: string) => [...qk.sprints.all, 'activo', { proyectoId }] as const,
   },
   pulsos: {
     all: ['pulsos'] as const,

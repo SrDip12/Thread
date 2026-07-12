@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types.ts'
 import { supabase } from '../lib/supabase.ts'
+import { useAuth } from '../auth/AuthProvider.tsx'
+import { diasHasta } from '../lib/ui.ts'
 import { qk } from './queryKeys.ts'
 
 type Tarea = Tables<'tareas'>
@@ -60,6 +62,7 @@ export function useMisTareas(personaId: string) {
 export interface StatProyecto {
   total: number
   hechas: number
+  vencidas: number
   pct: number
   modulos: number
   miembros: string[]
@@ -75,21 +78,23 @@ export function useEstadisticasProyectos() {
       const modToProy = new Map((mods ?? []).map((m) => [m.id, m.proyecto_id]))
       const { data: tareas, error: e2 } = await supabase
         .from('tareas')
-        .select('modulo_id, estado, responsable_id')
+        .select('modulo_id, estado, responsable_id, fecha')
       if (e2) throw e2
 
+      const vacio = (): StatProyecto => ({ total: 0, hechas: 0, vencidas: 0, pct: 0, modulos: 0, miembros: [] })
       const stats: Record<string, StatProyecto> = {}
       for (const [, proyectoId] of modToProy) {
-        stats[proyectoId] ??= { total: 0, hechas: 0, pct: 0, modulos: 0, miembros: [] }
+        stats[proyectoId] ??= vacio()
         stats[proyectoId].modulos += 1
       }
       const miembrosSet: Record<string, Set<string>> = {}
       for (const t of tareas ?? []) {
         const proyectoId = modToProy.get(t.modulo_id)
         if (!proyectoId) continue
-        const s = (stats[proyectoId] ??= { total: 0, hechas: 0, pct: 0, modulos: 0, miembros: [] })
+        const s = (stats[proyectoId] ??= vacio())
         s.total += 1
         if (t.estado === 'hecho') s.hechas += 1
+        else if (t.fecha && diasHasta(t.fecha) < 0) s.vencidas += 1
         if (t.responsable_id) (miembrosSet[proyectoId] ??= new Set()).add(t.responsable_id)
       }
       for (const [proyectoId, s] of Object.entries(stats)) {
@@ -162,6 +167,23 @@ export function useTareasReunion(reunionId: string) {
       return (data ?? []) as unknown as TareaConProyecto[]
     },
     enabled: Boolean(reunionId),
+  })
+}
+
+// Tareas en estado 'revision' de todos los proyectos, con proyecto resuelto.
+// Para la bandeja de /revisiones: la más antigua (que más espera) primero.
+export function useTareasEnRevision() {
+  return useQuery({
+    queryKey: qk.tareas.enRevision(),
+    queryFn: async (): Promise<TareaConProyecto[]> => {
+      const { data, error } = await supabase
+        .from('tareas')
+        .select('*, modulos(nombre, proyectos(id, nombre, color))')
+        .eq('estado', 'revision')
+        .order('updated_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as unknown as TareaConProyecto[]
+    },
   })
 }
 
@@ -276,6 +298,19 @@ export function useCrearTarea() {
         ...(viejo ?? []),
         optimista,
       ])
+      // También en la lista por proyecto (la que renderizan detalle y sprint).
+      // El proyecto del módulo sale del cache de módulos; si no está, onSettled refetchea.
+      for (const [, mods] of queryClient.getQueriesData<{ id: string; proyecto_id: string }[]>({
+        queryKey: qk.modulos.all,
+      })) {
+        const m = Array.isArray(mods) ? mods.find((x) => x.id === nueva.modulo_id) : undefined
+        if (m) {
+          queryClient.setQueryData<Tarea[]>(qk.tareas.byProyecto(m.proyecto_id), (viejo) =>
+            viejo ? [...viejo, optimista] : viejo,
+          )
+          break
+        }
+      }
       if (nueva.sprint_id) {
         // Solo si la lista ya está cacheada (vista de sprint montada); el nombre
         // de módulo llega en el refetch de onSettled.
@@ -298,6 +333,8 @@ export function useCrearTarea() {
 // Actualizar tarea con merge optimista en todas las vistas.
 export function useActualizarTarea() {
   const queryClient = useQueryClient()
+  const { persona } = useAuth()
+  const yoId = persona?.id ?? null
   return useMutation({
     mutationFn: async ({
       id,
@@ -307,16 +344,20 @@ export function useActualizarTarea() {
       moduloId: string
       cambios: TablesUpdate<'tareas'>
     }): Promise<Tarea> => {
-      // 1. Obtener la tarea actual antes de actualizar
-      const { data: tareaActual, error: errGet } = await supabase
-        .from('tareas')
-        .select('responsable_id, titulo, modulo_id')
-        .eq('id', id)
-        .single()
-      
-      if (errGet) throw errGet
+      // El estado previo solo hace falta para notificar una asignación nueva;
+      // en el resto de updates (ciclar estado, fechas…) va directo el UPDATE.
+      const notificar = Boolean(cambios.responsable_id) && cambios.responsable_id !== yoId
+      let previa: { responsable_id: string | null; titulo: string; modulo_id: string } | null = null
+      if (notificar) {
+        const { data: actual, error: errGet } = await supabase
+          .from('tareas')
+          .select('responsable_id, titulo, modulo_id')
+          .eq('id', id)
+          .single()
+        if (errGet) throw errGet
+        previa = actual
+      }
 
-      // 2. Realizar la actualización
       const { data, error } = await supabase
         .from('tareas')
         .update(cambios)
@@ -325,42 +366,23 @@ export function useActualizarTarea() {
         .single()
       if (error) throw error
 
-      // 3. Si cambió el responsable y el nuevo responsable no es nulo
-      if (cambios.responsable_id && cambios.responsable_id !== tareaActual.responsable_id) {
+      // Avisar al nuevo responsable (si no se autoasignó y de verdad cambió).
+      if (notificar && previa && cambios.responsable_id !== previa.responsable_id) {
         try {
-          // Obtener el módulo para saber el proyecto_id
           const { data: mod } = await supabase
             .from('modulos')
             .select('proyecto_id')
-            .eq('id', tareaActual.modulo_id)
+            .eq('id', previa.modulo_id)
             .single()
-
-          // Obtener el usuario autenticado para saber quién hace la asignación
-          const { data: authUser } = await supabase.auth.getUser()
-          const email = authUser.user?.email
-          
-          let autorId: string | null = null
-          if (email) {
-            const { data: pers } = await supabase
-              .from('personas')
-              .select('id')
-              .eq('email', email)
-              .single()
-            autorId = pers?.id ?? null
-          }
-
-          // Si el asignador no es el mismo asignado
-          if (cambios.responsable_id !== autorId) {
-            await supabase.from('notificaciones').insert({
-              persona_id: cambios.responsable_id,
-              autor_id: autorId,
-              tipo: 'asignacion',
-              texto: `Te asignó la tarea "${tareaActual.titulo}"`,
-              tarea_id: id,
-              proyecto_id: mod?.proyecto_id ?? null,
-              leido: false,
-            })
-          }
+          await supabase.from('notificaciones').insert({
+            persona_id: cambios.responsable_id as string,
+            autor_id: yoId,
+            tipo: 'asignacion',
+            texto: `Te asignó la tarea "${previa.titulo}"`,
+            tarea_id: id,
+            proyecto_id: mod?.proyecto_id ?? null,
+            leido: false,
+          })
         } catch (e) {
           console.error('Error al insertar notificación de asignación:', e)
         }
@@ -391,19 +413,17 @@ export function useEliminarTarea() {
       const { error } = await supabase.from('tareas').delete().eq('id', id)
       if (error) throw error
     },
-    onMutate: async ({ id, moduloId }) => {
-      const queryKey = qk.tareas.byModulo(moduloId)
-      await queryClient.cancelQueries({ queryKey })
-      const previo = queryClient.getQueryData<Tarea[]>(queryKey)
-      queryClient.setQueryData<Tarea[]>(queryKey, (viejo) =>
-        (viejo ?? []).filter((t) => t.id !== id),
+    onMutate: async ({ id }) => {
+      // Filtra la tarea de TODAS las listas cacheadas (módulo, proyecto, sprint, mías…).
+      await queryClient.cancelQueries({ queryKey: qk.tareas.all })
+      const snapshot = snapshotTareas(queryClient)
+      queryClient.setQueriesData<unknown>({ queryKey: qk.tareas.all }, (lista: unknown) =>
+        Array.isArray(lista) ? (lista as Tarea[]).filter((t) => t.id !== id) : lista,
       )
-      return { previo, queryKey }
+      return { snapshot }
     },
     onError: (_error, _vars, context) => {
-      if (context) {
-        queryClient.setQueryData(context.queryKey, context.previo)
-      }
+      if (context) restaurarTareas(queryClient, context.snapshot)
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: qk.tareas.all })

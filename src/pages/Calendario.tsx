@@ -1,20 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Enums } from '../lib/database.types.ts'
+import { useAuth } from '../auth/AuthProvider.tsx'
 import { useProyectos } from '../data/proyectos.ts'
 import { useReuniones } from '../data/reuniones.ts'
+import { useMisTareas, type TareaConProyecto } from '../data/tareas.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
+import { TIPOS_REUNION as TIPOS, estadoVM, fechaVM } from '../lib/ui.ts'
 import { Eyebrow, Skeleton } from '../components/ui.tsx'
-
-type TipoReunion = Enums<'tipo_reunion'>
-
-const TIPOS: Record<TipoReunion, { label: string; color: string; tint: string }> = {
-  sprint_planning: { label: 'Sprint planning', color: '#bb6a3e', tint: '#f8ece2' },
-  retro: { label: 'Retro', color: '#477155', tint: '#e7efe9' },
-  sync: { label: 'Sync', color: '#43618f', tint: '#e8eef6' },
-  cliente: { label: 'Cliente', color: '#a96a23', tint: '#f9ecdc' },
-  otro: { label: 'Otro', color: '#7a5a8c', tint: '#f0e9f3' },
-}
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -26,17 +18,34 @@ function claveDia(d: Date): string {
 
 export default function Calendario() {
   const navigate = useNavigate()
+  const { persona } = useAuth()
   const hoy = new Date()
   const [filtroProyecto, setFiltroProyecto] = useState<string | null>(null)
+  const [mostrarTareas, setMostrarTareas] = useState(true)
   const [cursor, setCursor] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1))
 
   const { data: proyectos } = useProyectos()
   const { data: reuniones, isLoading } = useReuniones(filtroProyecto)
+  const { data: misTareas } = useMisTareas(persona?.id ?? '')
 
   const proyectoPorId = useMemo(
     () => new Map((proyectos ?? []).map((p) => [p.id, p])),
     [proyectos],
   )
+
+  // Mis tareas pendientes con fecha, agrupadas por día (la fecha ya es YYYY-MM-DD).
+  const tareasPorDia = useMemo(() => {
+    const mapa = new Map<string, TareaConProyecto[]>()
+    if (!mostrarTareas) return mapa
+    for (const t of misTareas ?? []) {
+      if (!t.fecha || t.estado === 'hecho') continue
+      if (filtroProyecto && t.modulos?.proyectos?.id !== filtroProyecto) continue
+      const arr = mapa.get(t.fecha) ?? []
+      arr.push(t)
+      mapa.set(t.fecha, arr)
+    }
+    return mapa
+  }, [misTareas, mostrarTareas, filtroProyecto])
 
   // Reuniones agrupadas por día, ordenadas por hora dentro del día.
   const porDia = useMemo(() => {
@@ -73,7 +82,7 @@ export default function Calendario() {
           <Eyebrow>{reuniones?.length ?? 0} reuniones</Eyebrow>
           <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Calendario</h1>
           <p className="mt-[7px] text-sm text-muted-soft">
-            Las reuniones del equipo en el mes. Tocá una para ver descripción, notas y tareas.
+            Reuniones del equipo y vencimientos de tus tareas en el mes. Tocá para abrir.
           </p>
         </div>
         <button
@@ -115,11 +124,20 @@ export default function Calendario() {
           Hoy
         </button>
 
+        <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-[12.5px] font-semibold text-muted">
+          <input
+            type="checkbox"
+            checked={mostrarTareas}
+            onChange={(e) => setMostrarTareas(e.target.checked)}
+            className="h-[14px] w-[14px] accent-brand"
+          />
+          Mis vencimientos
+        </label>
         <select
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
           aria-label="Filtrar por proyecto"
-          className="ml-auto rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
+          className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
         >
           <option value="">Todos los proyectos</option>
           {(proyectos ?? []).map((p) => (
@@ -177,6 +195,27 @@ export default function Calendario() {
                           )}
                           {hora && <span className="flex-none font-mono text-[10px] opacity-80">{hora}</span>}
                           <span className="min-w-0 flex-1 truncate">{r.titulo}</span>
+                        </button>
+                      )
+                    })}
+                    {(tareasPorDia.get(claveDia(dia)) ?? []).map((t) => {
+                      const proy = t.modulos?.proyectos
+                      const venc = fechaVM(t.fecha)
+                      const vm = estadoVM(t.estado)
+                      const estilo = venc?.vencida
+                        ? { background: '#fbeee8', color: '#b5532f' }
+                        : { background: vm.bg, color: vm.fg }
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => proy && navigate(`/proyectos/${proy.id}?tarea=${t.id}`)}
+                          title={`${t.titulo}${proy ? ` · ${proy.nombre}` : ''}`}
+                          className="flex items-center gap-1 rounded-[6px] px-1.5 py-1 text-left text-[11.5px] font-semibold leading-tight transition-opacity hover:opacity-80"
+                          style={estilo}
+                        >
+                          <span className="inline-block h-1.5 w-1.5 flex-none rounded-full" style={{ background: proy?.color ?? vm.dot }} />
+                          <span className="min-w-0 flex-1 truncate">{t.titulo}</span>
                         </button>
                       )
                     })}

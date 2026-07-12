@@ -24,32 +24,11 @@ export function useSprints(proyectoId: string) {
   })
 }
 
-// Sprint activo del proyecto (o null si no hay).
-export function useSprintActivo(proyectoId: string) {
-  return useQuery({
-    queryKey: qk.sprints.activo(proyectoId),
-    queryFn: async (): Promise<Sprint | null> => {
-      const { data, error } = await supabase
-        .from('sprints')
-        .select('*')
-        .eq('proyecto_id', proyectoId)
-        .eq('estado', 'activo')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (error) throw error
-      return data
-    },
-    enabled: Boolean(proyectoId),
-  })
-}
-
 function invalidarSprints(
   queryClient: ReturnType<typeof useQueryClient>,
   proyectoId: string,
 ) {
   void queryClient.invalidateQueries({ queryKey: qk.sprints.byProyecto(proyectoId) })
-  void queryClient.invalidateQueries({ queryKey: qk.sprints.activo(proyectoId) })
 }
 
 // Crear sprint con update optimista.
@@ -87,6 +66,28 @@ export function useCrearSprint() {
       }
     },
     onSettled: (_data, _error, nuevo) => invalidarSprints(queryClient, nuevo.proyecto_id),
+  })
+}
+
+// Cerrar sprint: lo marca cerrado y devuelve al backlog las tareas no terminadas,
+// en un UPDATE por tabla (antes era una mutación por tarea).
+export function useCerrarSprint() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; proyectoId: string }): Promise<void> => {
+      const { error: e1 } = await supabase.from('sprints').update({ estado: 'cerrado' }).eq('id', id)
+      if (e1) throw e1
+      const { error: e2 } = await supabase
+        .from('tareas')
+        .update({ sprint_id: null })
+        .eq('sprint_id', id)
+        .neq('estado', 'hecho')
+      if (e2) throw e2
+    },
+    onSettled: (_data, _error, { proyectoId }) => {
+      invalidarSprints(queryClient, proyectoId)
+      void queryClient.invalidateQueries({ queryKey: qk.tareas.all })
+    },
   })
 }
 

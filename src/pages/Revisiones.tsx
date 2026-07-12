@@ -1,36 +1,281 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM, fmtFecha, fmtRelativo, fmtFechaHora } from '../lib/ui.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
-import { useTareas } from '../data/tareas.ts'
+import {
+  useTareas,
+  useTareasEnRevision,
+  useActualizarTarea,
+  type TareaConProyecto,
+} from '../data/tareas.ts'
 import { useComentariosModulo, useCrearComentario } from '../data/comentarios.ts'
 import {
   useModulosEnRevision,
   useResolverRevision,
   type ModuloEnRevision,
 } from '../data/revisiones.ts'
-import { Avatar, Eyebrow, Skeleton, EmptyState, ProgressBar } from '../components/ui.tsx'
+import { Avatar, Eyebrow, FechaTag, Skeleton, EmptyState, ProgressBar } from '../components/ui.tsx'
 
 type Persona = Tables<'personas'>
+type Tab = 'tareas' | 'modulos'
+
+// Selector Tareas/Módulos compartido por las dos vistas de la página.
+function Tabs({
+  tab,
+  setTab,
+  nTareas,
+  nModulos,
+}: {
+  tab: Tab
+  setTab: (t: Tab) => void
+  nTareas: number
+  nModulos: number
+}) {
+  const boton = (id: Tab, label: string, n: number) => (
+    <button
+      type="button"
+      onClick={() => setTab(id)}
+      className={`rounded-[6px] px-3 py-1.5 text-[12.5px] font-bold transition-colors ${
+        tab === id ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
+      }`}
+    >
+      {label}
+      {n > 0 && <span className="ml-1.5 font-mono text-[11px] text-faint">{n}</span>}
+    </button>
+  )
+  return (
+    <div className="flex w-fit rounded-lg border border-line bg-surface p-0.5">
+      {boton('tareas', 'Tareas', nTareas)}
+      {boton('modulos', 'Módulos', nModulos)}
+    </div>
+  )
+}
 
 export default function Revisiones() {
-  const { data: modulos, isLoading } = useModulosEnRevision()
+  const { data: modulos, isLoading: cargandoModulos } = useModulosEnRevision()
+  const { data: tareasRev, isLoading: cargandoTareas } = useTareasEnRevision()
+  const [tab, setTab] = useState<Tab>('tareas')
+
+  const nTareas = tareasRev?.length ?? 0
+  const nModulos = modulos?.length ?? 0
+
+  if (tab === 'tareas') {
+    return (
+      <TareasRevision
+        tareas={tareasRev ?? []}
+        cargando={cargandoTareas}
+        tabs={<Tabs tab={tab} setTab={setTab} nTareas={nTareas} nModulos={nModulos} />}
+      />
+    )
+  }
+
+  return (
+    <ModulosRevision
+      modulos={modulos ?? []}
+      cargando={cargandoModulos}
+      tabs={<Tabs tab={tab} setTab={setTab} nTareas={nTareas} nModulos={nModulos} />}
+    />
+  )
+}
+
+// ── Revisión de TAREAS: aprobar → hecho, devolver → en curso con motivo ──
+function TareasRevision({
+  tareas,
+  cargando,
+  tabs,
+}: {
+  tareas: TareaConProyecto[]
+  cargando: boolean
+  tabs: React.ReactNode
+}) {
+  const navigate = useNavigate()
+  const { persona: yo } = useAuth()
+  const { data: personas } = usePersonas()
+  const actualizar = useActualizarTarea()
+  const crearComentario = useCrearComentario()
+  const [devolviendoId, setDevolviendoId] = useState<string | null>(null)
+  const [motivo, setMotivo] = useState('')
+  const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
+
+  const aprobar = (t: TareaConProyecto) =>
+    actualizar.mutate({ id: t.id, moduloId: t.modulo_id, cambios: { estado: 'hecho' } })
+
+  const devolver = (t: TareaConProyecto) => {
+    const m = motivo.trim()
+    if (!m || !yo) return
+    crearComentario.mutate({ tarea_id: t.id, autor_id: yo.id, texto: `Devuelta de revisión: ${m}` })
+    actualizar.mutate({ id: t.id, moduloId: t.modulo_id, cambios: { estado: 'en_curso' } })
+    setDevolviendoId(null)
+    setMotivo('')
+  }
+
+  return (
+    <div className="mx-auto max-w-[820px] px-11 pb-24 pt-10">
+      <div className="mb-4">
+        <Eyebrow>{tareas.length} tareas esperando revisión</Eyebrow>
+        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Revisiones</h1>
+        <p className="mt-[7px] text-sm text-muted-soft">
+          Tareas que el equipo marcó "En revisión": aprobalas (pasan a hecho) o devolvelas con motivo.
+        </p>
+      </div>
+      <div className="mb-6">{tabs}</div>
+
+      {cargando && (
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-[92px] rounded-[13px]" />
+          ))}
+        </div>
+      )}
+
+      {!cargando && tareas.length === 0 && (
+        <EmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.5 8.5l3 3 6-6.5" />
+            </svg>
+          }
+          titulo="Nada esperando revisión"
+          descripcion="Cuando alguien marque una tarea como «En revisión», aparece acá para aprobar o devolver."
+        />
+      )}
+
+      <div className="flex flex-col gap-3">
+        {tareas.map((t) => {
+          const proy = t.modulos?.proyectos
+          const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+          const devolviendo = devolviendoId === t.id
+          return (
+            <div key={t.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-4">
+              <div className="mb-2 flex items-center gap-2 text-xs text-muted">
+                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? '#c4bdb1' }} />
+                <span className="font-semibold text-label">{proy?.nombre ?? 'Proyecto'}</span>
+                <span className="text-faint">/</span>
+                <span>{t.modulos?.nombre ?? ''}</span>
+                {fmtRelativo(t.updated_at) && (
+                  <span className="ml-auto font-mono text-[10.5px] text-faint">
+                    en revisión {fmtRelativo(t.updated_at)}
+                  </span>
+                )}
+              </div>
+
+              <div className="mb-1 flex items-center gap-2.5">
+                <span className="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.01em] text-ink">
+                  {t.titulo}
+                </span>
+                <FechaTag fecha={t.fecha} />
+                {resp && <Avatar nombre={resp.nombre} color={resp.color} size={24} />}
+              </div>
+
+              {t.criterio?.trim() && (
+                <div className="mb-2 rounded-[9px] bg-canvas px-3 py-2 text-[12.5px] leading-[1.5] text-ink-soft">
+                  <span className="font-bold text-muted">Criterio de listo: </span>
+                  {t.criterio}
+                </div>
+              )}
+
+              {devolviendo ? (
+                <div className="mt-2.5">
+                  <textarea
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    autoFocus
+                    aria-label="Motivo de la devolución"
+                    placeholder="¿Qué falta? El motivo queda como comentario en la tarea…"
+                    rows={2}
+                    className="w-full resize-none rounded-[10px] border border-line bg-canvas px-[11px] py-[9px] text-[13.5px] outline-none focus:border-brand focus:bg-surface"
+                  />
+                  <div className="mt-2 flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDevolviendoId(null)
+                        setMotivo('')
+                      }}
+                      className="rounded-[9px] border border-line bg-canvas px-3.5 py-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:bg-hover"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => devolver(t)}
+                      disabled={!motivo.trim() || actualizar.isPending}
+                      className="rounded-[9px] bg-[#b5532f] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
+                    >
+                      Devolver con motivo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => proy && navigate(`/proyectos/${proy.id}?tarea=${t.id}`)}
+                    className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-hover"
+                  >
+                    Ver tarea ↗
+                  </button>
+                  <div className="flex-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDevolviendoId(t.id)
+                      setMotivo('')
+                    }}
+                    className="rounded-lg border border-line bg-canvas px-3.5 py-1.5 text-[12.5px] font-semibold text-[#b5532f] transition-colors hover:bg-hover"
+                  >
+                    Devolver
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => aprobar(t)}
+                    disabled={actualizar.isPending}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#477155] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3.5 8.5l3 3 6-6.5" />
+                    </svg>
+                    Aprobar
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Revisión de MÓDULOS: la compuerta del responsable de visión ─────────
+function ModulosRevision({
+  modulos,
+  cargando,
+  tabs,
+}: {
+  modulos: ModuloEnRevision[]
+  cargando: boolean
+  tabs: React.ReactNode
+}) {
+  const isLoading = cargando
   const [selId, setSelId] = useState<string | null>(null)
 
-  const lista = modulos ?? []
+  const lista = modulos
   // Mantener una selección válida: el seleccionado o el primero de la lista.
   const seleccionado = lista.find((m) => m.id === selId) ?? lista[0] ?? null
 
   return (
     <div className="flex">
       <div className="h-screen w-[330px] flex-none overflow-auto border-r border-line bg-canvas">
-        <div className="px-6 pb-6 pt-10">
+        <div className="px-6 pb-4 pt-10">
           <Eyebrow>{lista.length} en revisión</Eyebrow>
           <h1 className="m-0 text-[24px] font-extrabold tracking-[-0.025em]">Revisiones</h1>
           <p className="mt-[7px] text-[13px] text-muted-soft">
             Módulos esperando el visto bueno del responsable de visión.
           </p>
+          <div className="mt-3">{tabs}</div>
         </div>
 
         {isLoading && (

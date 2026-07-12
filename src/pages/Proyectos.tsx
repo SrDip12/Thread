@@ -109,6 +109,11 @@ export default function Proyectos() {
                   <AvatarStack personas={miembros.map((m) => ({ nombre: m.nombre, color: m.color }))} />
                   <div className="font-mono text-xs text-muted">
                     {s?.modulos ?? 0} mód · {s?.total ?? 0} tareas
+                    {(s?.vencidas ?? 0) > 0 && (
+                      <span className="ml-1.5 rounded bg-[#fbeee8] px-1.5 py-[1px] font-bold text-[#b5532f]">
+                        {s?.vencidas} venc.
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

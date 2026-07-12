@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { Enums } from '../lib/database.types.ts'
-import { fmtFecha } from '../lib/ui.ts'
+import { fmtFecha, fmtFechaCompleta, TIPOS_REUNION as TIPOS } from '../lib/ui.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useModulos, useActualizarModulo } from '../data/modulos.ts'
@@ -11,26 +10,6 @@ import { ALERTAS, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
 import { useCrearTarea, useTareasReunion } from '../data/tareas.ts'
 import { extraerTareas, type TareaPropuesta } from '../lib/extraer.ts'
 import { Avatar, AvatarStack, Skeleton, EmptyState } from '../components/ui.tsx'
-
-type TipoReunion = Enums<'tipo_reunion'>
-
-const TIPOS: Record<TipoReunion, { label: string; color: string; tint: string }> = {
-  sprint_planning: { label: 'Sprint planning', color: '#bb6a3e', tint: '#f8ece2' },
-  retro: { label: 'Retro', color: '#477155', tint: '#e7efe9' },
-  sync: { label: 'Sync', color: '#43618f', tint: '#e8eef6' },
-  cliente: { label: 'Cliente', color: '#a96a23', tint: '#f9ecdc' },
-  otro: { label: 'Otro', color: '#7a5a8c', tint: '#f0e9f3' },
-}
-
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-
-// Fecha completa "12 jun 2026" a partir de un timestamptz. null si no hay.
-function fmtFechaCompleta(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`
-}
 
 // Fila editable de la vista de revisión de tareas propuestas por la IA.
 interface FilaRevision {

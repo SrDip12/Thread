@@ -1,6 +1,21 @@
 // Componentes presentacionales reutilizables, fieles al /design. Sin lógica de datos.
 import { useCallback, useState } from 'react'
-import { estadoVM, iniciales, type EstadoTarea } from '../lib/ui.ts'
+import { estadoVM, fechaVM, iniciales, type EstadoTarea } from '../lib/ui.ts'
+
+// Fecha límite de una tarea con señal de vencimiento (rojo si venció, marca si es hoy).
+export function FechaTag({ fecha, done = false }: { fecha: string | null; done?: boolean }) {
+  const vm = fechaVM(fecha, done)
+  if (!vm) return null
+  return (
+    <span
+      title={vm.vencida ? 'Vencida' : undefined}
+      className="flex-none rounded px-1.5 py-[2px] font-mono text-[11px] font-semibold"
+      style={{ color: vm.fg, background: vm.bg ?? 'transparent' }}
+    >
+      {vm.label}
+    </span>
+  )
+}
 
 // Edición inline: clic para editar, Enter (input) o blur guarda, Esc cancela.
 export function InlineEdit({

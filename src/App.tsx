@@ -5,6 +5,7 @@ import Login from './components/Login.tsx'
 import { useAuth } from './auth/AuthProvider.tsx'
 
 // Cada ruta en su propio chunk: el bundle inicial solo carga la vista abierta.
+const Hoy = lazy(() => import('./pages/Hoy.tsx'))
 const Proyectos = lazy(() => import('./pages/Proyectos.tsx'))
 const ProyectoDetalle = lazy(() => import('./pages/ProyectoDetalle.tsx'))
 const Sprint = lazy(() => import('./pages/Sprint.tsx'))
@@ -27,7 +28,7 @@ function Rutas() {
       <Route element={<Layout />}>
         <Route
           index
-          element={<Navigate to="/proyectos" replace />}
+          element={<Navigate to="/hoy" replace />}
         />
         <Route
           element={
@@ -36,6 +37,7 @@ function Rutas() {
             </Suspense>
           }
         >
+          <Route path="/hoy" element={<Hoy />} />
           <Route path="/proyectos" element={<Proyectos />} />
           <Route path="/proyectos/:id" element={<ProyectoDetalle />} />
           <Route path="/proyectos/:id/sprint" element={<Sprint />} />

@@ -1,6 +1,6 @@
 import type { Tables } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha } from '../lib/ui.ts'
-import { Avatar } from './ui.tsx'
+import { estadoVM } from '../lib/ui.ts'
+import { Avatar, FechaTag } from './ui.tsx'
 
 type Tarea = Tables<'tareas'>
 type Persona = Tables<'personas'>
@@ -79,8 +79,7 @@ export default function KanbanBoard({
               ) : (
                 tareasColumna.map((t) => {
                   const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
-                  const fecha = fmtFecha(t.fecha)
-                  
+
                   // Calcular si la tarea está bloqueada
                   const isBlocked = proyectoDeps
                     .filter((d) => d.bloqueada_id === t.id)
@@ -88,15 +87,6 @@ export default function KanbanBoard({
                       const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
                       return b ? b.estado !== 'hecho' : false
                     })
-
-                  // Calcular si la fecha de vencimiento ya pasó (y no está hecha)
-                  let esVencida = false
-                  if (t.fecha && t.estado !== 'hecho') {
-                    const ahora = new Date()
-                    ahora.setHours(0, 0, 0, 0)
-                    const fVence = new Date(t.fecha + 'T00:00:00')
-                    esVencida = fVence.getTime() < ahora.getTime()
-                  }
 
                   const moduloNombre = moduloNombres?.get(t.modulo_id)
 
@@ -145,15 +135,7 @@ export default function KanbanBoard({
 
                       <div className="flex items-center justify-between mt-2 pt-1 border-t border-line-soft">
                         <div className="flex items-center gap-2">
-                          {fecha && (
-                            <span
-                              className={`font-mono text-[10.5px] font-semibold ${
-                                esVencida ? 'text-[#c96442] bg-[#fbeee8] px-1.5 py-0.5 rounded' : 'text-muted'
-                              }`}
-                            >
-                              {fecha}
-                            </span>
-                          )}
+                          <FechaTag fecha={t.fecha} done={t.estado === 'hecho'} />
                         </div>
                         {resp ? (
                           <Avatar nombre={resp.nombre} color={resp.color} size={22} />

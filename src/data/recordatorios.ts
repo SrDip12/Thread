@@ -7,8 +7,10 @@ import { useEffect } from 'react'
 import { useReuniones, type Reunion } from './reuniones.ts'
 
 // Combina `fecha` (día) + `hora` (HH:MM[:SS], opcional → 09:00) en un Date local.
+// `fecha` llega como timestamptz a medianoche UTC: se toma solo la parte de día
+// y se ubica en el día LOCAL; si no, en husos negativos la reunión corre un día.
 export function momentoReunion(r: Pick<Reunion, 'fecha' | 'hora'>): Date {
-  const dia = new Date(r.fecha)
+  const dia = new Date(`${r.fecha.slice(0, 10)}T00:00:00`)
   const [h, m] = (r.hora ?? '09:00').split(':')
   dia.setHours(Number(h), Number(m), 0, 0)
   return dia

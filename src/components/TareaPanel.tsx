@@ -3,7 +3,6 @@ import type { Tables } from '../lib/database.types.ts'
 import { ESTADOS, estadoVM, fmtFecha, fmtFechaHora } from '../lib/ui.ts'
 import {
   useActualizarTarea,
-  useTareas,
   useTareasPorProyecto,
   useDependenciasTarea,
   useCrearDependencia,
@@ -16,7 +15,7 @@ import {
 } from '../data/comentarios.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
-import { Avatar, InlineEdit, Skeleton } from './ui.tsx'
+import { Avatar, FechaTag, InlineEdit, Skeleton } from './ui.tsx'
 
 type Tarea = Tables<'tareas'>
 type Proyecto = Tables<'proyectos'>
@@ -30,24 +29,28 @@ function tipoVM(tipo: Tarea['tipo']): { label: string; bg: string; fg: string } 
 
 export default function TareaPanel({
   taskId,
-  moduloId,
   moduloNombre,
   proyecto,
   onClose,
 }: {
   taskId: string
-  moduloId: string
   moduloNombre: string
   proyecto: Proyecto
   onClose: () => void
 }) {
   const { persona: yo } = useAuth()
   const { data: personas } = usePersonas()
-  const { data: tareas } = useTareas(moduloId)
+  // Una sola lista para la tarea, las dependencias y el selector de bloqueadores.
+  const { data: todasLasTareas } = useTareasPorProyecto(proyecto.id)
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
   const actualizar = useActualizarTarea()
+  // Hooks antes del early-return para mantener el orden estable entre renders.
+  const { data: deps } = useDependenciasTarea(taskId)
+  const crearDep = useCrearDependencia()
+  const elimDep = useEliminarDependencia()
 
-  const tarea = (tareas ?? []).find((t) => t.id === taskId)
+  const tareasProyecto = todasLasTareas ?? []
+  const tarea = tareasProyecto.find((t) => t.id === taskId)
   if (!tarea) {
     // La tarea desapareció (borrada o aún cargando tras navegar). Placeholder limpio.
     return (
@@ -81,13 +84,7 @@ export default function TareaPanel({
 
   const responsable = tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined
 
-  const { data: deps } = useDependenciasTarea(tarea.id)
-  const { data: todasLasTareas } = useTareasPorProyecto(proyecto.id)
-  const crearDep = useCrearDependencia()
-  const elimDep = useEliminarDependencia()
-
   const dependencias = deps ?? []
-  const tareasProyecto = todasLasTareas ?? []
   const tareasMap = new Map(tareasProyecto.map((t) => [t.id, t]))
 
   // Tareas que bloquean a la actual
@@ -225,7 +222,7 @@ export default function TareaPanel({
               onChange={(e) => setCambios({ fecha: e.target.value || null })}
               className="rounded-md border border-line bg-surface px-2 py-1 text-[13.5px] font-semibold outline-none focus:border-brand"
             />
-            {tarea.fecha && <span className="text-[12.5px] text-muted">{fmtFecha(tarea.fecha)}</span>}
+            <FechaTag fecha={tarea.fecha} done={tarea.estado === 'hecho'} />
           </Fila>
         </div>
       </div>

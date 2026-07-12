@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Tables, TablesUpdate } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha, ESTADOS, fmtFechaHora } from '../lib/ui.ts'
+import { estadoVM, fmtFecha, ESTADOS, fmtFechaHora, diasHasta } from '../lib/ui.ts'
 import { useProyectos, useActualizarProyecto, useEliminarProyecto } from '../data/proyectos.ts'
 import { useModulos, useCrearModulo, useActualizarModulo } from '../data/modulos.ts'
 import {
-  useTareas,
   useCrearTarea,
   useActualizarTarea,
   useTareasPorProyecto,
@@ -18,7 +17,7 @@ import { useReuniones } from '../data/reuniones.ts'
 import { useClientePorProyecto, useCrearCliente, useActualizarCliente } from '../data/clientes.ts'
 import { useComentariosModulo } from '../data/comentarios.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
-import { Avatar, AvatarStack, EstadoChip } from '../components/ui.tsx'
+import { Avatar, AvatarStack, EstadoChip, FechaTag } from '../components/ui.tsx'
 import TareaPanel from '../components/TareaPanel.tsx'
 import KanbanBoard from '../components/KanbanBoard.tsx'
 
@@ -159,6 +158,9 @@ export default function ProyectoDetalle() {
   const total = tasks.length
   const hechas = tasks.filter((t) => t.estado === 'hecho').length
   const curso = tasks.filter((t) => t.estado === 'en_curso').length
+  const vencidasProy = tasks.filter(
+    (t) => t.estado !== 'hecho' && t.fecha && diasHasta(t.fecha) < 0,
+  ).length
   // Avance del proyecto = módulos cerrados / total de módulos.
   const mods = modulos ?? []
   const modsCerrados = mods.filter((m) => m.estado === 'cerrado').length
@@ -252,6 +254,7 @@ export default function ProyectoDetalle() {
               <Metrica valor={total} label="tareas" />
               <Metrica valor={curso} label="en curso" color="#43618f" />
               <Metrica valor={hechas} label="hechas" color="#477155" />
+              {vencidasProy > 0 && <Metrica valor={vencidasProy} label="vencidas" color="#b5532f" />}
             </div>
           </div>
 
@@ -320,6 +323,7 @@ export default function ProyectoDetalle() {
                 <ModuloSeccion
                   key={m.id}
                   modulo={m}
+                  tareas={tasks.filter((t) => t.modulo_id === m.id)}
                   personaPorId={personaPorId}
                   seleccionado={sel?.taskId ?? null}
                   onAbrir={(taskId) =>
@@ -352,7 +356,6 @@ export default function ProyectoDetalle() {
       {sel && (
         <TareaPanel
           taskId={sel.taskId}
-          moduloId={sel.moduloId}
           moduloNombre={sel.moduloNombre}
           proyecto={proyecto}
           onClose={onCerrarPanel}
@@ -693,6 +696,7 @@ function ClienteEditor({
 
 function ModuloSeccion({
   modulo,
+  tareas,
   personaPorId,
   seleccionado,
   onAbrir,
@@ -700,13 +704,14 @@ function ModuloSeccion({
   proyectoDeps,
 }: {
   modulo: Modulo
+  // Filtradas por el padre desde la lista del proyecto: una sola query para todos los módulos.
+  tareas: Tables<'tareas'>[]
   personaPorId: Map<string, Persona>
   seleccionado: string | null
   onAbrir: (taskId: string) => void
   todasLasTareas: Tables<'tareas'>[]
   proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
 }) {
-  const { data: tareas } = useTareas(modulo.id)
   const crear = useCrearTarea()
   const actualizar = useActualizarTarea()
   const actualizarModulo = useActualizarModulo()
@@ -795,7 +800,6 @@ function ModuloSeccion({
         {lista.map((t) => {
           const vm = estadoVM(t.estado)
           const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
-          const fecha = fmtFecha(t.fecha)
 
           const isBlocked = proyectoDeps
             .filter((d) => d.bloqueada_id === t.id)
@@ -836,7 +840,7 @@ function ModuloSeccion({
                   Corrección
                 </span>
               )}
-              {fecha && <span className="flex-none font-mono text-[11.5px] text-muted">{fecha}</span>}
+              <FechaTag fecha={t.fecha} done={vm.done} />
               {resp ? (
                 <Avatar nombre={resp.nombre} color={resp.color} size={26} />
               ) : (

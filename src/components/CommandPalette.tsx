@@ -38,7 +38,9 @@ export default function CommandPalette({
 
   const items = useMemo<Item[]>(() => {
     const base: Item[] = [
+      { id: 'nav-hoy', label: 'Hoy', hint: 'Ir a', run: () => navigate('/hoy') },
       { id: 'nav-proyectos', label: 'Proyectos', hint: 'Ir a', run: () => navigate('/proyectos') },
+      { id: 'nav-cal', label: 'Calendario', hint: 'Ir a', run: () => navigate('/calendario') },
       { id: 'nav-mis', label: 'Mis tareas', hint: 'Ir a', run: () => navigate('/mis-tareas') },
       { id: 'nav-para', label: 'Para mí', hint: 'Ir a', run: () => navigate('/para-mi') },
       { id: 'nav-reu', label: 'Reuniones', hint: 'Ir a', run: () => navigate('/reuniones') },
