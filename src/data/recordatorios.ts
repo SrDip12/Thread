@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react'
 import { useReuniones, type Reunion } from './reuniones.ts'
+import i18n from '../i18n/index.ts'
 
 // Combina `fecha` (día) + `hora` (HH:MM[:SS], opcional → 09:00) en un Date local.
 // `fecha` llega como timestamptz a medianoche UTC: se toma solo la parte de día
@@ -33,16 +34,20 @@ function marcarAvisada(id: string) {
 }
 
 // Opciones de alerta para los selects (minutos antes; null = sin alerta).
-export const ALERTAS: { min: number | null; label: string }[] = [
-  { min: null, label: 'Sin alerta' },
-  { min: 0, label: 'A la hora' },
-  { min: 10, label: '10 min antes' },
-  { min: 60, label: '1 hora antes' },
-  { min: 1440, label: '1 día antes' },
-]
+// Función (no const) para que las etiquetas reaccionen al cambio de idioma.
+export function alertas(): { min: number | null; label: string }[] {
+  const t = i18n.t
+  return [
+    { min: null, label: t('recordatorios.sinAlerta') },
+    { min: 0, label: t('recordatorios.aLaHora') },
+    { min: 10, label: t('recordatorios.min10') },
+    { min: 60, label: t('recordatorios.hora1') },
+    { min: 1440, label: t('recordatorios.dia1') },
+  ]
+}
 
 export function etiquetaAlerta(min: number | null): string {
-  return ALERTAS.find((a) => a.min === min)?.label ?? `${min} min antes`
+  return alertas().find((a) => a.min === min)?.label ?? i18n.t('recordatorios.minAntes', { min })
 }
 
 // Pide permiso de notificaciones (requiere gesto del usuario). Devuelve si quedó concedido.
@@ -69,11 +74,11 @@ export function useRecordatoriosReuniones() {
         // Disparamos en la ventana [avisoEn, momento]; pasada la hora, ya no.
         if (ahora >= avisoEn && ahora <= momento) {
           marcarAvisada(r.id)
-          const cuando = momentoReunion(r).toLocaleString('es', {
+          const cuando = momentoReunion(r).toLocaleString(i18n.language?.startsWith('en') ? 'en' : 'es', {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
           })
           new Notification(r.titulo, {
-            body: `Reunión · ${cuando}${r.descripcion ? `\n${r.descripcion}` : ''}`,
+            body: `${i18n.t('recordatorios.notifBody', { cuando })}${r.descripcion ? `\n${r.descripcion}` : ''}`,
             tag: `reunion-${r.id}`,
           })
         }

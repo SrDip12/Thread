@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { diasHasta } from '../lib/ui.ts'
 import { qk } from './queryKeys.ts'
+import i18n from '../i18n/index.ts'
 
 type Tarea = Tables<'tareas'>
 
@@ -384,7 +385,7 @@ export function useActualizarTarea() {
             persona_id: cambios.responsable_id as string,
             autor_id: yoId,
             tipo: 'asignacion',
-            texto: `Te asignó la tarea "${previa.titulo}"`,
+            texto: i18n.t('notif.genAsigno', { titulo: previa.titulo }),
             tarea_id: id,
             proyecto_id: mod?.proyecto_id ?? null,
             leido: false,
@@ -414,14 +415,14 @@ export function useActualizarTarea() {
             if (entraARevision && proyecto?.responsable_vision_id && proyecto.responsable_vision_id !== yoId) {
               avisos.push({
                 persona_id: proyecto.responsable_vision_id,
-                texto: `envió a revisión la tarea "${previa.titulo}"`,
+                texto: i18n.t('notif.genEnvioRevision', { titulo: previa.titulo }),
               })
             }
             if (saleDeRevision && previa.responsable_id && previa.responsable_id !== yoId) {
               if (cambios.estado === 'hecho') {
-                avisos.push({ persona_id: previa.responsable_id, texto: `aprobó tu tarea "${previa.titulo}"` })
+                avisos.push({ persona_id: previa.responsable_id, texto: i18n.t('notif.genAprobo', { titulo: previa.titulo }) })
               } else if (cambios.estado === 'en_curso') {
-                avisos.push({ persona_id: previa.responsable_id, texto: `devolvió tu tarea "${previa.titulo}"` })
+                avisos.push({ persona_id: previa.responsable_id, texto: i18n.t('notif.genDevolvio', { titulo: previa.titulo }) })
               }
             }
             if (avisos.length) {

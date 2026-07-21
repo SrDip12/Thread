@@ -1,16 +1,14 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useProyectos } from '../data/proyectos.ts'
 import { useReuniones } from '../data/reuniones.ts'
 import { useMisTareas, type TareaConProyecto } from '../data/tareas.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
-import { TIPOS_REUNION as TIPOS, estadoVM, fechaVM } from '../lib/ui.ts'
+import { tiposReunion, estadoVM, fechaVM } from '../lib/ui.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
 import { Eyebrow, Skeleton } from '../components/ui.tsx'
-
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 // Clave de día local "YYYY-MM-DD" para agrupar reuniones.
 function claveDia(d: Date): string {
@@ -18,6 +16,10 @@ function claveDia(d: Date): string {
 }
 
 export default function Calendario() {
+  const { t } = useTranslation()
+  const TIPOS = tiposReunion()
+  const MESES = t('calendario.meses', { returnObjects: true }) as unknown as string[]
+  const DIAS = t('calendario.dias', { returnObjects: true }) as unknown as string[]
   const navigate = useNavigate()
   const { persona } = useAuth()
   const hoy = new Date()
@@ -80,10 +82,10 @@ export default function Calendario() {
     <div className="mx-auto max-w-[1040px] px-11 pb-20 pt-10">
       <div className="mb-[26px] flex items-end justify-between gap-6">
         <div>
-          <Eyebrow>{reuniones?.length ?? 0} reuniones</Eyebrow>
-          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Calendario</h1>
+          <Eyebrow>{t('calendario.reunionesCount', { count: reuniones?.length ?? 0 })}</Eyebrow>
+          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('calendario.titulo')}</h1>
           <p className="mt-[7px] text-sm text-muted-soft">
-            Reuniones del equipo y vencimientos de tus tareas en el mes. Tocá para abrir.
+            {t('calendario.subtitulo')}
           </p>
         </div>
         <button
@@ -91,7 +93,7 @@ export default function Calendario() {
           onClick={() => navigate('/reuniones')}
           className="flex flex-none items-center gap-1.5 rounded-[9px] border border-line bg-surface px-[15px] py-2.5 text-[13.5px] font-semibold text-ink transition-colors hover:bg-hover"
         >
-          Ver lista
+          {t('calendario.verLista')}
         </button>
       </div>
 
@@ -100,7 +102,7 @@ export default function Calendario() {
           <button
             type="button"
             onClick={() => irMes(-1)}
-            aria-label="Mes anterior"
+            aria-label={t('calendario.mesAnterior')}
             className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-surface text-muted transition-colors hover:bg-hover hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3L5 8l5 5" /></svg>
@@ -108,7 +110,7 @@ export default function Calendario() {
           <button
             type="button"
             onClick={() => irMes(1)}
-            aria-label="Mes siguiente"
+            aria-label={t('calendario.mesSiguiente')}
             className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-surface text-muted transition-colors hover:bg-hover hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
@@ -122,7 +124,7 @@ export default function Calendario() {
           onClick={() => setCursor(new Date(hoy.getFullYear(), hoy.getMonth(), 1))}
           className="rounded-[9px] border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink transition-colors hover:bg-hover"
         >
-          Hoy
+          {t('calendario.hoy')}
         </button>
 
         <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-[12.5px] font-semibold text-muted">
@@ -132,15 +134,15 @@ export default function Calendario() {
             onChange={(e) => setMostrarTareas(e.target.checked)}
             className="h-[14px] w-[14px] accent-brand"
           />
-          Mis vencimientos
+          {t('calendario.misVencimientos')}
         </label>
         <select
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
-          aria-label="Filtrar por proyecto"
+          aria-label={t('calendario.filtrarProyecto')}
           className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
         >
-          <option value="">Todos los proyectos</option>
+          <option value="">{t('calendario.todosProyectos')}</option>
           {(proyectos ?? []).map((p) => (
             <option key={p.id} value={p.id}>{p.nombre}</option>
           ))}

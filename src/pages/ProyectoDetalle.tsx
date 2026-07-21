@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Tables, TablesUpdate } from '../lib/database.types.ts'
 import { estadoVM, fmtFecha, ESTADOS, fmtFechaHora, diasHasta } from '../lib/ui.ts'
+import i18n from '../i18n/index.ts'
 import { etiquetaOrigen, origenValido } from '../lib/navegacion.ts'
 import { useProyectos, useActualizarProyecto, useEliminarProyecto } from '../data/proyectos.ts'
 import { useModulos, useCrearModulo, useActualizarModulo } from '../data/modulos.ts'
@@ -28,13 +30,14 @@ type EstadoModulo = Modulo['estado']
 
 // Chip de estado del módulo: gris=abierto, azul=en revisión, verde=cerrado.
 function moduloEstadoVM(estado: EstadoModulo): { label: string; bg: string; fg: string } {
+  const t = i18n.t
   switch (estado) {
     case 'cerrado':
-      return { label: 'Cerrado', bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)' }
+      return { label: t('proyectoDetalle.moduloCerrado'), bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)' }
     case 'en_revision':
-      return { label: 'En revisión', bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
+      return { label: t('proyectoDetalle.moduloEnRevision'), bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
     default:
-      return { label: 'Abierto', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
+      return { label: t('proyectoDetalle.moduloAbierto'), bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
   }
 }
 
@@ -45,6 +48,7 @@ interface Seleccion {
 }
 
 export default function ProyectoDetalle() {
+  const { t } = useTranslation()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data: proyectos } = useProyectos()
@@ -79,13 +83,13 @@ export default function ProyectoDetalle() {
 
   useEffect(() => {
     if (tareaIdParam && tareasProyecto && modulos) {
-      const t = tareasProyecto.find((x) => x.id === tareaIdParam)
-      if (t) {
-        const m = modulos.find((x) => x.id === t.modulo_id)
+      const tk = tareasProyecto.find((x) => x.id === tareaIdParam)
+      if (tk) {
+        const m = modulos.find((x) => x.id === tk.modulo_id)
         setSel({
-          taskId: t.id,
-          moduloId: t.modulo_id,
-          moduloNombre: m ? m.nombre : 'Módulo',
+          taskId: tk.id,
+          moduloId: tk.modulo_id,
+          moduloNombre: m ? m.nombre : i18n.t('proyectoDetalle.moduloFallback'),
         })
       }
     }
@@ -164,7 +168,7 @@ export default function ProyectoDetalle() {
   }
 
   if (!proyecto) {
-    return <div className="p-11 text-sm text-muted">Proyecto no encontrado.</div>
+    return <div className="p-11 text-sm text-muted">{t('proyectoDetalle.noEncontrado')}</div>
   }
 
   const tasks = tareasProyecto ?? []
@@ -211,7 +215,7 @@ export default function ProyectoDetalle() {
                     vista === 'lista' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
                   }`}
                 >
-                  Lista
+                  {t('proyectoDetalle.lista')}
                 </button>
                 <button
                   type="button"
@@ -220,7 +224,7 @@ export default function ProyectoDetalle() {
                     vista === 'kanban' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
                   }`}
                 >
-                  Tablero
+                  {t('proyectoDetalle.tablero')}
                 </button>
               </div>
               <button
@@ -252,7 +256,7 @@ export default function ProyectoDetalle() {
             <div className="min-w-0 flex-1">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[12.5px] font-semibold text-muted-soft">
-                  Avance del proyecto · módulos cerrados
+                  {t('proyectoDetalle.avanceProyecto')}
                 </span>
                 <span className="font-mono text-[13px] font-bold">
                   {modsCerrados}/{mods.length} · {pct}%
@@ -264,10 +268,10 @@ export default function ProyectoDetalle() {
             </div>
             <div className="h-[34px] w-px flex-none bg-line" />
             <div className="flex flex-none gap-[22px]">
-              <Metrica valor={total} label="tareas" />
-              <Metrica valor={curso} label="en curso" color="var(--color-info)" />
-              <Metrica valor={hechas} label="hechas" color="var(--color-ok)" />
-              {vencidasProy > 0 && <Metrica valor={vencidasProy} label="vencidas" color="var(--color-danger)" />}
+              <Metrica valor={total} label={t('common.tareas')} />
+              <Metrica valor={curso} label={t('proyectoDetalle.metEnCurso')} color="var(--color-info)" />
+              <Metrica valor={hechas} label={t('proyectoDetalle.metHechas')} color="var(--color-ok)" />
+              {vencidasProy > 0 && <Metrica valor={vencidasProy} label={t('proyectoDetalle.metVencidas')} color="var(--color-danger)" />}
             </div>
           </div>
 
@@ -280,13 +284,13 @@ export default function ProyectoDetalle() {
               {/* Filtro por Módulo */}
               <div className="flex items-center justify-between mb-2">
                 <label className="flex items-center gap-2 text-xs font-semibold text-muted">
-                  Filtrar por Módulo
+                  {t('proyectoDetalle.filtrarModulo')}
                   <select
                     value={moduloFiltro}
                     onChange={(e) => setModuloFiltro(e.target.value)}
                     className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
                   >
-                    <option value="todos">Todos los módulos</option>
+                    <option value="todos">{t('proyectoDetalle.todosModulos')}</option>
                     {(modulos ?? []).map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.nombre}
@@ -308,22 +312,22 @@ export default function ProyectoDetalle() {
                 todasLasTareas={tareasProyecto ?? []}
                 moduloNombres={new Map((modulos ?? []).map((m) => [m.id, m.nombre]))}
                 onAbrir={(taskId) => {
-                  const t = (tareasProyecto ?? []).find((x) => x.id === taskId)
-                  if (t) {
-                    const m = (modulos ?? []).find((x) => x.id === t.modulo_id)
+                  const tk = (tareasProyecto ?? []).find((x) => x.id === taskId)
+                  if (tk) {
+                    const m = (modulos ?? []).find((x) => x.id === tk.modulo_id)
                     setSel({
-                      taskId: t.id,
-                      moduloId: t.modulo_id,
-                      moduloNombre: m ? m.nombre : 'Módulo',
+                      taskId: tk.id,
+                      moduloId: tk.modulo_id,
+                      moduloNombre: m ? m.nombre : t('proyectoDetalle.moduloFallback'),
                     })
                   }
                 }}
                 onMoverTarea={(taskId, nuevoEstado) => {
-                  const t = (tareasProyecto ?? []).find((x) => x.id === taskId)
-                  if (t) {
+                  const tk = (tareasProyecto ?? []).find((x) => x.id === taskId)
+                  if (tk) {
                     actualizar.mutate({
                       id: taskId,
-                      moduloId: t.modulo_id,
+                      moduloId: tk.modulo_id,
                       cambios: { estado: nuevoEstado },
                     })
                   }
@@ -354,11 +358,11 @@ export default function ProyectoDetalle() {
                   value={nuevoModulo}
                   onChange={(e) => setNuevoModulo(e.target.value)}
                   onKeyDown={agregarModulo}
-                  placeholder="Agregar módulo…"
+                  placeholder={t('proyectoDetalle.agregarModulo')}
                   className="flex-1 bg-transparent text-[13px] font-semibold uppercase tracking-[0.02em] text-label outline-none placeholder:text-faint placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
                 />
                 {nuevoModulo.trim() && (
-                  <span className="flex-none font-mono text-[11px] text-faint">Enter ↵</span>
+                  <span className="flex-none font-mono text-[11px] text-faint">{t('proyectoDetalle.enterHint')}</span>
                 )}
               </div>
             </>
@@ -380,6 +384,7 @@ export default function ProyectoDetalle() {
 
 // Borrar proyecto con confirmación inline (el delete cascada borra módulos/tareas).
 function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: string }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const eliminar = useEliminarProyecto()
   const [confirmando, setConfirmando] = useState(false)
@@ -387,7 +392,7 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
   if (confirmando) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-2.5 py-1.5">
-        <span className="text-[12px] font-semibold text-brand-strong">¿Eliminar «{nombre}»?</span>
+        <span className="text-[12px] font-semibold text-brand-strong">{t('proyectoDetalle.eliminarConfirm', { nombre })}</span>
         <button
           type="button"
           onClick={() => {
@@ -396,14 +401,14 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
           }}
           className="rounded-md bg-brand px-2 py-[3px] text-[11px] font-bold text-on-brand transition-opacity hover:opacity-90"
         >
-          Sí, eliminar
+          {t('proyectoDetalle.siEliminar')}
         </button>
         <button
           type="button"
           onClick={() => setConfirmando(false)}
           className="text-[11px] font-semibold text-muted transition-colors hover:text-ink"
         >
-          Cancelar
+          {t('common.cancelar')}
         </button>
       </div>
     )
@@ -413,8 +418,8 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
     <button
       type="button"
       onClick={() => setConfirmando(true)}
-      title="Eliminar proyecto"
-      aria-label="Eliminar proyecto"
+      title={t('proyectoDetalle.eliminarProyecto')}
+      aria-label={t('proyectoDetalle.eliminarProyecto')}
       className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-[var(--color-danger-line)] hover:bg-[var(--color-danger-tint)] hover:text-brand"
     >
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -438,6 +443,7 @@ function Metrica({ valor, label, color }: { valor: number; label: string; color?
 // Equipo del proyecto: AvatarStack que abre un popover para sumar/quitar miembros
 // (tabla proyecto_personas). Las personas disponibles salen del equipo global.
 function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas: Persona[] }) {
+  const { t } = useTranslation()
   const { data: miembros } = useMiembros(proyectoId)
   const agregar = useAgregarMiembro()
   const quitar = useQuitarMiembro()
@@ -451,13 +457,13 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
-        title="Equipo del proyecto"
+        title={t('proyectoDetalle.equipoProyecto')}
         className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 transition-colors hover:bg-hover"
       >
         {lista.length > 0 ? (
           <AvatarStack personas={lista.map((m) => ({ nombre: m.nombre, color: m.color }))} size={28} />
         ) : (
-          <span className="px-1 text-[13px] font-semibold text-muted">+ Equipo</span>
+          <span className="px-1 text-[13px] font-semibold text-muted">{t('proyectoDetalle.masEquipo')}</span>
         )}
       </button>
 
@@ -466,11 +472,11 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
           <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
           <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-[12px] border border-line bg-surface p-3 shadow-[var(--shadow-pop)]">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-              Equipo · {lista.length}
+              {t('proyectoDetalle.equipoCount', { count: lista.length })}
             </div>
             <div className="mb-2 flex flex-col gap-1">
               {lista.length === 0 && (
-                <p className="px-1 py-1 text-[12.5px] text-faint">Nadie todavía.</p>
+                <p className="px-1 py-1 text-[12.5px] text-faint">{t('proyectoDetalle.nadieTodavia')}</p>
               )}
               {lista.map((m) => (
                 <div key={m.id} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-hover">
@@ -479,7 +485,7 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
                   <button
                     type="button"
                     onClick={() => quitar.mutate({ proyectoId, personaId: m.id })}
-                    aria-label={`Quitar a ${m.nombre}`}
+                    aria-label={t('proyectoDetalle.quitarA', { nombre: m.nombre })}
                     className="flex h-5 w-5 items-center justify-center rounded text-muted transition-colors hover:bg-[var(--color-danger-tint)] hover:text-[var(--color-danger)]"
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -498,7 +504,7 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
                 }}
                 className="w-full rounded-lg border border-line bg-canvas px-2 py-1.5 text-[13px] outline-none focus:border-brand"
               >
-                <option value="">+ Sumar persona…</option>
+                <option value="">{t('proyectoDetalle.sumarPersona')}</option>
                 {disponibles.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
@@ -515,6 +521,7 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
 
 // Definición de producto: el norte del proyecto. Autoguardado con debounce.
 function DefinicionSeccion({ proyecto }: { proyecto: Tables<'proyectos'> }) {
+  const { t } = useTranslation()
   const actualizar = useActualizarProyecto()
   const [campos, setCampos] = useState({
     que_es: proyecto.que_es ?? '',
@@ -558,16 +565,16 @@ function DefinicionSeccion({ proyecto }: { proyecto: Tables<'proyectos'> }) {
   return (
     <div className="mb-[30px]">
       <div className="mb-[9px] flex items-center gap-2.5 px-0.5">
-        <h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.02em] text-label">Definición</h2>
+        <h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.02em] text-label">{t('proyectoDetalle.definicion')}</h2>
         <span className="font-mono text-[11.5px] text-faint">
-          {guardado === 'guardando' ? 'guardando…' : guardado === 'ok' ? 'guardado' : 'el norte del proyecto'}
+          {guardado === 'guardando' ? t('proyectoDetalle.guardando') : guardado === 'ok' ? t('proyectoDetalle.guardado') : t('proyectoDetalle.elNorte')}
         </span>
         <div className="h-px flex-1 bg-line" />
       </div>
       <div className="space-y-3 rounded-[13px] border border-line bg-surface px-5 py-[18px]">
-        {fila('que_es', 'Qué es', '¿Qué es este producto, en una frase?')}
-        {fila('para_quien', 'Para quién', '¿Quién lo usa? ¿Para quién resuelve algo?')}
-        {fila('problema', 'Problema', '¿Qué problema resuelve?')}
+        {fila('que_es', t('revisiones.queEs'), t('proyectoDetalle.queEsPh'))}
+        {fila('para_quien', t('revisiones.paraQuien'), t('proyectoDetalle.paraQuienPh'))}
+        {fila('problema', t('revisiones.problema'), t('proyectoDetalle.problemaPh'))}
       </div>
     </div>
   )
@@ -581,6 +588,7 @@ function CorreccionesClienteSeccion({
   proyectoId: string
   personaPorId: Map<string, Persona>
 }) {
+  const { t } = useTranslation()
   const { data: correcciones } = useCorreccionesCliente(proyectoId)
   const { data: reuniones } = useReuniones(proyectoId)
   const { data: cliente } = useClientePorProyecto(proyectoId)
@@ -594,12 +602,12 @@ function CorreccionesClienteSeccion({
     <div className="mb-[30px]">
       <div className="mb-[9px] flex items-center gap-2.5 px-0.5">
         <h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.02em] text-label">
-          Correcciones del cliente
+          {t('proyectoDetalle.correccionesCliente')}
         </h2>
         <span className="font-mono text-[11.5px] text-faint">
           {fechaCierre
-            ? `último cierre con cliente: ${fechaCierre}`
-            : 'sin cierres con cliente todavía'}
+            ? t('proyectoDetalle.ultimoCierre', { fecha: fechaCierre })
+            : t('proyectoDetalle.sinCierres')}
         </span>
         <div className="h-px flex-1 bg-line" />
       </div>
@@ -608,28 +616,28 @@ function CorreccionesClienteSeccion({
 
       {lista.length === 0 ? (
         <div className="rounded-[13px] border border-dashed border-line px-4 py-3.5 text-center text-[12.5px] text-faint">
-          Sin correcciones de cliente abiertas.
+          {t('proyectoDetalle.sinCorrecciones')}
         </div>
       ) : (
         <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
-          {lista.map((t) => {
-            const vm = estadoVM(t.estado)
-            const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+          {lista.map((tarea) => {
+            const vm = estadoVM(tarea.estado)
+            const resp = tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined
             return (
               <div
-                key={t.id}
+                key={tarea.id}
                 className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px]"
               >
                 <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{t.titulo}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{tarea.titulo}</span>
                 <span
                   className="flex-none rounded-md px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
                   style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                 >
-                  Corrección
+                  {t('revisiones.correccion')}
                 </span>
-                {t.modulos?.nombre && (
-                  <span className="flex-none text-[11.5px] text-muted-soft">{t.modulos.nombre}</span>
+                {tarea.modulos?.nombre && (
+                  <span className="flex-none text-[11.5px] text-muted-soft">{tarea.modulos.nombre}</span>
                 )}
                 <span
                   className="flex-none rounded-md px-2 py-[2px] text-[11px] font-semibold"
@@ -655,6 +663,7 @@ function ClienteEditor({
   proyectoId: string
   cliente: Tables<'clientes'> | null
 }) {
+  const { t } = useTranslation()
   const crear = useCrearCliente()
   const actualizar = useActualizarCliente()
   const [nombre, setNombre] = useState(cliente?.nombre ?? '')
@@ -690,17 +699,17 @@ function ClienteEditor({
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-[13px] border border-line bg-surface px-4 py-3">
-      <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-label">Cliente</span>
+      <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-label">{t('proyectoDetalle.cliente')}</span>
       <input
         value={nombre}
         onChange={(e) => onChange('nombre', e.target.value)}
-        placeholder="Nombre del cliente"
+        placeholder={t('proyectoDetalle.nombreCliente')}
         className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-[13px] text-ink outline-none placeholder:text-faint focus:border-brand"
       />
       <input
         value={contacto}
         onChange={(e) => onChange('contacto', e.target.value)}
-        placeholder="Contacto (email, teléfono…)"
+        placeholder={t('proyectoDetalle.contactoCliente')}
         className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-[13px] text-ink outline-none placeholder:text-faint focus:border-brand"
       />
     </div>
@@ -725,6 +734,7 @@ function ModuloSeccion({
   todasLasTareas: Tables<'tareas'>[]
   proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
 }) {
+  const { t } = useTranslation()
   const crear = useCrearTarea()
   const actualizar = useActualizarTarea()
   const actualizarModulo = useActualizarModulo()
@@ -755,9 +765,9 @@ function ModuloSeccion({
 
   const agregar = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return
-    const t = titulo.trim()
-    if (!t) return
-    crear.mutate({ modulo_id: modulo.id, titulo: t })
+    const tit = titulo.trim()
+    if (!tit) return
+    crear.mutate({ modulo_id: modulo.id, titulo: tit })
     setTitulo('')
   }
 
@@ -770,7 +780,7 @@ function ModuloSeccion({
           className={`m-0 text-[13px] font-bold uppercase tracking-[0.02em] text-label ${
             cerrado ? 'cursor-pointer' : 'cursor-default'
           }`}
-          title={cerrado ? (colapsado ? 'Expandir módulo' : 'Colapsar módulo') : undefined}
+          title={cerrado ? (colapsado ? t('proyectoDetalle.expandirModulo') : t('proyectoDetalle.colapsarModulo')) : undefined}
         >
           {modulo.nombre}
         </button>
@@ -786,19 +796,19 @@ function ModuloSeccion({
         <div className="h-px flex-1 bg-line" />
         <div className="flex flex-none items-center gap-2">
           {modulo.estado === 'abierto' && (
-            <AccionModulo onClick={() => cambiarEstado('en_revision')}>Enviar a revisión</AccionModulo>
+            <AccionModulo onClick={() => cambiarEstado('en_revision')}>{t('proyectoDetalle.enviarRevision')}</AccionModulo>
           )}
           {modulo.estado === 'en_revision' && (
             <Link
               to="/revisiones"
               className="rounded-md border border-[var(--color-info-line)] bg-[var(--color-info-tint)] px-2 py-[3px] text-[11px] font-semibold text-[var(--color-info)] transition-colors hover:bg-[var(--color-info-line)]"
-              title="Pendiente del responsable de visión"
+              title={t('proyectoDetalle.pendienteVision')}
             >
-              En revisión →
+              {t('proyectoDetalle.enRevisionArrow')}
             </Link>
           )}
           {modulo.estado === 'cerrado' && (
-            <AccionModulo onClick={() => cambiarEstado('abierto')}>Reabrir</AccionModulo>
+            <AccionModulo onClick={() => cambiarEstado('abierto')}>{t('proyectoDetalle.reabrir')}</AccionModulo>
           )}
         </div>
       </div>
@@ -810,12 +820,12 @@ function ModuloSeccion({
 
       {!colapsado && (
       <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
-        {lista.map((t) => {
-          const vm = estadoVM(t.estado)
-          const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+        {lista.map((tarea) => {
+          const vm = estadoVM(tarea.estado)
+          const resp = tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined
 
           const isBlocked = proyectoDeps
-            .filter((d) => d.bloqueada_id === t.id)
+            .filter((d) => d.bloqueada_id === tarea.id)
             .some((d) => {
               const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
               return b ? b.estado !== 'hecho' : false
@@ -823,12 +833,12 @@ function ModuloSeccion({
 
           return (
             <button
-              key={t.id}
+              key={tarea.id}
               type="button"
               data-taskrow
-              onClick={() => onAbrir(t.id)}
+              onClick={() => onAbrir(tarea.id)}
               className="flex w-full items-center gap-3 border-b border-line-soft px-4 py-[11px] text-left transition-colors hover:bg-row-hover focus:bg-row-hover focus:outline-none"
-              style={{ background: seleccionado === t.id ? 'var(--color-hover)' : undefined }}
+              style={{ background: seleccionado === tarea.id ? 'var(--color-hover)' : undefined }}
             >
               <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
               <span
@@ -836,30 +846,30 @@ function ModuloSeccion({
                 style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
               >
                 {isBlocked && (
-                  <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+                  <span className="text-brand flex-none" title={t('kanban.tareaBloqueada')}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="inline">
                       <rect x="3" y="11" width="10" height="4" rx="1" />
                       <path d="M4 11V6a4 4 0 0 1 8 0v5" />
                     </svg>
                   </span>
                 )}
-                {t.titulo}
+                {tarea.titulo}
               </span>
-              {t.tipo === 'correccion' && (
+              {tarea.tipo === 'correccion' && (
                 <span
                   className="flex-none rounded-md px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
                   style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                 >
-                  Corrección
+                  {t('revisiones.correccion')}
                 </span>
               )}
-              <FechaTag fecha={t.fecha} done={vm.done} />
+              <FechaTag fecha={tarea.fecha} done={vm.done} />
               {resp ? (
                 <Avatar nombre={resp.nombre} color={resp.color} size={26} />
               ) : (
                 <Avatar nombre="—" color="var(--color-avatar-empty)" size={26} />
               )}
-              <EstadoChip estado={t.estado} onClick={() => ciclarEstado(t.id, t.estado)} />
+              <EstadoChip estado={tarea.estado} onClick={() => ciclarEstado(tarea.id, tarea.estado)} />
             </button>
           )
         })}
@@ -873,11 +883,11 @@ function ModuloSeccion({
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             onKeyDown={agregar}
-            placeholder="Agregar tarea…"
+            placeholder={t('proyectoDetalle.agregarTarea')}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
           />
           {titulo.trim() && (
-            <span className="flex-none font-mono text-[11px] text-faint">Enter ↵</span>
+            <span className="flex-none font-mono text-[11px] text-faint">{t('proyectoDetalle.enterHint')}</span>
           )}
         </div>
       </div>
@@ -895,6 +905,7 @@ function FeedbackModulo({
   moduloId: string
   personaPorId: Map<string, Persona>
 }) {
+  const { t } = useTranslation()
   const { data: comentarios } = useComentariosModulo(moduloId)
   const [expandido, setExpandido] = useState(false)
   const lista = comentarios ?? []
@@ -906,7 +917,7 @@ function FeedbackModulo({
     <div className="mb-2.5 rounded-[11px] border border-line bg-row-hover px-3.5 py-2.5">
       <div className="mb-1.5 flex items-center gap-2">
         <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-faint">
-          Feedback de revisión
+          {t('proyectoDetalle.feedbackRevision')}
         </span>
         {lista.length > 1 && (
           <button
@@ -914,7 +925,7 @@ function FeedbackModulo({
             onClick={() => setExpandido((v) => !v)}
             className="text-[11px] font-semibold text-muted transition-colors hover:text-ink"
           >
-            {expandido ? 'ver menos' : `ver los ${lista.length}`}
+            {expandido ? t('proyectoDetalle.verMenos') : t('proyectoDetalle.verLos', { count: lista.length })}
           </button>
         )}
       </div>
@@ -926,7 +937,7 @@ function FeedbackModulo({
               <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={22} />
               <div className="min-w-0 flex-1">
                 <div className="mb-0.5 flex items-baseline gap-2">
-                  <span className="text-[12px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                  <span className="text-[12px] font-bold">{autor?.nombre ?? t('paraMi.alguien')}</span>
                   {c.created_at && (
                     <span className="text-[10px] font-mono text-faint">
                       {fmtFechaHora(c.created_at)}

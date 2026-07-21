@@ -1,22 +1,22 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { Enums } from '../lib/database.types.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { usePersonas } from '../data/personas.ts'
 import { useSprints } from '../data/sprints.ts'
 import { useReuniones, useCrearReunion } from '../data/reuniones.ts'
-import { ALERTAS, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
-import { TIPOS_REUNION, fmtFechaCompleta } from '../lib/ui.ts'
+import { alertas, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
+import { tiposReunion, fmtFechaCompleta } from '../lib/ui.ts'
 import { Eyebrow, Skeleton, EmptyState } from '../components/ui.tsx'
 
 type TipoReunion = Enums<'tipo_reunion'>
 
-// Mapa de tipo de reunión → etiqueta + colores (chip), compartido en lib/ui.
-const TIPOS = TIPOS_REUNION
-
 const ORDEN_TIPOS: TipoReunion[] = ['sprint_planning', 'retro', 'sync', 'cliente', 'otro']
 
 export default function Reuniones() {
+  const { t } = useTranslation()
+  const TIPOS = tiposReunion()
   const navigate = useNavigate()
   const [filtroProyecto, setFiltroProyecto] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
@@ -33,10 +33,10 @@ export default function Reuniones() {
     <div className="mx-auto max-w-[860px] px-11 pb-20 pt-10">
       <div className="mb-[30px] flex items-end justify-between gap-6">
         <div>
-          <Eyebrow>{reuniones?.length ?? 0} registradas</Eyebrow>
-          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Reuniones</h1>
+          <Eyebrow>{t('reuniones.registradas', { count: reuniones?.length ?? 0 })}</Eyebrow>
+          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('reuniones.titulo')}</h1>
           <p className="mt-[7px] text-sm text-muted-soft">
-            Una bitácora de reuniones por proyecto. Tomá notas y convertí los acuerdos en tareas.
+            {t('reuniones.subtitulo')}
           </p>
         </div>
         <div className="flex flex-none items-center gap-2.5">
@@ -49,7 +49,7 @@ export default function Reuniones() {
               <rect x="2" y="3" width="12" height="11" rx="1.6" />
               <path d="M2 6.2h12M5.2 1.8v2.4M10.8 1.8v2.4" />
             </svg>
-            Calendario
+            {t('nav.calendario')}
           </button>
           <button
             type="button"
@@ -59,20 +59,20 @@ export default function Reuniones() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M8 3v10M3 8h10" />
             </svg>
-            Nueva reunión
+            {t('reuniones.nuevaReunion')}
           </button>
         </div>
       </div>
 
       <div className="mb-6 flex items-center gap-2.5">
-        <label htmlFor="filtro-proyecto" className="text-xs font-medium text-muted">Proyecto</label>
+        <label htmlFor="filtro-proyecto" className="text-xs font-medium text-muted">{t('common.proyecto')}</label>
         <select
           id="filtro-proyecto"
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
           className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
         >
-          <option value="">Todos los proyectos</option>
+          <option value="">{t('calendario.todosProyectos')}</option>
           {(proyectos ?? []).map((p) => (
             <option key={p.id} value={p.id}>
               {p.nombre}
@@ -104,8 +104,8 @@ export default function Reuniones() {
               <path d="M5 6.5h6M5 9h4" />
             </svg>
           }
-          titulo="Sin reuniones todavía"
-          descripcion="Registrá una reunión para tomar notas y convertir los acuerdos en tareas."
+          titulo={t('reuniones.sinReuniones')}
+          descripcion={t('reuniones.sinReunionesDesc')}
           accion={
             !creando ? (
               <button
@@ -116,7 +116,7 @@ export default function Reuniones() {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M8 3v10M3 8h10" />
                 </svg>
-                Nueva reunión
+                {t('reuniones.nuevaReunion')}
               </button>
             ) : undefined
           }
@@ -165,10 +165,11 @@ export default function Reuniones() {
 
 // Etiqueta del sprint asociado en la tarjeta de la lista.
 function SprintLabel({ proyectoId, sprintId }: { proyectoId: string; sprintId: string }) {
+  const { t } = useTranslation()
   const { data: sprints } = useSprints(proyectoId)
   const sprint = (sprints ?? []).find((s) => s.id === sprintId)
   if (!sprint) return null
-  return <div className="mt-2 text-[12px] text-muted">Sprint: {sprint.nombre}</div>
+  return <div className="mt-2 text-[12px] text-muted">{t('reuniones.sprintPrefix', { nombre: sprint.nombre })}</div>
 }
 
 // Formulario inline para registrar (no agendar) una reunión.
@@ -181,6 +182,8 @@ function NuevaReunionForm({
   onCancelar: () => void
   onCreada: (id: string) => void
 }) {
+  const { t } = useTranslation()
+  const TIPOS = tiposReunion()
   const { data: proyectos } = useProyectos()
   const { data: personas } = usePersonas()
   const crear = useCrearReunion()
@@ -244,18 +247,18 @@ function NuevaReunionForm({
   return (
     <div className="mb-6 rounded-[14px] border border-line bg-surface p-5">
       <div className="mb-4 text-[13px] font-bold uppercase tracking-[0.03em] text-label">
-        Registrar reunión
+        {t('reuniones.registrarReunion')}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-4">
-        <Campo label="Proyecto">
+        <Campo label={t('common.proyecto')}>
           <select
             value={proyectoId}
             onChange={(e) => onCambiarProyecto(e.target.value)}
             className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
           >
             <option value="" disabled>
-              Elegí un proyecto…
+              {t('reuniones.elegiProyecto')}
             </option>
             {(proyectos ?? []).map((p) => (
               <option key={p.id} value={p.id}>
@@ -265,28 +268,28 @@ function NuevaReunionForm({
           </select>
         </Campo>
 
-        <Campo label="Tipo">
+        <Campo label={t('reuniones.tipo')}>
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoReunion)}
             className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
           >
-            {ORDEN_TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {TIPOS[t].label}
+            {ORDEN_TIPOS.map((tp) => (
+              <option key={tp} value={tp}>
+                {TIPOS[tp].label}
               </option>
             ))}
           </select>
         </Campo>
 
-        <Campo label="Sprint (opcional)">
+        <Campo label={t('reuniones.sprintOpcional')}>
           <select
             value={sprintId}
             onChange={(e) => setSprintId(e.target.value)}
             disabled={!proyectoValido}
             className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none disabled:opacity-50"
           >
-            <option value="">Sin sprint</option>
+            <option value="">{t('reuniones.sinSprint')}</option>
             {(sprints ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
@@ -295,7 +298,7 @@ function NuevaReunionForm({
           </select>
         </Campo>
 
-        <Campo label="Fecha">
+        <Campo label={t('reuniones.fecha')}>
           <input
             type="date"
             value={fecha}
@@ -304,7 +307,7 @@ function NuevaReunionForm({
           />
         </Campo>
 
-        <Campo label="Hora (opcional)">
+        <Campo label={t('reuniones.horaOpcional')}>
           <input
             type="time"
             value={hora}
@@ -313,20 +316,20 @@ function NuevaReunionForm({
           />
         </Campo>
 
-        <Campo label="Alerta">
+        <Campo label={t('reuniones.alerta')}>
           <select
             value={alertaMin ?? ''}
             onChange={(e) => onCambiarAlerta(e.target.value)}
             className="w-full rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none"
           >
-            {ALERTAS.map((a) => (
+            {alertas().map((a) => (
               <option key={a.label} value={a.min ?? ''}>{a.label}</option>
             ))}
           </select>
         </Campo>
       </div>
 
-      <Campo label="Título (opcional)">
+      <Campo label={t('reuniones.tituloOpcional')}>
         <input
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
@@ -336,11 +339,11 @@ function NuevaReunionForm({
       </Campo>
 
       <div className="mt-4">
-        <Campo label="Descripción · qué se hará en la reunión (opcional)">
+        <Campo label={t('reuniones.descripcionLabel')}>
           <textarea
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Agenda, objetivo, temas a tratar…"
+            placeholder={t('reuniones.descripcionPlaceholder')}
             rows={2}
             className="w-full resize-y rounded-[9px] border border-line bg-canvas px-2.5 py-2 text-[13px] text-ink outline-none placeholder:text-faint"
           />
@@ -348,7 +351,7 @@ function NuevaReunionForm({
       </div>
 
       <div className="mb-4 mt-4">
-        <div className="mb-2 text-[12px] font-medium text-muted">Asistentes</div>
+        <div className="mb-2 text-[12px] font-medium text-muted">{t('reuniones.asistentes')}</div>
         <div className="flex flex-wrap gap-2">
           {(personas ?? []).map((p) => {
             const activo = asistentes.includes(p.id)
@@ -377,7 +380,7 @@ function NuevaReunionForm({
 
       {crear.isError && (
         <div className="mb-3 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-          No se pudo crear la reunión.
+          {t('reuniones.errCrear')}
         </div>
       )}
 
@@ -387,7 +390,7 @@ function NuevaReunionForm({
           onClick={onCancelar}
           className="rounded-[9px] border border-line bg-canvas px-[15px] py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-hover"
         >
-          Cancelar
+          {t('common.cancelar')}
         </button>
         <button
           type="button"
@@ -395,7 +398,7 @@ function NuevaReunionForm({
           disabled={!proyectoValido || crear.isPending}
           className="rounded-[9px] bg-brand px-4 py-2 text-[13.5px] font-semibold text-on-brand transition-colors hover:bg-[var(--color-brand-strong)] disabled:opacity-50"
         >
-          {crear.isPending ? 'Creando…' : 'Crear reunión'}
+          {crear.isPending ? t('reuniones.creando') : t('reuniones.crearReunion')}
         </button>
       </div>
     </div>

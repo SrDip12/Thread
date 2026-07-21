@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
@@ -23,7 +24,7 @@ const iconProps = {
 
 interface NavItem {
   to: string
-  label: string
+  label: string // clave i18n
   icon: React.ReactNode
   badge?: boolean
 }
@@ -33,7 +34,7 @@ interface NavItem {
 const navPrincipal: NavItem[] = [
   {
     to: '/hoy',
-    label: 'Hoy',
+    label: 'nav.hoy',
     icon: (
       <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="8" cy="8" r="3.2" />
@@ -43,7 +44,7 @@ const navPrincipal: NavItem[] = [
   },
   {
     to: '/mis-tareas',
-    label: 'Mis tareas',
+    label: 'nav.misTareas',
     icon: (
       <svg {...iconProps} strokeLinecap="round">
         <path d="M3 4h2M3 8h2M3 12h2" />
@@ -53,7 +54,7 @@ const navPrincipal: NavItem[] = [
   },
   {
     to: '/para-mi',
-    label: 'Para mí',
+    label: 'nav.paraMi',
     badge: true,
     icon: (
       <svg {...iconProps} strokeLinejoin="round">
@@ -64,7 +65,7 @@ const navPrincipal: NavItem[] = [
   },
   {
     to: '/revisiones',
-    label: 'Revisiones',
+    label: 'nav.revisiones',
     icon: (
       <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 8.5l3 3 6.5-7" />
@@ -77,7 +78,7 @@ const navPrincipal: NavItem[] = [
 const navSecundaria: NavItem[] = [
   {
     to: '/proyectos',
-    label: 'Proyectos',
+    label: 'nav.proyectos',
     icon: (
       <svg {...iconProps}>
         <rect x="2" y="2" width="5" height="5" rx="1.2" />
@@ -89,7 +90,7 @@ const navSecundaria: NavItem[] = [
   },
   {
     to: '/reuniones',
-    label: 'Reuniones',
+    label: 'nav.reuniones',
     icon: (
       <svg {...iconProps}>
         <rect x="2" y="3" width="12" height="11" rx="1.6" />
@@ -99,7 +100,7 @@ const navSecundaria: NavItem[] = [
   },
   {
     to: '/calendario',
-    label: 'Calendario',
+    label: 'nav.calendario',
     icon: (
       <svg {...iconProps} strokeLinecap="round">
         <rect x="2" y="3" width="12" height="11" rx="1.6" />
@@ -110,7 +111,7 @@ const navSecundaria: NavItem[] = [
   },
   {
     to: '/equipo',
-    label: 'Equipo',
+    label: 'nav.equipo',
     icon: (
       <svg {...iconProps}>
         <circle cx="6" cy="6" r="2.4" />
@@ -123,6 +124,7 @@ const navSecundaria: NavItem[] = [
 ]
 
 export default function Layout() {
+  const { t, i18n } = useTranslation()
   const { persona, signOut } = useAuth()
   const { data: preguntas } = useComentariosParaPo()
   const poCount = preguntas?.length ?? 0
@@ -181,10 +183,16 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const alternarIdioma = () => {
+    const next = i18n.language?.startsWith('en') ? 'es' : 'en'
+    void i18n.changeLanguage(next)
+  }
+  const esIngles = i18n.language?.startsWith('en') ?? false
+
   const renderItem = (item: NavItem) => {
     const esRev = item.to === '/revisiones'
     const count = esRev ? revCount : item.badge ? poCount : 0
-    const countLabel = esRev ? `${count} en revisión` : `${count} preguntas para vos`
+    const countLabel = esRev ? t('nav.enRevision', { count }) : t('nav.preguntasParaVos', { count })
     return (
       <NavLink
         key={item.to}
@@ -197,7 +205,7 @@ export default function Layout() {
         }
       >
         {item.icon}
-        <span className="flex-1">{item.label}</span>
+        <span className="flex-1">{t(item.label)}</span>
         {count > 0 && (
           <span
             aria-label={countLabel}
@@ -216,7 +224,7 @@ export default function Layout() {
         href="#contenido"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-canvas"
       >
-        Saltar al contenido
+        {t('common.saltarAlContenido')}
       </a>
       <Onboarding abierto={tourAbierto} onCerrar={() => setTourAbierto(false)} />
       <CommandPalette abierto={paletaAbierta} onCerrar={() => setPaletaAbierta(false)} />
@@ -238,7 +246,7 @@ export default function Layout() {
             <circle cx="7" cy="7" r="4.5" />
             <path d="M13.5 13.5L10.5 10.5" />
           </svg>
-          <span className="flex-1 text-left">Buscar…</span>
+          <span className="flex-1 text-left">{t('nav.buscar')}</span>
           <span className="flex-none font-mono text-[11px] text-faint">⌘K</span>
         </button>
 
@@ -259,7 +267,7 @@ export default function Layout() {
             >
               <path d="M6 3.5L10.5 8L6 12.5" />
             </svg>
-            <span className="flex-1 text-left">Más</span>
+            <span className="flex-1 text-left">{t('nav.mas')}</span>
           </button>
 
           {mostrarMas && navSecundaria.map(renderItem)}
@@ -269,16 +277,25 @@ export default function Layout() {
           <div className="mt-2 flex items-center gap-2.5 border-t border-line px-[11px] pb-2 pt-3.5">
             <Avatar nombre={persona?.nombre ?? 'Yo'} color={persona?.color ?? '#c96442'} size={30} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-semibold">{persona?.nombre ?? 'Yo'}</div>
+              <div className="truncate text-[13px] font-semibold">{persona?.nombre ?? t('nav.yo')}</div>
               <div className="truncate text-[11px] text-muted">
-                {persona?.rol === 'po' ? 'Product Owner' : 'Desarrollo'}
+                {persona?.rol === 'po' ? t('nav.productOwner') : t('nav.desarrollo')}
               </div>
             </div>
             <button
               type="button"
+              onClick={alternarIdioma}
+              title={t('nav.idioma')}
+              aria-label={t('nav.idioma')}
+              className="flex h-7 flex-none items-center justify-center rounded-lg px-1.5 text-[11px] font-bold uppercase text-muted transition-colors hover:bg-hover hover:text-ink"
+            >
+              {esIngles ? 'EN' : 'ES'}
+            </button>
+            <button
+              type="button"
               onClick={alternarTema}
-              title={oscuro ? 'Modo claro' : 'Modo oscuro'}
-              aria-label={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              title={oscuro ? t('nav.modoClaro') : t('nav.modoOscuro')}
+              aria-label={oscuro ? t('nav.cambiarAClaro') : t('nav.cambiarAOscuro')}
               className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
             >
               {oscuro ? (
@@ -295,7 +312,7 @@ export default function Layout() {
             <button
               type="button"
               onClick={() => setTourAbierto(true)}
-              title="Ver el recorrido"
+              title={t('nav.verRecorrido')}
               className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
             >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -307,7 +324,7 @@ export default function Layout() {
             <button
               type="button"
               onClick={() => void signOut()}
-              title="Cerrar sesión"
+              title={t('nav.cerrarSesion')}
               className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
             >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

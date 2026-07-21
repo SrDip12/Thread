@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProyectos } from '../data/proyectos.ts'
 import { useEstadisticasProyectos } from '../data/tareas.ts'
@@ -7,6 +8,7 @@ import { AvatarStack, EmptyState, Eyebrow, ProgressBar, Skeleton } from '../comp
 import NuevoProyecto from '../components/NuevoProyecto.tsx'
 
 export default function Proyectos() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { data: proyectos, isLoading } = useProyectos()
   const { data: stats } = useEstadisticasProyectos()
@@ -29,15 +31,15 @@ export default function Proyectos() {
     <div className="mx-auto max-w-[1120px] px-11 pb-20 pt-10">
       <div className="mb-[30px] flex items-end justify-between">
         <div>
-          <Eyebrow>Equipo</Eyebrow>
-          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Proyectos</h1>
+          <Eyebrow>{t('proyectos.eyebrow')}</Eyebrow>
+          <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('proyectos.titulo')}</h1>
         </div>
         <button
           type="button"
           onClick={() => setCreando(true)}
           className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
         >
-          + Nuevo proyecto
+          {t('proyectos.nuevo')}
         </button>
       </div>
 
@@ -61,15 +63,15 @@ export default function Proyectos() {
               <rect x="9" y="9" width="5" height="5" rx="1.2" />
             </svg>
           }
-          titulo="Todavía no hay proyectos"
-          descripcion="Creá el primero y, si querés, subí un documento de requisitos para que la IA arme los módulos."
+          titulo={t('proyectos.sinProyectos')}
+          descripcion={t('proyectos.sinProyectosDesc')}
           accion={
             <button
               type="button"
               onClick={() => setCreando(true)}
               className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
             >
-              + Nuevo proyecto
+              {t('proyectos.nuevo')}
             </button>
           }
         />
@@ -98,7 +100,7 @@ export default function Proyectos() {
                 <div className="mb-5 text-[13px] text-muted-soft">{p.descripcion ?? ''}</div>
 
                 <div className="mb-[7px] flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted">Avance</span>
+                  <span className="text-xs font-medium text-muted">{t('proyectos.avance')}</span>
                   <span className="font-mono text-xs font-bold text-ink">{s?.pct ?? 0}%</span>
                 </div>
                 <div className="mb-[18px]">
@@ -108,10 +110,10 @@ export default function Proyectos() {
                 <div className="flex items-center justify-between">
                   <AvatarStack personas={miembros.map((m) => ({ nombre: m.nombre, color: m.color }))} />
                   <div className="font-mono text-xs text-muted">
-                    {s?.modulos ?? 0} mód · {s?.total ?? 0} tareas
+                    {s?.modulos ?? 0} {t('proyectos.modAbrev')} · {s?.total ?? 0} {t('common.tareas')}
                     {(s?.vencidas ?? 0) > 0 && (
                       <span className="ml-1.5 rounded bg-[var(--color-danger-tint)] px-1.5 py-[1px] font-bold text-[var(--color-danger)]">
-                        {s?.vencidas} venc.
+                        {s?.vencidas} {t('proyectos.vencAbrev')}
                       </span>
                     )}
                   </div>

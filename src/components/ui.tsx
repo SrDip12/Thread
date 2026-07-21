@@ -1,14 +1,16 @@
 // Componentes presentacionales reutilizables, fieles al /design. Sin lógica de datos.
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { estadoVM, fechaVM, iniciales, type EstadoTarea } from '../lib/ui.ts'
 
 // Fecha límite de una tarea con señal de vencimiento (rojo si venció, marca si es hoy).
 export function FechaTag({ fecha, done = false }: { fecha: string | null; done?: boolean }) {
+  const { t } = useTranslation()
   const vm = fechaVM(fecha, done)
   if (!vm) return null
   return (
     <span
-      title={vm.vencida ? 'Vencida' : undefined}
+      title={vm.vencida ? t('fecha.vencida') : undefined}
       className="flex-none rounded px-1.5 py-[2px] font-mono text-[11px] font-semibold"
       style={{ color: vm.fg, background: vm.bg ?? 'transparent' }}
     >
@@ -151,6 +153,7 @@ const CheckIcon = (
 )
 
 export function EstadoChip({ estado, onClick }: { estado: EstadoTarea; onClick?: () => void }) {
+  const { t } = useTranslation()
   const vm = estadoVM(estado)
   return (
     <span
@@ -163,7 +166,7 @@ export function EstadoChip({ estado, onClick }: { estado: EstadoTarea; onClick?:
           : undefined
       }
       role={onClick ? 'button' : undefined}
-      title={onClick ? 'Cambiar estado' : undefined}
+      title={onClick ? t('estados.cambiarEstado') : undefined}
       className={`flex flex-none items-center gap-1.5 rounded-lg py-[3px] pl-2 pr-[9px] text-xs font-semibold ${
         onClick ? 'cursor-pointer transition-transform hover:scale-[1.03]' : ''
       }`}

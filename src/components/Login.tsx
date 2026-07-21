@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Login() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -27,12 +29,12 @@ export default function Login() {
           <div className="text-base font-extrabold tracking-tight text-ink">Thread</div>
         </div>
 
-        <h1 className="mb-1 text-lg font-semibold text-ink">Iniciar sesión</h1>
-        <p className="mb-6 text-sm text-muted">Ingresá con tu email y contraseña.</p>
+        <h1 className="mb-1 text-lg font-semibold text-ink">{t('login.titulo')}</h1>
+        <p className="mb-6 text-sm text-muted">{t('login.subtitulo')}</p>
 
         <form onSubmit={entrar} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-ink">Email</span>
+            <span className="text-sm font-medium text-ink">{t('login.email')}</span>
             <input
               type="email"
               value={email}
@@ -44,7 +46,7 @@ export default function Login() {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-ink">Contraseña</span>
+            <span className="text-sm font-medium text-ink">{t('login.contrasena')}</span>
             <input
               type="password"
               value={password}
@@ -62,12 +64,12 @@ export default function Login() {
             disabled={enviando}
             className="rounded-[9px] bg-brand px-3 py-2 text-sm font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            Entrar
+            {t('login.entrar')}
           </button>
         </form>
 
         <p className="mt-4 text-xs text-muted">
-          ¿No tenés acceso? El alta de cuentas la hace un administrador del equipo.
+          {t('login.sinAcceso')}
         </p>
       </div>
     </div>

@@ -1,12 +1,13 @@
 // "Hoy": el plan del día en una pantalla. Qué venció, qué vence hoy, qué viene
 // esta semana y las reuniones del día — con acción directa (ciclar estado, abrir).
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useMisTareas, useActualizarTarea, type TareaConProyecto } from '../data/tareas.ts'
 import { useReuniones, type Reunion } from '../data/reuniones.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
 import { useProyectos } from '../data/proyectos.ts'
-import { estadoVM, ESTADOS, diasHasta, TIPOS_REUNION, fmtFecha } from '../lib/ui.ts'
+import { estadoVM, ESTADOS, diasHasta, tiposReunion, fmtFecha } from '../lib/ui.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
 import { Eyebrow, EstadoChip, FechaTag, Skeleton, EmptyState } from '../components/ui.tsx'
 
@@ -19,6 +20,7 @@ function diasReunion(r: Reunion): number {
 }
 
 export default function Hoy() {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { persona } = useAuth()
   const { data: tareas, isLoading: cargandoTareas } = useMisTareas(persona?.id ?? '')
@@ -66,7 +68,7 @@ export default function Hoy() {
     reunionesHoy.length === 0 &&
     reunionesProximas.length === 0
 
-  const fechaLarga = new Date().toLocaleDateString('es', {
+  const fechaLarga = new Date().toLocaleDateString(i18n.language?.startsWith('en') ? 'en' : 'es', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -77,17 +79,20 @@ export default function Hoy() {
       <div className="mb-[30px]">
         <Eyebrow>{fechaLarga}</Eyebrow>
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">
-          Hoy{persona ? `, ${persona.nombre.split(' ')[0]}` : ''}
+          {persona ? t('hoy.saludoNombre', { nombre: persona.nombre.split(' ')[0] }) : t('hoy.saludo')}
         </h1>
         {!cargando && (
           <p className="mt-[7px] text-sm text-muted-soft">
             {vencidas.length > 0 && (
               <span className="font-semibold text-[var(--color-danger)]">
-                {vencidas.length} {vencidas.length === 1 ? 'tarea vencida' : 'tareas vencidas'} ·{' '}
+                {vencidas.length} {vencidas.length === 1 ? t('hoy.tareaVencida') : t('hoy.tareasVencidas')} ·{' '}
               </span>
             )}
-            {paraHoy.length} para hoy · {reunionesHoy.length}{' '}
-            {reunionesHoy.length === 1 ? 'reunión' : 'reuniones'} hoy
+            {t('hoy.resumen', {
+              paraHoy: paraHoy.length,
+              reuniones: reunionesHoy.length,
+              palabraReunion: reunionesHoy.length === 1 ? t('hoy.reunion') : t('hoy.reuniones'),
+            })}
           </p>
         )}
       </div>
@@ -108,13 +113,13 @@ export default function Hoy() {
               <path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1" />
             </svg>
           }
-          titulo="Día despejado"
-          descripcion="Sin vencimientos ni reuniones a la vista. Mirá el backlog de tus proyectos si querés adelantar."
+          titulo={t('hoy.diaDespejado')}
+          descripcion={t('hoy.diaDespejadoDesc')}
         />
       )}
 
       {vencidas.length > 0 && (
-        <SeccionHoy titulo="Vencidas" extra={`${vencidas.length}`} alerta>
+        <SeccionHoy titulo={t('hoy.vencidas')} extra={`${vencidas.length}`} alerta>
           {vencidas.map((t) => (
             <FilaTareaHoy key={t.id} t={t} onAbrir={navigate} onCiclar={() => ciclar(t)} />
           ))}
@@ -122,7 +127,7 @@ export default function Hoy() {
       )}
 
       {paraHoy.length > 0 && (
-        <SeccionHoy titulo="Para hoy" extra={`${paraHoy.length}`}>
+        <SeccionHoy titulo={t('hoy.paraHoy')} extra={`${paraHoy.length}`}>
           {paraHoy.map((t) => (
             <FilaTareaHoy key={t.id} t={t} onAbrir={navigate} onCiclar={() => ciclar(t)} />
           ))}
@@ -130,7 +135,7 @@ export default function Hoy() {
       )}
 
       {semana.length > 0 && (
-        <SeccionHoy titulo="Esta semana" extra={`${semana.length}`}>
+        <SeccionHoy titulo={t('hoy.estaSemana')} extra={`${semana.length}`}>
           {semana.map((t) => (
             <FilaTareaHoy key={t.id} t={t} onAbrir={navigate} onCiclar={() => ciclar(t)} />
           ))}
@@ -138,7 +143,7 @@ export default function Hoy() {
       )}
 
       {enCurso.length > 0 && (
-        <SeccionHoy titulo="En curso, sin fecha" extra={`${enCurso.length}`}>
+        <SeccionHoy titulo={t('hoy.enCursoSinFecha')} extra={`${enCurso.length}`}>
           {enCurso.map((t) => (
             <FilaTareaHoy key={t.id} t={t} onAbrir={navigate} onCiclar={() => ciclar(t)} />
           ))}
@@ -147,7 +152,7 @@ export default function Hoy() {
 
       {/* Las reuniones van al final: lo primero que se ve al abrir la app son las tareas. */}
       {(reunionesHoy.length > 0 || reunionesProximas.length > 0) && (
-        <SeccionHoy titulo="Reuniones" extra={`${reunionesHoy.length} hoy`}>
+        <SeccionHoy titulo={t('hoy.seccionReuniones')} extra={t('hoy.reunionesHoy', { count: reunionesHoy.length })}>
           {reunionesHoy.map((r) => (
             <FilaReunion key={r.id} r={r} color={proyectoPorId.get(r.proyecto_id)?.color} hoy />
           ))}
@@ -228,8 +233,9 @@ function FilaTareaHoy({
 }
 
 function FilaReunion({ r, color, hoy = false }: { r: Reunion; color?: string; hoy?: boolean }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const tipo = TIPOS_REUNION[r.tipo]
+  const tipo = tiposReunion()[r.tipo]
   const hora = r.hora ? r.hora.slice(0, 5) : null
   return (
     <button
@@ -246,7 +252,7 @@ function FilaReunion({ r, color, hoy = false }: { r: Reunion; color?: string; ho
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{r.titulo}</span>
       {color && <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: color }} />}
       <span className="flex-none font-mono text-[11.5px] font-semibold text-muted">
-        {hoy ? (hora ?? 'hoy') : `${fmtFecha(r.fecha.slice(0, 10))}${hora ? ` · ${hora}` : ''}`}
+        {hoy ? (hora ?? t('fecha.hoy')) : `${fmtFecha(r.fecha.slice(0, 10))}${hora ? ` · ${hora}` : ''}`}
       </span>
     </button>
   )

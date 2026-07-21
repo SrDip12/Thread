@@ -2,6 +2,7 @@
 // la IA analiza y separa en módulos + tareas; el usuario revisa antes de crear
 // (nada se crea sin revisión, como el resto de la app).
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { COLORES_PROYECTO } from '../lib/ui.ts'
 import { analizarProyecto, type ModuloPropuesto } from '../lib/analizarProyecto.ts'
@@ -10,6 +11,7 @@ import { useCrearModulo } from '../data/modulos.ts'
 import { useCrearTarea } from '../data/tareas.ts'
 
 export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const crearProyecto = useCrearProyecto()
   const crearModulo = useCrearModulo()
@@ -42,11 +44,11 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
     try {
       const propuesta = await analizarProyecto(docTexto)
       if (propuesta.length === 0) {
-        setError('La IA no encontró módulos ni tareas en el documento.')
+        setError(t('nuevoProyecto.errSinModulos'))
       }
       setModulos(propuesta)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo analizar el documento.')
+      setError(e instanceof Error ? e.message : t('nuevoProyecto.errAnalizar'))
     } finally {
       setAnalizando(false)
     }
@@ -97,7 +99,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
       }
       navigate(`/proyectos/${proyecto.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo crear el proyecto.')
+      setError(e instanceof Error ? e.message : t('nuevoProyecto.errCrear'))
       setCreando(false)
     }
   }
@@ -114,12 +116,12 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">Nuevo proyecto</h2>
+          <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">{t('nuevoProyecto.titulo')}</h2>
           <button
             type="button"
             onClick={onCerrar}
             className="rounded-lg p-1 text-muted transition-colors hover:text-ink"
-            aria-label="Cerrar"
+            aria-label={t('common.cerrar')}
           >
             <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M4 4l8 8M12 4l-8 8" />
@@ -127,24 +129,24 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
           </button>
         </div>
 
-        <label className="mb-1 block text-[12.5px] font-semibold text-muted">Nombre</label>
+        <label className="mb-1 block text-[12.5px] font-semibold text-muted">{t('nuevoProyecto.nombre')}</label>
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder="Nombre del proyecto"
+          placeholder={t('nuevoProyecto.nombrePlaceholder')}
           autoFocus
           className="mb-4 w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-brand placeholder:text-faint"
         />
 
-        <label className="mb-1 block text-[12.5px] font-semibold text-muted">Descripción</label>
+        <label className="mb-1 block text-[12.5px] font-semibold text-muted">{t('nuevoProyecto.descripcion')}</label>
         <input
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
-          placeholder="Una línea (opcional)"
+          placeholder={t('nuevoProyecto.descripcionPlaceholder')}
           className="mb-4 w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-brand placeholder:text-faint"
         />
 
-        <label className="mb-1.5 block text-[12.5px] font-semibold text-muted">Color</label>
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-muted">{t('nuevoProyecto.color')}</label>
         <div className="mb-5 flex gap-2.5">
           {COLORES_PROYECTO.map((c) => (
             <button
@@ -157,17 +159,17 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
                 outline: color === c ? `2px solid ${c}` : 'none',
                 outlineOffset: 2,
               }}
-              aria-label={`Color ${c}`}
+              aria-label={t('nuevoProyecto.colorLabel', { color: c })}
             />
           ))}
         </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-muted">
-          Documento de requisitos (.md) — opcional
+          {t('nuevoProyecto.docLabel')}
         </label>
         <div className="mb-2 flex items-center gap-3">
           <label className="cursor-pointer rounded-lg border border-line bg-canvas px-3 py-1.5 text-[13px] font-semibold text-muted transition-colors hover:border-brand hover:text-brand">
-            {docNombre ? 'Cambiar archivo' : 'Elegir archivo'}
+            {docNombre ? t('nuevoProyecto.cambiarArchivo') : t('nuevoProyecto.elegirArchivo')}
             <input
               type="file"
               accept=".md,.markdown,.txt,text/markdown,text/plain"
@@ -184,19 +186,19 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
             disabled={ocupado}
             className="mb-4 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {analizando ? 'Analizando…' : 'Analizar con IA'}
+            {analizando ? t('nuevoProyecto.analizando') : t('nuevoProyecto.analizarIA')}
           </button>
         )}
 
         {modulos !== null && (
           <div className="mb-4 mt-1">
             <div className="mb-2 text-[12.5px] font-semibold text-muted">
-              Propuesta de la IA · {modulos.length} módulos · {totalTareas} tareas
-              <span className="ml-2 font-normal text-faint">Revisá y quitá lo que no quieras.</span>
+              {t('nuevoProyecto.propuestaIA', { modulos: modulos.length, tareas: totalTareas })}
+              <span className="ml-2 font-normal text-faint">{t('nuevoProyecto.revisaQuita')}</span>
             </div>
             <div className="flex max-h-[40vh] flex-col gap-3 overflow-auto rounded-[11px] border border-line bg-canvas p-3">
               {modulos.length === 0 && (
-                <span className="text-[13px] text-faint">Sin módulos. Podés crear el proyecto vacío.</span>
+                <span className="text-[13px] text-faint">{t('nuevoProyecto.sinModulos')}</span>
               )}
               {modulos.map((m, im) => (
                 <div key={im} className="rounded-lg border border-line-soft bg-surface p-2.5">
@@ -207,20 +209,20 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
                       onClick={() => quitarModulo(im)}
                       className="text-[12px] font-semibold text-faint transition-colors hover:text-brand"
                     >
-                      Quitar módulo
+                      {t('nuevoProyecto.quitarModulo')}
                     </button>
                   </div>
-                  {m.tareas.map((t, it) => (
+                  {m.tareas.map((tarea, it) => (
                     <div key={it} className="flex items-start gap-2 py-1 pl-3">
                       <div className="flex-1">
-                        <span className="block text-[13px] text-muted-soft">{t.titulo}</span>
-                        {t.descripcion && (
-                          <span className="mt-0.5 block text-[12px] text-faint">{t.descripcion}</span>
+                        <span className="block text-[13px] text-muted-soft">{tarea.titulo}</span>
+                        {tarea.descripcion && (
+                          <span className="mt-0.5 block text-[12px] text-faint">{tarea.descripcion}</span>
                         )}
-                        {t.criterio && (
+                        {tarea.criterio && (
                           <span className="mt-0.5 block whitespace-pre-line text-[12px] text-faint">
-                            <span className="font-semibold">Cómo debería quedar: </span>
-                            {t.criterio}
+                            <span className="font-semibold">{t('nuevoProyecto.comoDeberiaQuedar')}</span>
+                            {tarea.criterio}
                           </span>
                         )}
                       </div>
@@ -228,7 +230,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
                         type="button"
                         onClick={() => quitarTarea(im, it)}
                         className="mt-0.5 text-faint transition-colors hover:text-brand"
-                        aria-label="Quitar tarea"
+                        aria-label={t('nuevoProyecto.quitarTarea')}
                       >
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                           <path d="M4 4l8 8M12 4l-8 8" />
@@ -250,7 +252,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
             onClick={onCerrar}
             className="rounded-lg border border-line px-4 py-2 text-[13px] font-semibold text-muted transition-colors hover:text-ink"
           >
-            Cancelar
+            {t('common.cancelar')}
           </button>
           <button
             type="button"
@@ -259,10 +261,10 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
             className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {creando
-              ? 'Creando…'
+              ? t('nuevoProyecto.creando')
               : totalTareas > 0
-                ? `Crear proyecto · ${totalTareas} tareas`
-                : 'Crear proyecto'}
+                ? t('nuevoProyecto.crearConTareas', { tareas: totalTareas })
+                : t('nuevoProyecto.crearProyecto')}
           </button>
         </div>
       </div>

@@ -34,9 +34,20 @@ CLAUDE.md
 - **Componentes funcionales** únicamente. Nada de clases.
 - **Hooks** para lógica con estado/efectos; data de servidor siempre vía React Query (no `useEffect` + `fetch`).
 - **TypeScript estricto**: sin `any`, sin variables/parámetros sin usar (el build falla). Tipa props con `type`.
-- **UI en español**: textos, rutas (`/mis-tareas`, `/para-mi`) y nombres de cara al usuario en español.
+- **UI bilingüe (es/en)**: el idioma base es español; hay traducción a inglés vía **i18next + react-i18next** (ver «Internacionalización»). Todo texto de cara al usuario pasa por `t('clave')` — no escribir literales en `.tsx`. Las rutas quedan en español.
 - Estilos con clases Tailwind y los tokens de `@theme` (`bg-canvas`, `text-ink`, `bg-brand`, `border-line`, `text-muted`...). No CSS suelto salvo en `index.css`.
 - La paleta y tipografía (Manrope) salen de `/design`. Al construir vistas, mirá `/design` como referencia.
+
+## Internacionalización (i18n)
+
+App base en español con inglés como alternativa. **i18next + react-i18next + i18next-browser-languagedetector**.
+
+- Config: `src/i18n/index.ts` (init; `fallbackLng: 'es'`, `supportedLngs: ['es','en']`, detección `localStorage['idioma']` → navegador). Importado una vez en `main.tsx`. Sincroniza `<html lang>` al cambiar de idioma.
+- Diccionarios: `src/i18n/locales/es.ts` y `en.ts` — mismo árbol de claves anidadas por área (`common`, `nav`, `hoy`, `misTareas`, `proyectoDetalle`, `sprint`, `revisiones`, `reunionDetalle`, `tareaPanel`, `notif`, …). **Al agregar/editar texto, tocar ambos archivos con la misma clave.**
+- En componentes: `const { t } = useTranslation()` y `t('area.clave', { var })`. Interpolación `{{var}}`; plurales con sufijos `_one`/`_other` + `{ count }`. Arrays (ej. pasos de onboarding, meses) con `t('clave', { returnObjects: true })`.
+- **Cuidado con el shadowing**: muchos `.map((t) => …)` usaban `t` como ítem; al introducir el `t` de i18n se renombró el ítem (a `tarea`/`tk`/`c`). No reintroducir un `t` local que tape la función de traducción.
+- Fuera de React (helpers/data): importar la instancia `i18n` de `src/i18n/index.ts` y usar `i18n.t(...)`. Así lo hacen `src/lib/ui.ts` (estados, tipos de reunión, meses/fechas, tiempo relativo — todos idioma-aware) y los `src/data/*` que **generan** texto persistido de notificaciones (`data/tareas.ts`, `data/comentarios.ts`, `data/notificaciones.ts`, `data/recordatorios.ts`). Nota: ese texto se guarda en el idioma activo al crearse; no se re-traduce después.
+- Selector de idioma: botón ES/EN en el sidebar (`src/components/Layout.tsx`) → `i18n.changeLanguage`.
 
 ## Comandos
 

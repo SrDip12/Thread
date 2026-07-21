@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Tables } from '../lib/database.types.ts'
 import { ESTADOS, estadoVM, fmtFecha, fmtFechaHora } from '../lib/ui.ts'
+import i18n from '../i18n/index.ts'
 import {
   useActualizarTarea,
   useTareasPorProyecto,
@@ -23,8 +25,8 @@ type Proyecto = Tables<'proyectos'>
 // Chip de tipo: 'tarea' neutro, 'correccion' con acento ámbar de alerta.
 function tipoVM(tipo: Tarea['tipo']): { label: string; bg: string; fg: string } {
   return tipo === 'correccion'
-    ? { label: 'Corrección', bg: 'var(--color-warn-tint)', fg: 'var(--color-warn)' }
-    : { label: 'Tarea', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
+    ? { label: i18n.t('tareaPanel.corregir'), bg: 'var(--color-warn-tint)', fg: 'var(--color-warn)' }
+    : { label: i18n.t('tareaPanel.tarea'), bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
 }
 
 export default function TareaPanel({
@@ -38,6 +40,7 @@ export default function TareaPanel({
   proyecto: Proyecto
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const { persona: yo } = useAuth()
   const { data: personas } = usePersonas()
   // Una sola lista para la tarea, las dependencias y el selector de bloqueadores.
@@ -56,7 +59,7 @@ export default function TareaPanel({
     return (
       <aside
         aria-busy="true"
-        aria-label="Cargando tarea"
+        aria-label={t('tareaPanel.cargandoTarea')}
         className="flex h-screen w-[430px] flex-none flex-col border-l border-line bg-surface"
       >
         <div className="flex items-center justify-between border-b border-line-soft px-[22px] py-4">
@@ -115,7 +118,7 @@ export default function TareaPanel({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Cerrar panel"
+          aria-label={t('tareaPanel.cerrarPanel')}
           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
         >
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -131,9 +134,9 @@ export default function TareaPanel({
               <rect x="3" y="11" width="10" height="4" rx="1" />
               <path d="M4 11V6a4 4 0 0 1 8 0v5" />
             </svg>
-            Tarea Bloqueada
+            {t('tareaPanel.tareaBloqueada')}
           </div>
-          Esta tarea no debería empezar hasta completar:
+          {t('tareaPanel.noEmpezarHasta')}
           <ul className="list-disc list-inside mt-1 font-semibold space-y-0.5">
             {blockersIncompletos.map((b) => (
               <li key={b.id}>
@@ -154,7 +157,7 @@ export default function TareaPanel({
           />
         </div>
         <div className="flex flex-col gap-[13px]">
-          <Fila etiqueta="Responsable">
+          <Fila etiqueta={t('tareaPanel.responsable')}>
             <div className="flex items-center gap-2">
               {responsable && <Avatar nombre={responsable.nombre} color={responsable.color} size={24} />}
               <select
@@ -162,7 +165,7 @@ export default function TareaPanel({
                 onChange={(e) => setCambios({ responsable_id: e.target.value || null })}
                 className="rounded-md border border-line bg-surface px-1.5 py-1 text-[13.5px] font-semibold outline-none focus:border-brand"
               >
-                <option value="">Sin asignar</option>
+                <option value="">{t('tareaPanel.sinAsignar')}</option>
                 {(personas ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
@@ -172,7 +175,7 @@ export default function TareaPanel({
             </div>
           </Fila>
 
-          <Fila etiqueta="Estado">
+          <Fila etiqueta={t('tareaPanel.estado')}>
             <select
               value={tarea.estado}
               onChange={(e) => setCambios({ estado: e.target.value as Tarea['estado'] })}
@@ -187,7 +190,7 @@ export default function TareaPanel({
             </select>
           </Fila>
 
-          <Fila etiqueta="Tipo">
+          <Fila etiqueta={t('tareaPanel.tipo')}>
             {(() => {
               const vm = tipoVM(tarea.tipo)
               const otro: Tarea['tipo'] = tarea.tipo === 'correccion' ? 'tarea' : 'correccion'
@@ -195,7 +198,7 @@ export default function TareaPanel({
                 <button
                   type="button"
                   onClick={() => setCambios({ tipo: otro })}
-                  title={`Cambiar a ${tipoVM(otro).label.toLowerCase()}`}
+                  title={t('tareaPanel.cambiarA', { tipo: tipoVM(otro).label.toLowerCase() })}
                   className="rounded-lg px-2 py-[3px] text-[12.5px] font-semibold outline-none transition-colors"
                   style={{ background: vm.bg, color: vm.fg }}
                 >
@@ -205,7 +208,7 @@ export default function TareaPanel({
             })()}
           </Fila>
 
-          <Fila etiqueta="Inicio">
+          <Fila etiqueta={t('tareaPanel.inicio')}>
             <input
               type="date"
               value={tarea.fecha_inicio ?? ''}
@@ -215,7 +218,7 @@ export default function TareaPanel({
             {tarea.fecha_inicio && <span className="text-[12.5px] text-muted">{fmtFecha(tarea.fecha_inicio)}</span>}
           </Fila>
 
-          <Fila etiqueta="Vence">
+          <Fila etiqueta={t('tareaPanel.vence')}>
             <input
               type="date"
               value={tarea.fecha ?? ''}
@@ -229,13 +232,13 @@ export default function TareaPanel({
 
       <div className="border-b border-line-soft px-[22px] pb-[18px] pt-5">
         <div className="mb-[9px] text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-          Qué se hace
+          {t('tareaPanel.queSeHace')}
         </div>
         <InlineEdit
           value={tarea.descripcion ?? ''}
           onSave={(v) => setCambios({ descripcion: v || null })}
           multiline
-          placeholder="Describe qué hay que hacer… (clic para editar)"
+          placeholder={t('tareaPanel.descripcionPlaceholder')}
           viewClassName="text-sm leading-[1.6] text-ink-soft rounded-[10px] -mx-1 px-1 py-0.5 hover:bg-hover whitespace-pre-wrap min-h-[24px]"
           editClassName="w-full resize-y rounded-[10px] border border-brand bg-surface px-3 py-2 text-sm leading-[1.6] text-ink-soft outline-none"
         />
@@ -243,13 +246,13 @@ export default function TareaPanel({
 
       <div className="border-b border-line-soft px-[22px] pb-[18px] pt-5">
         <div className="mb-[9px] text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-          Criterio · ¿cómo sé que está listo?
+          {t('tareaPanel.criterioTitulo')}
         </div>
         <InlineEdit
           value={tarea.criterio ?? ''}
           onSave={(v) => setCambios({ criterio: v || null })}
           multiline
-          placeholder="Define qué tiene que pasar para darla por terminada… (clic para editar)"
+          placeholder={t('tareaPanel.criterioPlaceholder')}
           viewClassName="text-sm leading-[1.6] text-ink-soft rounded-[10px] -mx-1 px-1 py-0.5 hover:bg-hover whitespace-pre-wrap min-h-[24px]"
           editClassName="w-full resize-y rounded-[10px] border border-brand bg-surface px-3 py-2 text-sm leading-[1.6] text-ink-soft outline-none"
         />
@@ -258,14 +261,14 @@ export default function TareaPanel({
       {/* Sección de Dependencias */}
       <div className="border-b border-line-soft px-[22px] pb-[18px] pt-5">
         <div className="mb-[9px] text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-          Dependencias
+          {t('tareaPanel.dependencias')}
         </div>
-        
+
         {/* Lista de bloqueadores */}
         <div className="mb-3 space-y-1.5">
-          <div className="text-[12px] font-bold text-muted mb-1">Bloqueada por (tareas previas):</div>
+          <div className="text-[12px] font-bold text-muted mb-1">{t('tareaPanel.bloqueadaPor')}</div>
           {bloqueadores.length === 0 ? (
-            <div className="text-[12.5px] text-faint italic pl-1">Sin bloqueadores.</div>
+            <div className="text-[12.5px] text-faint italic pl-1">{t('tareaPanel.sinBloqueadores')}</div>
           ) : (
             bloqueadores.map((b) => (
               <div key={b.id} className="flex items-center justify-between rounded-lg bg-canvas px-2.5 py-1.5 text-xs">
@@ -277,7 +280,7 @@ export default function TareaPanel({
                   type="button"
                   onClick={() => elimDep.mutate({ bloqueadora_id: b.id, bloqueada_id: tarea.id })}
                   className="text-faint hover:text-brand-strong font-bold px-1"
-                  title="Eliminar bloqueo"
+                  title={t('tareaPanel.eliminarBloqueo')}
                 >
                   ✕
                 </button>
@@ -298,7 +301,7 @@ export default function TareaPanel({
             }}
             className="flex-1 rounded-md border border-line bg-surface px-2 py-1 text-[12.5px] outline-none focus:border-brand"
           >
-            <option value="">+ Agregar tarea bloqueadora...</option>
+            <option value="">{t('tareaPanel.agregarBloqueadora')}</option>
             {tareasProyecto
               .filter((t) => t.id !== tarea.id && !bloqueadores.some((b) => b.id === t.id) && !bloqueados.some((b) => b.id === t.id))
               .map((t) => (
@@ -312,7 +315,7 @@ export default function TareaPanel({
         {/* Lista de tareas bloqueadas */}
         {bloqueados.length > 0 && (
           <div className="mt-4">
-            <div className="text-[12px] font-bold text-muted mb-1.5">Bloquea a (tareas que dependen de esta):</div>
+            <div className="text-[12px] font-bold text-muted mb-1.5">{t('tareaPanel.bloqueaA')}</div>
             <div className="space-y-1.5">
               {bloqueados.map((b) => (
                 <div key={b.id} className="flex items-center justify-between rounded-lg bg-canvas px-2.5 py-1.5 text-xs">
@@ -350,6 +353,7 @@ function Comentarios({
   yoId: string | null
   personaPorId: Map<string, Tables<'personas'>>
 }) {
+  const { t } = useTranslation()
   const { data: comentarios } = useComentarios(tarea.id)
   const crear = useCrearComentario()
   const actualizar = useActualizarComentario()
@@ -426,9 +430,9 @@ function Comentarios({
   }
 
   const enviar = () => {
-    const t = texto.trim()
-    if (!t || !yoId) return
-    crear.mutate({ tarea_id: tarea.id, autor_id: yoId, texto: t, para_po: paraPo })
+    const txt = texto.trim()
+    if (!txt || !yoId) return
+    crear.mutate({ tarea_id: tarea.id, autor_id: yoId, texto: txt, para_po: paraPo })
     setTexto('')
     setParaPo(false)
     setMostrarMentions(false)
@@ -437,11 +441,11 @@ function Comentarios({
   return (
     <div className="flex-1 px-[22px] py-5">
       <div className="mb-3.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-        Comentarios
+        {t('tareaPanel.comentarios')}
       </div>
 
       {(comentarios?.length ?? 0) === 0 ? (
-        <div className="py-5 text-center text-[13px] text-faint">Sin comentarios todavía.</div>
+        <div className="py-5 text-center text-[13px] text-faint">{t('tareaPanel.sinComentarios')}</div>
       ) : (
         <div className="mb-5 flex flex-col gap-4">
           {(comentarios ?? []).map((c) => {
@@ -452,7 +456,7 @@ function Comentarios({
                 <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={28} />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-baseline gap-2">
-                    <span className="text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
+                    <span className="text-[13px] font-bold">{autor?.nombre ?? t('paraMi.alguien')}</span>
                     {c.created_at && (
                       <span className="text-[11px] font-mono text-faint">
                         {fmtFechaHora(c.created_at)}
@@ -480,7 +484,7 @@ function Comentarios({
                           <path d="M4 2.5v11" strokeLinecap="round" />
                           <path d="M4 3.2h8.2l-2 2.4 2 2.4H4" strokeLinejoin="round" />
                         </svg>
-                        {c.resuelto ? 'Pregunta para el PO · resuelta' : 'Pregunta para el PO'}
+                        {c.resuelto ? t('tareaPanel.preguntaPoResuelta') : t('tareaPanel.preguntaPo')}
                       </div>
                     )}
                     {c.texto}
@@ -500,7 +504,7 @@ function Comentarios({
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M3.5 8.5l3 3 6-6.5" />
                           </svg>
-                          Marcar resuelto
+                          {t('tareaPanel.marcarResuelto')}
                         </button>
                       </div>
                     )}
@@ -513,14 +517,14 @@ function Comentarios({
       )}
 
       <div className="flex items-start gap-2.5 pt-1">
-        <Avatar nombre={yoId ? personaPorId.get(yoId)?.nombre ?? 'Yo' : 'Yo'} color="#c96442" size={28} />
+        <Avatar nombre={yoId ? personaPorId.get(yoId)?.nombre ?? t('nav.yo') : t('nav.yo')} color="#c96442" size={28} />
         <div className="relative flex-1">
           <textarea
             id="comentario-textarea"
             value={texto}
             onChange={handleChangeTextarea}
             onKeyDown={handleKeyDownTextarea}
-            placeholder="Escribe un comentario…"
+            placeholder={t('tareaPanel.escribiComentario')}
             rows={2}
             className="w-full resize-none rounded-[10px] border border-line bg-canvas px-[11px] py-[9px] text-[13.5px] outline-none focus:border-brand focus:bg-surface"
           />
@@ -546,7 +550,7 @@ function Comentarios({
                     <div className="min-w-0 flex-1">
                       <div className={`truncate ${seleccionado ? 'text-on-brand' : 'text-ink'}`}>{p.nombre}</div>
                       <div className={`truncate ${seleccionado ? 'text-on-brand/80' : 'text-muted-soft'}`} style={{ fontSize: '10px' }}>
-                        {p.rol === 'po' ? 'Product Owner' : 'Developer'}
+                        {p.rol === 'po' ? t('nav.productOwner') : t('tareaPanel.developer')}
                       </div>
                     </div>
                   </button>
@@ -563,7 +567,7 @@ function Comentarios({
                 onChange={(e) => setParaPo(e.target.checked)}
                 className="h-[15px] w-[15px] accent-brand"
               />
-              Marcar como pregunta para el PO
+              {t('tareaPanel.marcarPregunta')}
             </label>
             <button
               type="button"
@@ -571,7 +575,7 @@ function Comentarios({
               disabled={!texto.trim() || !yoId}
               className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand-strong disabled:opacity-50"
             >
-              Comentar
+              {t('tareaPanel.comentar')}
             </button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types.ts'
 import { supabase } from '../lib/supabase.ts'
 import { qk } from './queryKeys.ts'
+import i18n from '../i18n/index.ts'
 
 type Comentario = Tables<'comentarios'>
 
@@ -318,7 +319,7 @@ export function useCrearComentario() {
                   persona_id: pid,
                   autor_id: data.autor_id,
                   tipo: 'mencion',
-                  texto: `Te mencionó en la tarea "${taskData.titulo}": "${data.texto.slice(0, 50)}..."`,
+                  texto: i18n.t('notif.genMenciono', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
                   tarea_id: data.tarea_id,
                   proyecto_id: proyectoId,
                   leido: false,
@@ -351,7 +352,7 @@ export function useCrearComentario() {
                   persona_id: poId,
                   autor_id: data.autor_id,
                   tipo: 'pregunta',
-                  texto: `Te hizo una pregunta en la tarea "${taskData.titulo}": "${data.texto.slice(0, 50)}..."`,
+                  texto: i18n.t('notif.genPregunto', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
                   tarea_id: data.tarea_id,
                   proyecto_id: proyectoId,
                   leido: false,
@@ -369,7 +370,7 @@ export function useCrearComentario() {
                   persona_id: taskData.responsable_id,
                   autor_id: data.autor_id,
                   tipo: 'comentario',
-                  texto: `Comentó en tu tarea "${taskData.titulo}": "${data.texto.slice(0, 50)}..."`,
+                  texto: i18n.t('notif.genComento', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
                   tarea_id: data.tarea_id,
                   proyecto_id: proyectoId,
                   leido: false,

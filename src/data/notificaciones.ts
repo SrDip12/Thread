@@ -5,6 +5,7 @@ import { qk } from './queryKeys.ts'
 import type { TablesInsert } from '../lib/database.types.ts'
 import { useMisTareas } from './tareas.ts'
 import { fmtFecha } from '../lib/ui.ts'
+import i18n from '../i18n/index.ts'
 
 export interface Notif {
   id: string
@@ -51,7 +52,7 @@ export function useNotificaciones(personaId: string) {
         id: n.id,
         created_at: n.created_at,
         autor_id: n.autor_id,
-        autor_nombre: n.personas?.nombre ?? 'Sistema',
+        autor_nombre: n.personas?.nombre ?? i18n.t('notif.sistema'),
         autor_color: n.personas?.color ?? 'var(--color-avatar-empty)',
         texto: n.texto,
         leido: n.leido,
@@ -165,7 +166,7 @@ export function useChequearVencimientos(personaId: string) {
           persona_id: personaId,
           autor_id: null,
           tipo: 'vencimiento',
-          texto: `La tarea "${t.titulo}" vence pronto o ya expiró (${fmtFecha(t.fecha)})`,
+          texto: i18n.t('notif.vencimiento', { titulo: t.titulo, fecha: fmtFecha(t.fecha) }),
           tarea_id: t.id,
           proyecto_id: t.modulos?.proyectos?.id ?? null,
           leido: false,

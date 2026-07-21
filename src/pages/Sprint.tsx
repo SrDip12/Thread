@@ -1,7 +1,9 @@
 import { useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM, ESTADOS, diasHasta } from '../lib/ui.ts'
+import i18n from '../i18n/index.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { useModulos } from '../data/modulos.ts'
@@ -39,13 +41,14 @@ function fechaISO(diasOffset: number): string {
 
 // Chip de estado del sprint: azul activo, gris planificado, verde cerrado.
 function sprintEstadoVM(estado: Sprint['estado']): { label: string; bg: string; fg: string; dot: string } {
+  const t = i18n.t
   switch (estado) {
     case 'activo':
-      return { label: 'Activo', bg: 'var(--color-info-tint)', fg: 'var(--color-info)', dot: 'var(--color-info-dot)' }
+      return { label: t('sprint.estadoActivo'), bg: 'var(--color-info-tint)', fg: 'var(--color-info)', dot: 'var(--color-info-dot)' }
     case 'cerrado':
-      return { label: 'Cerrado', bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)', dot: 'var(--color-ok-dot)' }
+      return { label: t('sprint.estadoCerrado'), bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)', dot: 'var(--color-ok-dot)' }
     default:
-      return { label: 'Planificado', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)', dot: 'var(--color-neutral-dot)' }
+      return { label: t('sprint.estadoPlanificado'), bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)', dot: 'var(--color-neutral-dot)' }
   }
 }
 
@@ -53,6 +56,7 @@ function sprintEstadoVM(estado: Sprint['estado']): { label: string; bg: string; 
 const PESO_ESTADO: Record<Sprint['estado'], number> = { activo: 0, planificado: 1, cerrado: 2 }
 
 export default function SprintPage() {
+  const { t } = useTranslation()
   const { id = '' } = useParams()
   const { data: proyectos } = useProyectos()
   const { data: sprints } = useSprints(id)
@@ -84,12 +88,12 @@ export default function SprintPage() {
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 3L5 8l5 5" />
           </svg>
-          {proyecto?.nombre ?? 'Proyecto'}
+          {proyecto?.nombre ?? t('common.proyecto')}
         </Link>
 
         <div className="mb-5 flex items-center gap-[11px]">
           <span className="h-3.5 w-3.5 flex-none rounded" style={{ background: acento }} />
-          <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.025em]">Sprints</h1>
+          <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.025em]">{t('sprint.titulo')}</h1>
           {lista.length > 0 && (
             <span className="font-mono text-[12px] text-faint">{lista.length}</span>
           )}
@@ -99,7 +103,7 @@ export default function SprintPage() {
               onClick={() => setCreando((v) => !v)}
               className="ml-auto rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:bg-hover hover:text-ink"
             >
-              {creando ? 'Cancelar' : '+ Nuevo sprint'}
+              {creando ? t('common.cancelar') : t('sprint.nuevoSprint')}
             </button>
           )}
         </div>
@@ -163,6 +167,7 @@ function CrearSprintRapido({
   hayActivo: boolean
   onCreado: () => void
 }) {
+  const { t } = useTranslation()
   const { data: sprints } = useSprints(proyectoId)
   const crear = useCrearSprint()
   const [inicio, setInicio] = useState(fechaISO(0))
@@ -192,13 +197,13 @@ function CrearSprintRapido({
   return (
     <div className="rounded-[13px] border border-line bg-surface p-6">
       <div className="mb-1 text-xs font-semibold uppercase tracking-[0.04em] text-faint">
-        Crear sprint rápido {hayActivo && '· entra como planificado'}
+        {t('sprint.crearRapido')} {hayActivo && t('sprint.entraPlanificado')}
       </div>
       <div className="mb-5 text-[22px] font-extrabold tracking-[-0.02em]">{nombre}</div>
 
       <div className="mb-4 flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-[13px] text-muted">
-          Inicio
+          {t('sprint.inicio')}
           <input
             type="date"
             value={inicio}
@@ -207,7 +212,7 @@ function CrearSprintRapido({
           />
         </label>
         <label className="flex items-center gap-2 text-[13px] text-muted">
-          Fin
+          {t('sprint.fin')}
           <input
             type="date"
             value={fin}
@@ -222,8 +227,8 @@ function CrearSprintRapido({
           value={objetivo}
           onChange={(e) => setObjetivo(e.target.value)}
           onKeyDown={onEnter}
-          aria-label="Objetivo del sprint"
-          placeholder="Objetivo del sprint…"
+          aria-label={t('sprint.objetivoAria')}
+          placeholder={t('sprint.objetivoPlaceholder')}
           className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
         />
         <button
@@ -231,7 +236,7 @@ function CrearSprintRapido({
           onClick={crearSprint}
           className="flex-none rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
         >
-          Crear
+          {t('common.crear')}
         </button>
       </div>
     </div>
@@ -250,6 +255,7 @@ function VistaSprint({
   acento: string
   hayOtroActivo: boolean
 }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { data: personas } = usePersonas()
   const actualizarSprint = useActualizarSprint()
@@ -300,10 +306,10 @@ function VistaSprint({
     diasFin === null
       ? null
       : diasFin < 0
-        ? { label: `venció hace ${-diasFin} ${diasFin === -1 ? 'día' : 'días'}`, bg: 'var(--color-danger-tint)', fg: 'var(--color-danger)' }
+        ? { label: t('sprint.vencioHace', { count: -diasFin }), bg: 'var(--color-danger-tint)', fg: 'var(--color-danger)' }
         : diasFin === 0
-          ? { label: 'termina hoy', bg: 'var(--color-brand-soft)', fg: 'var(--color-brand)' }
-          : { label: `quedan ${diasFin} ${diasFin === 1 ? 'día' : 'días'}`, bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
+          ? { label: t('sprint.terminaHoy'), bg: 'var(--color-brand-soft)', fg: 'var(--color-brand)' }
+          : { label: t('sprint.quedan', { count: diasFin }), bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
 
   const tieneCierre = Boolean(sprint.cierre_logros || sprint.cierre_pegados || sprint.cierre_cambio)
 
@@ -332,10 +338,10 @@ function VistaSprint({
               type="button"
               onClick={iniciar}
               disabled={hayOtroActivo || actualizarSprint.isPending}
-              title={hayOtroActivo ? 'Ya hay un sprint activo: cerralo primero' : 'Poner este sprint en marcha'}
+              title={hayOtroActivo ? t('sprint.yaHayActivo') : t('sprint.ponerEnMarcha')}
               className="ml-auto rounded-lg bg-brand px-3.5 py-1.5 text-[12.5px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-40"
             >
-              Iniciar sprint
+              {t('sprint.iniciarSprint')}
             </button>
           )}
         </div>
@@ -345,7 +351,7 @@ function VistaSprint({
           onSave={(v) =>
             actualizarSprint.mutate({ id: sprint.id, proyectoId, cambios: { objetivo: v || null } })
           }
-          placeholder="Objetivo del sprint…"
+          placeholder={t('sprint.objetivoPlaceholder')}
           viewClassName="mb-3 text-sm text-muted-soft"
           editClassName="mb-3 w-full bg-transparent text-sm text-ink outline-none"
         />
@@ -353,7 +359,7 @@ function VistaSprint({
         {!cerrado && (
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-[12.5px] text-muted">
-              Inicio
+              {t('sprint.inicio')}
               <input
                 type="date"
                 value={sprint.fecha_inicio ?? ''}
@@ -362,7 +368,7 @@ function VistaSprint({
               />
             </label>
             <label className="flex items-center gap-2 text-[12.5px] text-muted">
-              Fin
+              {t('sprint.fin')}
               <input
                 type="date"
                 value={sprint.fecha_fin ?? ''}
@@ -386,13 +392,13 @@ function VistaSprint({
         {cerrado && tieneCierre && (
           <div className="mt-4 space-y-1.5 border-t border-line-soft pt-3.5 text-[13px]">
             {sprint.cierre_logros && (
-              <div><span className="font-semibold text-muted">Logros:</span> <span className="text-ink-soft">{sprint.cierre_logros}</span></div>
+              <div><span className="font-semibold text-muted">{t('sprint.logros')}:</span> <span className="text-ink-soft">{sprint.cierre_logros}</span></div>
             )}
             {sprint.cierre_pegados && (
-              <div><span className="font-semibold text-muted">Pegados:</span> <span className="text-ink-soft">{sprint.cierre_pegados}</span></div>
+              <div><span className="font-semibold text-muted">{t('sprint.pegados')}:</span> <span className="text-ink-soft">{sprint.cierre_pegados}</span></div>
             )}
             {sprint.cierre_cambio && (
-              <div><span className="font-semibold text-muted">Cambio:</span> <span className="text-ink-soft">{sprint.cierre_cambio}</span></div>
+              <div><span className="font-semibold text-muted">{t('sprint.cambio')}:</span> <span className="text-ink-soft">{sprint.cierre_cambio}</span></div>
             )}
           </div>
         )}
@@ -400,7 +406,7 @@ function VistaSprint({
 
       <div>
         <div className="flex items-center justify-between mb-4 px-0.5">
-          <div className="text-xs font-semibold uppercase tracking-[0.04em] text-faint">Tareas del sprint</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.04em] text-faint">{t('sprint.tareasDelSprint')}</div>
           <div className="flex rounded-lg border border-line bg-surface p-0.5">
             <button
               type="button"
@@ -409,7 +415,7 @@ function VistaSprint({
                 vista === 'lista' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
               }`}
             >
-              Lista
+              {t('sprint.lista')}
             </button>
             <button
               type="button"
@@ -418,7 +424,7 @@ function VistaSprint({
                 vista === 'kanban' ? 'bg-hover text-ink' : 'text-muted hover:text-ink'
               }`}
             >
-              Tablero
+              {t('sprint.tablero')}
             </button>
           </div>
         </div>
@@ -436,11 +442,11 @@ function VistaSprint({
                 navigate(rutaTarea(proyectoId, taskId, `/proyectos/${proyectoId}/sprint`))
               }}
               onMoverTarea={(taskId, nuevoEstado) => {
-                const t = (todasLasTareas ?? []).find((x) => x.id === taskId)
-                if (t) {
+                const tk = (todasLasTareas ?? []).find((x) => x.id === taskId)
+                if (tk) {
                   actualizarTarea.mutate({
                     id: taskId,
-                    moduloId: t.modulo_id,
+                    moduloId: tk.modulo_id,
                     cambios: { estado: nuevoEstado },
                   })
                 }
@@ -487,6 +493,7 @@ function FilaTarea({
   proyectoId: string
   isBlocked: boolean
 }) {
+  const { t } = useTranslation()
   const vm = estadoVM(tarea.estado)
   return (
     <div className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0">
@@ -497,7 +504,7 @@ function FilaTarea({
         style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
       >
         {isBlocked && (
-          <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+          <span className="text-brand flex-none" title={t('kanban.tareaBloqueada')}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="inline">
               <rect x="3" y="11" width="10" height="4" rx="1" />
               <path d="M4 11V6a4 4 0 0 1 8 0v5" />
@@ -537,6 +544,7 @@ function TareasSprint({
   todasLasTareas: Tables<'tareas'>[]
   soloLectura: boolean
 }) {
+  const { t } = useTranslation()
   const { data: tareas } = useTareasSprint(sprint.id)
   const { data: modulos } = useModulos(proyectoId)
   const crear = useCrearTarea()
@@ -546,12 +554,12 @@ function TareasSprint({
 
   const lista = tareas ?? []
   const mods = modulos ?? []
-  const hechas = lista.filter((t) => t.estado === 'hecho').length
+  const hechas = lista.filter((x) => x.estado === 'hecho').length
   const moduloElegido = moduloId || mods[0]?.id || ''
 
-  const ciclar = (t: TareaConModulo) => {
-    const siguiente = ESTADOS[(ESTADOS.indexOf(t.estado) + 1) % ESTADOS.length]
-    actualizar.mutate({ id: t.id, moduloId: t.modulo_id, cambios: { estado: siguiente } })
+  const ciclar = (tarea: TareaConModulo) => {
+    const siguiente = ESTADOS[(ESTADOS.indexOf(tarea.estado) + 1) % ESTADOS.length]
+    actualizar.mutate({ id: tarea.id, moduloId: tarea.modulo_id, cambios: { estado: siguiente } })
   }
 
   const agregar = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -564,16 +572,16 @@ function TareasSprint({
 
   return (
     <section>
-      <SeccionTitulo titulo="Tareas del sprint" extra={`${hechas}/${lista.length}`} />
+      <SeccionTitulo titulo={t('sprint.tareasDelSprint')} extra={`${hechas}/${lista.length}`} />
       <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
         {lista.length === 0 && (
           <div className="px-4 py-4 text-center text-[13px] text-faint">
-            Este sprint no tiene tareas todavía.
+            {t('sprint.sinTareasSprint')}
           </div>
         )}
-        {lista.map((t) => {
+        {lista.map((tarea) => {
           const isBlocked = proyectoDeps
-            .filter((d) => d.bloqueada_id === t.id)
+            .filter((d) => d.bloqueada_id === tarea.id)
             .some((d) => {
               const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
               return b ? b.estado !== 'hecho' : false
@@ -581,10 +589,10 @@ function TareasSprint({
 
           return (
             <FilaTarea
-              key={t.id}
-              tarea={t}
-              persona={t.responsable_id ? personaPorId.get(t.responsable_id) : undefined}
-              onCiclar={() => ciclar(t)}
+              key={tarea.id}
+              tarea={tarea}
+              persona={tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined}
+              onCiclar={() => ciclar(tarea)}
               proyectoId={proyectoId}
               isBlocked={isBlocked}
             />
@@ -601,15 +609,15 @@ function TareasSprint({
               onChange={(e) => setTitulo(e.target.value)}
               onKeyDown={agregar}
               disabled={mods.length === 0}
-              aria-label="Agregar tarea al sprint"
-              placeholder={mods.length === 0 ? 'Creá un módulo primero' : 'Agregar tarea al sprint…'}
+              aria-label={t('sprint.agregarTareaAria')}
+              placeholder={mods.length === 0 ? t('sprint.creaModuloPrimero') : t('sprint.agregarTareaSprint')}
               className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint disabled:cursor-not-allowed"
             />
             {mods.length > 0 && (
               <select
                 value={moduloElegido}
                 onChange={(e) => setModuloId(e.target.value)}
-                aria-label="Módulo de la tarea"
+                aria-label={t('sprint.moduloTareaAria')}
                 className="flex-none rounded-lg border border-line bg-canvas px-2 py-1 text-[12.5px] text-muted outline-none focus:border-brand"
               >
                 {mods.map((m) => (
@@ -639,17 +647,18 @@ function Backlog({
   proyectoDeps: { bloqueadora_id: string; bloqueada_id: string }[]
   todasLasTareas: Tables<'tareas'>[]
 }) {
+  const { t } = useTranslation()
   const { data: tareas } = useTareasBacklog(proyectoId)
   const actualizar = useActualizarTarea()
   const lista = tareas ?? []
 
-  const alSprint = (t: TareaConModulo) => {
-    actualizar.mutate({ id: t.id, moduloId: t.modulo_id, cambios: { sprint_id: sprint.id } })
+  const alSprint = (tarea: TareaConModulo) => {
+    actualizar.mutate({ id: tarea.id, moduloId: tarea.modulo_id, cambios: { sprint_id: sprint.id } })
   }
 
   return (
     <section>
-      <SeccionTitulo titulo="Backlog" extra={`${lista.length}`} />
+      <SeccionTitulo titulo={t('sprint.backlog')} extra={`${lista.length}`} />
       {lista.length === 0 ? (
         <EmptyState
           icon={
@@ -657,16 +666,16 @@ function Backlog({
               <path d="M3 4.5h10M3 8h10M3 11.5h6" />
             </svg>
           }
-          titulo="Backlog vacío"
-          descripcion="Las tareas sin sprint aparecen acá, listas para sumar al sprint."
+          titulo={t('sprint.backlogVacio')}
+          descripcion={t('sprint.backlogVacioDesc')}
         />
       ) : (
         <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
-          {lista.map((t) => {
-            const vm = estadoVM(t.estado)
-            const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
+          {lista.map((tarea) => {
+            const vm = estadoVM(tarea.estado)
+            const resp = tarea.responsable_id ? personaPorId.get(tarea.responsable_id) : undefined
             const isBlocked = proyectoDeps
-              .filter((d) => d.bloqueada_id === t.id)
+              .filter((d) => d.bloqueada_id === tarea.id)
               .some((d) => {
                 const b = todasLasTareas.find((x) => x.id === d.bloqueadora_id)
                 return b ? b.estado !== 'hecho' : false
@@ -674,37 +683,37 @@ function Backlog({
 
             return (
               <div
-                key={t.id}
+                key={tarea.id}
                 className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0"
               >
                 <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
                 <Link
-                  to={rutaTarea(proyectoId, t.id, `/proyectos/${proyectoId}/sprint`)}
+                  to={rutaTarea(proyectoId, tarea.id, `/proyectos/${proyectoId}/sprint`)}
                   className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:underline hover:text-brand flex items-center gap-1.5"
                 >
                   {isBlocked && (
-                    <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
+                    <span className="text-brand flex-none" title={t('kanban.tareaBloqueada')}>
                       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="inline">
                         <rect x="3" y="11" width="10" height="4" rx="1" />
                         <path d="M4 11V6a4 4 0 0 1 8 0v5" />
                       </svg>
                     </span>
                   )}
-                  {t.titulo}
+                  {tarea.titulo}
                 </Link>
-                <FechaTag fecha={t.fecha} done={vm.done} />
-                {t.modulos?.nombre && (
+                <FechaTag fecha={tarea.fecha} done={vm.done} />
+                {tarea.modulos?.nombre && (
                   <span className="flex-none rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted">
-                    {t.modulos.nombre}
+                    {tarea.modulos.nombre}
                   </span>
                 )}
                 {resp && <Avatar nombre={resp.nombre} color={resp.color} size={26} />}
                 <button
                   type="button"
-                  onClick={() => alSprint(t)}
+                  onClick={() => alSprint(tarea)}
                   className="flex-none rounded-lg border border-line px-2.5 py-1 text-[12px] font-semibold text-muted transition-colors hover:border-brand hover:text-brand"
                 >
-                  + Al sprint
+                  {t('sprint.alSprint')}
                 </button>
               </div>
             )
@@ -722,6 +731,7 @@ function PulsoEquipo({
   sprint: Sprint
   personaPorId: Map<string, Persona>
 }) {
+  const { t } = useTranslation()
   const { persona } = useAuth()
   const { data: pulsos } = usePulsos(sprint.id)
   const crear = useCrearPulso()
@@ -733,23 +743,23 @@ function PulsoEquipo({
 
   const enviar = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || !persona) return
-    const t = texto.trim()
-    if (!t) return
+    const txt = texto.trim()
+    if (!txt) return
     if (miPulso) {
-      actualizar.mutate({ id: miPulso.id, sprintId: sprint.id, cambios: { texto: t } })
+      actualizar.mutate({ id: miPulso.id, sprintId: sprint.id, cambios: { texto: txt } })
     } else {
-      crear.mutate({ sprint_id: sprint.id, persona_id: persona.id, texto: t })
+      crear.mutate({ sprint_id: sprint.id, persona_id: persona.id, texto: txt })
     }
     setTexto('')
   }
 
   return (
     <section>
-      <SeccionTitulo titulo="Pulso del equipo" />
+      <SeccionTitulo titulo={t('sprint.pulsoEquipo')} />
       <div className="overflow-hidden rounded-[13px] border border-line bg-surface">
         {lista.length === 0 ? (
           <div className="px-4 py-4 text-center text-[13px] text-faint">
-            Todavía no hay pulsos · contá tu avance o bloqueo.
+            {t('sprint.sinPulsos')}
           </div>
         ) : (
           lista.map((p) => {
@@ -758,7 +768,7 @@ function PulsoEquipo({
               <div key={p.id} className="flex items-start gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0">
                 <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={26} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-semibold text-ink">{autor?.nombre ?? 'Alguien'}</div>
+                  <div className="text-[12.5px] font-semibold text-ink">{autor?.nombre ?? t('paraMi.alguien')}</div>
                   <div className="text-sm text-muted-soft">{p.texto}</div>
                 </div>
               </div>
@@ -773,8 +783,8 @@ function PulsoEquipo({
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={enviar}
-              aria-label="Tu pulso del sprint"
-              placeholder={miPulso ? 'Actualizá tu pulso…' : 'Tu pulso (avance o bloqueo)…'}
+              aria-label={t('sprint.tuPulsoAria')}
+              placeholder={miPulso ? t('sprint.actualizaPulso') : t('sprint.tuPulsoPlaceholder')}
               className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
             />
           </div>
@@ -793,6 +803,7 @@ function CierreSprint({
   proyectoId: string
   acento: string
 }) {
+  const { t } = useTranslation()
   const actualizarSprint = useActualizarSprint()
   const cerrarSprint = useCerrarSprint()
 
@@ -801,26 +812,26 @@ function CierreSprint({
   }
 
   const cerrar = () => {
-    if (!window.confirm('¿Cerrar el sprint? Las tareas sin terminar volverán al backlog.')) return
+    if (!window.confirm(t('sprint.confirmarCerrar'))) return
     cerrarSprint.mutate({ id: sprint.id, proyectoId })
   }
 
   return (
     <section>
-      <SeccionTitulo titulo="Cierre del sprint" />
+      <SeccionTitulo titulo={t('sprint.cierreSprint')} />
       <div className="flex flex-col gap-3 rounded-[13px] border border-line bg-surface p-5">
         <CampoCierre
-          etiqueta="Logros"
+          etiqueta={t('sprint.logros')}
           valor={sprint.cierre_logros ?? ''}
           onGuardar={(v) => guardar('cierre_logros', v)}
         />
         <CampoCierre
-          etiqueta="Pegados"
+          etiqueta={t('sprint.pegados')}
           valor={sprint.cierre_pegados ?? ''}
           onGuardar={(v) => guardar('cierre_pegados', v)}
         />
         <CampoCierre
-          etiqueta="Cambio"
+          etiqueta={t('sprint.cambio')}
           valor={sprint.cierre_cambio ?? ''}
           onGuardar={(v) => guardar('cierre_cambio', v)}
         />
@@ -832,7 +843,7 @@ function CierreSprint({
             className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{ background: acento }}
           >
-            {cerrarSprint.isPending ? 'Cerrando…' : 'Cerrar sprint'}
+            {cerrarSprint.isPending ? t('sprint.cerrando') : t('sprint.cerrarSprint')}
           </button>
         </div>
       </div>

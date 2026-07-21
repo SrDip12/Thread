@@ -2,22 +2,25 @@
 // a la derecha con selector de proyecto (los mensajes siguen siendo por proyecto).
 // Montado una vez en Layout. Mensajes vía src/data/mensajes.ts.
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMatch } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { useCrearMensaje, useMensajes, useRealtimeChat } from '../data/mensajes.ts'
 import { Avatar } from './ui.tsx'
+import i18n from '../i18n/index.ts'
 
 function hora(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString(i18n.language?.startsWith('en') ? 'en' : 'es', { hour: '2-digit', minute: '2-digit' })
 }
 
 const LS_KEY = 'chat:proyecto'
 
 export default function ChatProyecto() {
+  const { t } = useTranslation()
   const { persona } = useAuth()
   const { data: personas } = usePersonas()
   const { data: proyectos } = useProyectos()
@@ -56,9 +59,9 @@ export default function ChatProyecto() {
   }, [msgs.length, abierto, proyectoId])
 
   const enviar = () => {
-    const t = texto.trim()
-    if (!t || !persona || !proyectoId) return
-    crear.mutate({ proyecto_id: proyectoId, autor_id: persona.id, texto: t })
+    const txt = texto.trim()
+    if (!txt || !persona || !proyectoId) return
+    crear.mutate({ proyecto_id: proyectoId, autor_id: persona.id, texto: txt })
     setTexto('')
   }
 
@@ -70,7 +73,7 @@ export default function ChatProyecto() {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        aria-label="Abrir chat del equipo"
+        aria-label={t('chat.abrir')}
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[var(--shadow-pop)] transition-transform hover:scale-105"
         style={{ background: color }}
       >
@@ -96,7 +99,7 @@ export default function ChatProyecto() {
                 // localStorage puede fallar (modo privado); igual cambia en esta sesión.
               }
             }}
-            aria-label="Proyecto del chat"
+            aria-label={t('chat.proyectoChat')}
             className="min-w-0 truncate bg-transparent text-[14px] font-bold text-ink outline-none"
           >
             {lista.map((p) => (
@@ -109,7 +112,7 @@ export default function ChatProyecto() {
         <button
           type="button"
           onClick={() => setAbierto(false)}
-          aria-label="Cerrar chat"
+          aria-label={t('chat.cerrar')}
           className="flex-none rounded-lg p-1 text-muted transition-colors hover:bg-hover hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -121,7 +124,7 @@ export default function ChatProyecto() {
       <div className="flex-1 space-y-3 overflow-auto px-4 py-3.5">
         {msgs.length === 0 && (
           <p className="mt-6 text-center text-[13px] text-faint">
-            Sin mensajes todavía. Escribí el primero.
+            {t('chat.sinMensajes')}
           </p>
         )}
         {msgs.map((m) => {
@@ -132,7 +135,7 @@ export default function ChatProyecto() {
               <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={28} />
               <div className={`min-w-0 max-w-[74%] ${mio ? 'text-right' : ''}`}>
                 <div className={`mb-0.5 flex items-center gap-1.5 text-[11px] ${mio ? 'justify-end' : ''}`}>
-                  <span className="font-semibold text-ink-soft">{mio ? 'Vos' : (autor?.nombre ?? 'Alguien')}</span>
+                  <span className="font-semibold text-ink-soft">{mio ? t('chat.vos') : (autor?.nombre ?? t('chat.alguien'))}</span>
                   <span className="font-mono text-faint">{hora(m.created_at)}</span>
                 </div>
                 <div
@@ -162,15 +165,15 @@ export default function ChatProyecto() {
               enviar()
             }
           }}
-          placeholder="Escribí un mensaje…"
-          aria-label="Mensaje"
+          placeholder={t('chat.escribiMensaje')}
+          aria-label={t('chat.mensaje')}
           className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3 py-2 text-[13px] text-ink outline-none placeholder:text-faint focus:border-brand"
         />
         <button
           type="button"
           onClick={enviar}
           disabled={!texto.trim()}
-          aria-label="Enviar mensaje"
+          aria-label={t('chat.enviarMensaje')}
           className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-white transition-opacity hover:opacity-90 disabled:opacity-40"
           style={{ background: color }}
         >

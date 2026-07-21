@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useMisTareas, useActualizarTarea, type TareaConProyecto } from '../data/tareas.ts'
@@ -16,9 +17,9 @@ interface Grupo {
 type Filtro = 'pendientes' | 'hechas' | 'todas'
 
 const FILTROS: { id: Filtro; label: string }[] = [
-  { id: 'pendientes', label: 'Pendientes' },
-  { id: 'hechas', label: 'Hechas' },
-  { id: 'todas', label: 'Todas' },
+  { id: 'pendientes', label: 'misTareas.pendientes' },
+  { id: 'hechas', label: 'misTareas.hechas' },
+  { id: 'todas', label: 'misTareas.todas' },
 ]
 
 // Vencidas primero, luego por fecha ascendente; sin fecha al final; hechas últimas.
@@ -32,6 +33,7 @@ function ordenar(a: TareaConProyecto, b: TareaConProyecto): number {
 }
 
 export default function MisTareas() {
+  const { t } = useTranslation()
   const { persona } = useAuth()
   const navigate = useNavigate()
   const { data: tareas, isLoading } = useMisTareas(persona?.id ?? '')
@@ -64,14 +66,14 @@ export default function MisTareas() {
     <div className="mx-auto max-w-[880px] px-11 pb-[90px] pt-10">
       <div className="mb-5">
         <Eyebrow>
-          {pendientes.length} pendientes
+          {t('misTareas.pendientesCount', { count: pendientes.length })}
           {vencidas.length > 0 && (
             <span className="ml-1.5 rounded bg-[var(--color-danger-tint)] px-1.5 py-[1px] font-bold text-[var(--color-danger)]">
-              {vencidas.length} vencidas
+              {t('misTareas.vencidasCount', { count: vencidas.length })}
             </span>
           )}
         </Eyebrow>
-        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Mis tareas</h1>
+        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('misTareas.titulo')}</h1>
       </div>
 
       <div className="mb-[26px] flex items-center gap-1.5">
@@ -86,7 +88,7 @@ export default function MisTareas() {
                 : 'border-line bg-surface text-muted hover:bg-hover hover:text-ink'
             }`}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
@@ -116,11 +118,11 @@ export default function MisTareas() {
               <circle cx="8" cy="8" r="6.5" />
             </svg>
           }
-          titulo={filtro === 'pendientes' ? 'Nada pendiente' : filtro === 'hechas' ? 'Todavía sin tareas hechas' : 'No tenés tareas asignadas'}
+          titulo={filtro === 'pendientes' ? t('misTareas.nadaPendiente') : filtro === 'hechas' ? t('misTareas.sinHechas') : t('misTareas.sinAsignadas')}
           descripcion={
             filtro === 'pendientes'
-              ? 'Cuando alguien te asigne una tarea (o exista alguna sin terminar), aparecerá acá.'
-              : 'Cuando alguien te asigne una tarea en cualquier proyecto, aparecerá acá.'
+              ? t('misTareas.descPendientes')
+              : t('misTareas.descOtras')
           }
         />
       )}

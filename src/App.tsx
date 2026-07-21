@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import Login from './components/Login.tsx'
@@ -19,7 +20,8 @@ const Calendario = lazy(() => import('./pages/Calendario.tsx'))
 const Revisiones = lazy(() => import('./pages/Revisiones.tsx'))
 
 function CargandoRuta() {
-  return <div className="px-11 pt-10 text-sm text-muted">Cargando…</div>
+  const { t } = useTranslation()
+  return <div className="px-11 pt-10 text-sm text-muted">{t('app.cargando')}</div>
 }
 
 function Rutas() {
@@ -57,27 +59,29 @@ function Rutas() {
 }
 
 function NoEncontrado() {
+  const { t } = useTranslation()
   return (
     <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-3 text-center">
       <p className="font-mono text-2xl font-semibold text-ink">404</p>
-      <p className="text-sm text-muted">Esta página no existe.</p>
+      <p className="text-sm text-muted">{t('app.notFoundDesc')}</p>
       <Link
         to="/proyectos"
         className="rounded-[9px] border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-hover"
       >
-        Ir a Proyectos
+        {t('app.irProyectos')}
       </Link>
     </div>
   )
 }
 
 export default function App() {
+  const { t } = useTranslation()
   const { session, persona, cargando, error, signOut } = useAuth()
 
   if (cargando) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-canvas text-sm text-muted">
-        Cargando…
+        {t('app.cargando')}
       </div>
     )
   }
@@ -90,14 +94,14 @@ export default function App() {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-canvas px-4">
         <div className="w-full max-w-sm rounded-2xl border border-line bg-canvas p-8 text-center">
-          <p className="mb-2 text-sm text-ink">No pudimos verificar tu cuenta.</p>
+          <p className="mb-2 text-sm text-ink">{t('app.errVerificar')}</p>
           <p className="mb-4 text-xs text-muted">{error}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="rounded-[9px] border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-hover"
           >
-            Reintentar
+            {t('app.reintentar')}
           </button>
         </div>
       </div>
@@ -109,14 +113,14 @@ export default function App() {
       <div className="flex min-h-screen w-full items-center justify-center bg-canvas px-4">
         <div className="w-full max-w-sm rounded-2xl border border-line bg-canvas p-8 text-center">
           <p className="mb-4 text-sm text-ink">
-            Tu email no está registrado en el equipo. Avisá a un administrador.
+            {t('app.sinRegistrar')}
           </p>
           <button
             type="button"
             onClick={() => void signOut()}
             className="rounded-[9px] border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-hover"
           >
-            Cerrar sesión
+            {t('nav.cerrarSesion')}
           </button>
         </div>
       </div>

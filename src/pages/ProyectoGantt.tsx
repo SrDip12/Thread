@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
-import { estadoVM, fmtFecha } from '../lib/ui.ts'
+import { estadoVM, fmtFecha, mesesCortos } from '../lib/ui.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { useModulos } from '../data/modulos.ts'
 import { useTareasPorProyecto } from '../data/tareas.ts'
@@ -14,7 +15,6 @@ const PX_DIA = 13 // ancho de un día en el track; sube/baja para zoom
 const COL = 248 // ancho de la columna de etiquetas (izquierda)
 const DIA = 86_400_000
 const HOY = new Date().toISOString().slice(0, 10)
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 const ms = (iso: string) => new Date(`${iso}T00:00:00`).getTime()
 
@@ -28,6 +28,8 @@ const rango = (t: Tarea) => {
 const esHito = (t: Tarea) => !t.fecha_inicio && !!t.fecha
 
 export default function ProyectoGantt() {
+  const { t } = useTranslation()
+  const MESES = mesesCortos()
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data: proyectos } = useProyectos()
@@ -90,7 +92,7 @@ export default function ProyectoGantt() {
   const sinFecha = (tareas ?? []).filter((t) => !rango(t)).length
 
   if (!proyecto) {
-    return <div className="px-11 pt-10 text-sm text-muted">Cargando…</div>
+    return <div className="px-11 pt-10 text-sm text-muted">{t('gantt.cargando')}</div>
   }
 
   return (
@@ -107,10 +109,10 @@ export default function ProyectoGantt() {
       </button>
 
       <div className="mb-7">
-        <Eyebrow>Cronograma</Eyebrow>
+        <Eyebrow>{t('gantt.cronograma')}</Eyebrow>
         <div className="flex items-center gap-[11px]">
           <span className="h-3.5 w-3.5 flex-none rounded" style={{ background: proyecto.color }} />
-          <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.025em]">Gantt · {proyecto.nombre}</h1>
+          <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.025em]">{t('gantt.titulo', { nombre: proyecto.nombre })}</h1>
         </div>
       </div>
 
@@ -123,8 +125,8 @@ export default function ProyectoGantt() {
               <path d="M2 4h7M2 8h11M2 12h5" />
             </svg>
           }
-          titulo="Todavía no hay nada que ubicar en el tiempo"
-          descripcion="Asigná fecha de inicio y/o vencimiento a las tareas (en su panel) para verlas acá."
+          titulo={t('gantt.sinFechas')}
+          descripcion={t('gantt.sinFechasDesc')}
         />
       )}
 
@@ -148,7 +150,7 @@ export default function ProyectoGantt() {
                   <div
                     className="absolute top-0 z-20 h-9 w-px bg-brand"
                     style={{ left: x(HOY) }}
-                    title={`Hoy · ${fmtFecha(HOY)}`}
+                    title={t('gantt.hoyTooltip', { fecha: fmtFecha(HOY) })}
                   />
                 )}
               </div>
@@ -181,7 +183,7 @@ export default function ProyectoGantt() {
 
       {!isLoading && sinFecha > 0 && (
         <p className="mt-3 text-[12.5px] text-faint">
-          {sinFecha} {sinFecha === 1 ? 'tarea sin fechas no aparece' : 'tareas sin fechas no aparecen'} en el cronograma.
+          {t('gantt.sinFechaNota', { count: sinFecha })}
         </p>
       )}
     </div>
@@ -201,6 +203,7 @@ function FilaTarea({
   ancho: number
   color: string
 }) {
+  const { t } = useTranslation()
   const r = rango(tarea)
   if (!r) return null
   const vm = estadoVM(tarea.estado)
@@ -222,13 +225,13 @@ function FilaTarea({
           <div
             className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 rounded-[1px]"
             style={{ left: left, background: vm.dot, border: `1px solid ${vm.fg}` }}
-            title={`${tarea.titulo} · vence ${fmtFecha(tarea.fecha)}`}
+            title={t('gantt.hitoTooltip', { titulo: tarea.titulo, fecha: fmtFecha(tarea.fecha) })}
           />
         ) : (
           <div
             className="absolute top-1/2 flex h-[14px] -translate-y-1/2 items-center rounded-[5px]"
             style={{ left, width: w, background: vm.done ? vm.dot : color, opacity: vm.done ? 1 : 0.85 }}
-            title={`${tarea.titulo} · ${fmtFecha(r.start)} → ${fmtFecha(r.end)}`}
+            title={t('gantt.barraTooltip', { titulo: tarea.titulo, inicio: fmtFecha(r.start), fin: fmtFecha(r.end) })}
           />
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useNotificaciones, useMarcarLeida, useMarcarTodasLeidas } from '../data/notificaciones.ts'
@@ -8,6 +9,7 @@ import { rutaTarea, volverDesde } from '../lib/navegacion.ts'
 import { Avatar } from './ui.tsx'
 
 export default function Campana() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { persona } = useAuth()
@@ -37,7 +39,7 @@ export default function Campana() {
       <button
         type="button"
         onClick={() => (abierto ? setAbierto(false) : abrir())}
-        aria-label={`Notificaciones${noLeidas > 0 ? ` (${noLeidas} sin leer)` : ''}`}
+        aria-label={noLeidas > 0 ? t('notif.ariaSinLeer', { count: noLeidas }) : t('notif.aria')}
         className="relative flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -56,10 +58,10 @@ export default function Campana() {
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
           <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px] rounded-[12px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
             <div className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
-              Notificaciones
+              {t('notif.titulo')}
             </div>
             {lista.length === 0 ? (
-              <p className="px-2 py-6 text-center text-[12.5px] text-faint">Nada nuevo por acá.</p>
+              <p className="px-2 py-6 text-center text-[12.5px] text-faint">{t('notif.nadaNuevo')}</p>
             ) : (
               <div className="flex max-h-[60vh] flex-col gap-0.5 overflow-auto">
                 {lista.map((n) => {
@@ -92,10 +94,10 @@ export default function Campana() {
                           ) : (
                             <>
                               <span className="font-bold">{n.autor_nombre}</span>{' '}
-                              {n.tipo === 'mencion' && <>te mencionó en <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'pregunta' && <>te preguntó en <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'comentario' && <>comentó en <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'asignacion' && <>te asignó la tarea <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'mencion' && <>{t('notif.mencion')} <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'pregunta' && <>{t('notif.pregunta')} <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'comentario' && <>{t('notif.comentario')} <span className="font-semibold">{n.tarea_titulo}</span></>}
+                              {n.tipo === 'asignacion' && <>{t('notif.asignacion')} <span className="font-semibold">{n.tarea_titulo}</span></>}
                               {!['mencion', 'pregunta', 'comentario', 'asignacion'].includes(n.tipo) && n.texto}
                             </>
                           )}

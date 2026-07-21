@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Tables } from '../lib/database.types.ts'
 import {
   usePersonas,
@@ -14,6 +15,7 @@ type Rol = Persona['rol']
 const PALETA = ['#c96442', '#3f7d6e', '#5a6f8c', '#a8743a', '#8a5a9c', '#6b7d3f']
 
 export default function Equipo() {
+  const { t } = useTranslation()
   const { data: personas, isLoading } = usePersonas()
   const crear = useCrearPersona()
 
@@ -34,38 +36,38 @@ export default function Equipo() {
   return (
     <div className="mx-auto max-w-[920px] px-11 pb-[90px] pt-10">
       <div className="mb-[30px]">
-        <Eyebrow>{personas?.length ?? 0} personas</Eyebrow>
-        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Equipo</h1>
+        <Eyebrow>{t('equipo.personasCount', { count: personas?.length ?? 0 })}</Eyebrow>
+        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('nav.equipo')}</h1>
       </div>
 
       <div className="mb-7 flex flex-wrap items-end gap-3 rounded-[13px] border border-line bg-surface p-4">
-        <Campo label="Nombre">
+        <Campo label={t('equipo.nombre')}>
           <input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre y apellido"
+            placeholder={t('equipo.nombrePlaceholder')}
             className="w-44 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface"
           />
         </Campo>
-        <Campo label="Email">
+        <Campo label={t('equipo.email')}>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@thread.app"
+            placeholder={t('equipo.emailPlaceholder')}
             className="w-52 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface"
           />
         </Campo>
-        <Campo label="Rol">
+        <Campo label={t('equipo.rol')}>
           <select
             value={rol}
             onChange={(e) => setRol(e.target.value as Rol)}
             className="rounded-lg border border-line bg-canvas px-2 py-1.5 text-sm outline-none focus:border-brand"
           >
-            <option value="dev">Desarrollo</option>
-            <option value="po">Product Owner</option>
+            <option value="dev">{t('nav.desarrollo')}</option>
+            <option value="po">{t('nav.productOwner')}</option>
           </select>
         </Campo>
-        <Campo label="Color">
+        <Campo label={t('equipo.color')}>
           <Swatches valor={color} onChange={setColor} />
         </Campo>
         <button
@@ -74,7 +76,7 @@ export default function Equipo() {
           disabled={!nombre.trim() || !email.trim()}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-strong disabled:opacity-50"
         >
-          Agregar
+          {t('equipo.agregar')}
         </button>
       </div>
 
@@ -108,8 +110,8 @@ export default function Equipo() {
               <path d="M11 4.2a2.3 2.3 0 0 1 0 4.1M13 13.5c0-1.9-1-3.2-2.6-3.8" />
             </svg>
           }
-          titulo="Todavía no hay nadie en el equipo"
-          descripcion="Agregá a la primera persona con el formulario de arriba."
+          titulo={t('equipo.sinEquipo')}
+          descripcion={t('equipo.sinEquipoDesc')}
         />
       )}
 
@@ -125,6 +127,7 @@ export default function Equipo() {
 }
 
 function PersonaCard({ persona }: { persona: Persona }) {
+  const { t } = useTranslation()
   const actualizar = useActualizarPersona()
   const eliminar = useEliminarPersona()
   const [editando, setEditando] = useState(false)
@@ -160,8 +163,8 @@ function PersonaCard({ persona }: { persona: Persona }) {
             onChange={(e) => setRol(e.target.value as Rol)}
             className="rounded-lg border border-line bg-canvas px-2 py-1.5 text-sm outline-none focus:border-brand"
           >
-            <option value="dev">Desarrollo</option>
-            <option value="po">Product Owner</option>
+            <option value="dev">{t('nav.desarrollo')}</option>
+            <option value="po">{t('nav.productOwner')}</option>
           </select>
           <Swatches valor={color} onChange={setColor} />
           <div className="mt-1 flex gap-2">
@@ -170,14 +173,14 @@ function PersonaCard({ persona }: { persona: Persona }) {
               onClick={guardar}
               className="flex-1 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand hover:bg-brand-strong"
             >
-              Guardar
+              {t('common.guardar')}
             </button>
             <button
               type="button"
               onClick={() => setEditando(false)}
               className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-hover"
             >
-              Cancelar
+              {t('common.cancelar')}
             </button>
           </div>
         </div>
@@ -197,7 +200,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
             )}
           </div>
           <div className="truncate text-[12.5px] text-muted-soft">{persona.email}</div>
-          <div className="text-[12px] text-muted">{persona.rol === 'po' ? 'Product Owner' : 'Desarrollo'}</div>
+          <div className="text-[12px] text-muted">{persona.rol === 'po' ? t('nav.productOwner') : t('nav.desarrollo')}</div>
         </div>
       </div>
       <div className="mt-4 flex gap-2">
@@ -206,16 +209,16 @@ function PersonaCard({ persona }: { persona: Persona }) {
           onClick={() => setEditando(true)}
           className="flex-1 rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
         >
-          Editar
+          {t('equipo.editar')}
         </button>
         <button
           type="button"
           onClick={() => {
-            if (confirm(`¿Eliminar a ${persona.nombre}?`)) eliminar.mutate(persona.id)
+            if (confirm(t('equipo.confirmarEliminar', { nombre: persona.nombre }))) eliminar.mutate(persona.id)
           }}
           className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:bg-[var(--color-danger-tint)] hover:text-[var(--color-danger)]"
         >
-          Eliminar
+          {t('common.eliminar')}
         </button>
       </div>
     </div>
@@ -232,6 +235,7 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Swatches({ valor, onChange }: { valor: string; onChange: (c: string) => void }) {
+  const { t } = useTranslation()
   return (
     <div className="flex gap-1.5">
       {PALETA.map((c) => (
@@ -241,7 +245,7 @@ function Swatches({ valor, onChange }: { valor: string; onChange: (c: string) =>
           onClick={() => onChange(c)}
           className="h-6 w-6 rounded-md transition-transform hover:scale-110"
           style={{ background: c, outline: valor === c ? '2px solid var(--color-ink)' : 'none', outlineOffset: 1 }}
-          aria-label={`Color ${c}`}
+          aria-label={t('nuevoProyecto.colorLabel', { color: c })}
         />
       ))}
     </div>
