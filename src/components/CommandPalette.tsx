@@ -1,9 +1,10 @@
 // Paleta de comandos (Cmd/Ctrl+K): saltar a cualquier vista o proyecto, o crear,
 // desde un atajo. Menos pasos para navegar. Sin estado global: se monta en Layout.
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useProyectos } from '../data/proyectos.ts'
 import { useBuscarGlobal } from '../data/buscar.ts'
+import { rutaTarea, volverDesde } from '../lib/navegacion.ts'
 
 type Item = {
   id: string
@@ -24,6 +25,7 @@ export default function CommandPalette({
   const [qDebounced, setQDebounced] = useState('')
   const [idx, setIdx] = useState(0)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { data: proyectos } = useProyectos()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -85,7 +87,7 @@ export default function CommandPalette({
           label: t.titulo,
           hint: `Tarea en ${t.proyecto_nombre} (${t.modulo_nombre})`,
           color: t.proyecto_color,
-          run: () => navigate(`/proyectos/${t.proyecto_id}?tarea=${t.id}`),
+          run: () => navigate(rutaTarea(t.proyecto_id, t.id, volverDesde(pathname))),
         })
       })
 
@@ -97,7 +99,7 @@ export default function CommandPalette({
           label: `«${textoCorto}»`,
           hint: `Comentario en "${c.tarea_titulo}" (${c.proyecto_nombre})`,
           color: c.proyecto_color,
-          run: () => navigate(`/proyectos/${c.proyecto_id}?tarea=${c.tarea_id}`),
+          run: () => navigate(rutaTarea(c.proyecto_id, c.tarea_id, volverDesde(pathname))),
         })
       })
 
@@ -153,13 +155,13 @@ export default function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-[rgba(28,27,25,0.4)] p-6"
+      className="fixed inset-0 z-[60] flex items-start justify-center bg-[var(--color-scrim)] p-6"
       onClick={cerrar}
     >
       <div
         role="dialog"
         aria-label="Paleta de comandos"
-        className="mt-[12vh] w-full max-w-[520px] overflow-hidden rounded-[15px] border border-line bg-surface shadow-[0_20px_60px_-20px_rgba(40,35,30,0.4)]"
+        className="mt-[12vh] w-full max-w-[520px] overflow-hidden rounded-[15px] border border-line bg-surface shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -186,7 +188,7 @@ export default function CommandPalette({
               >
                 <span
                   className="h-2.5 w-2.5 flex-none rounded-[3px]"
-                  style={{ background: it.color ?? '#d8d3ca' }}
+                  style={{ background: it.color ?? 'var(--color-avatar-empty)' }}
                 />
                 <span className="flex-1 truncate font-medium text-ink">{it.label}</span>
                 <span className="flex-none font-mono text-[11px] text-faint">{it.hint}</span>

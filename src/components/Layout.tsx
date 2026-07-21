@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useComentariosParaPo } from '../data/comentarios.ts'
 import { useModulosEnRevision } from '../data/revisiones.ts'
@@ -28,7 +28,9 @@ interface NavItem {
   badge?: boolean
 }
 
-const nav: NavItem[] = [
+// Lo de todos los días: tareas. El resto (armado de proyectos, reuniones, etc.)
+// vive colapsado bajo «Más» — se usa fuerte al principio y poco después.
+const navPrincipal: NavItem[] = [
   {
     to: '/hoy',
     label: 'Hoy',
@@ -36,18 +38,6 @@ const nav: NavItem[] = [
       <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="8" cy="8" r="3.2" />
         <path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1" />
-      </svg>
-    ),
-  },
-  {
-    to: '/proyectos',
-    label: 'Proyectos',
-    icon: (
-      <svg {...iconProps}>
-        <rect x="2" y="2" width="5" height="5" rx="1.2" />
-        <rect x="9" y="2" width="5" height="5" rx="1.2" />
-        <rect x="2" y="9" width="5" height="5" rx="1.2" />
-        <rect x="9" y="9" width="5" height="5" rx="1.2" />
       </svg>
     ),
   },
@@ -73,6 +63,31 @@ const nav: NavItem[] = [
     ),
   },
   {
+    to: '/revisiones',
+    label: 'Revisiones',
+    icon: (
+      <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 8.5l3 3 6.5-7" />
+        <path d="M13 8v5.5A1.5 1.5 0 0111.5 15h-7A1.5 1.5 0 013 13.5v-9A1.5 1.5 0 014.5 3H10" />
+      </svg>
+    ),
+  },
+]
+
+const navSecundaria: NavItem[] = [
+  {
+    to: '/proyectos',
+    label: 'Proyectos',
+    icon: (
+      <svg {...iconProps}>
+        <rect x="2" y="2" width="5" height="5" rx="1.2" />
+        <rect x="9" y="2" width="5" height="5" rx="1.2" />
+        <rect x="2" y="9" width="5" height="5" rx="1.2" />
+        <rect x="9" y="9" width="5" height="5" rx="1.2" />
+      </svg>
+    ),
+  },
+  {
     to: '/reuniones',
     label: 'Reuniones',
     icon: (
@@ -90,16 +105,6 @@ const nav: NavItem[] = [
         <rect x="2" y="3" width="12" height="11" rx="1.6" />
         <path d="M2 6.2h12M5.2 1.8v2.4M10.8 1.8v2.4" />
         <path d="M5 9h2M9 9h2M5 11.5h2" />
-      </svg>
-    ),
-  },
-  {
-    to: '/revisiones',
-    label: 'Revisiones',
-    icon: (
-      <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 8.5l3 3 6.5-7" />
-        <path d="M13 8v5.5A1.5 1.5 0 0111.5 15h-7A1.5 1.5 0 013 13.5v-9A1.5 1.5 0 014.5 3H10" />
       </svg>
     ),
   },
@@ -129,6 +134,27 @@ export default function Layout() {
   useChequearVencimientos(persona?.id ?? '')
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
   const [paletaAbierta, setPaletaAbierta] = useState(false)
+  const { pathname } = useLocation()
+  // «Más» arranca colapsado: el día a día es tareas; proyectos/reuniones/equipo
+  // se usan fuerte solo al armar el proyecto. Persistido por usuario.
+  const [masAbierto, setMasAbierto] = useState(() => {
+    try {
+      return localStorage.getItem('nav_mas') === 'abierto'
+    } catch {
+      return false
+    }
+  })
+  const alternarMas = () => {
+    const next = !masAbierto
+    setMasAbierto(next)
+    try {
+      localStorage.setItem('nav_mas', next ? 'abierto' : 'cerrado')
+    } catch {}
+  }
+  // Si la ruta actual vive en el grupo colapsado (o corre el tour, que apunta
+  // a esos ítems), se muestra igual: el ítem activo nunca queda invisible.
+  const enSecundaria = navSecundaria.some((item) => pathname.startsWith(item.to))
+  const mostrarMas = masAbierto || enSecundaria || tourAbierto
   // El script de index.html ya fijó la clase antes del paint; acá solo reflejamos.
   const [oscuro, setOscuro] = useState(() => document.documentElement.classList.contains('dark'))
 
@@ -155,11 +181,40 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const renderItem = (item: NavItem) => {
+    const esRev = item.to === '/revisiones'
+    const count = esRev ? revCount : item.badge ? poCount : 0
+    const countLabel = esRev ? `${count} en revisión` : `${count} preguntas para vos`
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        data-tour={item.to.slice(1)}
+        className={({ isActive }) =>
+          `flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm transition-colors hover:bg-hover ${
+            isActive ? 'bg-hover font-bold text-ink' : 'font-medium text-label'
+          }`
+        }
+      >
+        {item.icon}
+        <span className="flex-1">{item.label}</span>
+        {count > 0 && (
+          <span
+            aria-label={countLabel}
+            className="flex h-[19px] min-w-[19px] flex-none items-center justify-center rounded-[10px] bg-brand px-[5px] text-[11px] font-bold text-on-brand"
+          >
+            {count}
+          </span>
+        )}
+      </NavLink>
+    )
+  }
+
   return (
     <div className="flex min-h-screen w-full bg-canvas">
       <a
         href="#contenido"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-canvas"
       >
         Saltar al contenido
       </a>
@@ -188,34 +243,26 @@ export default function Layout() {
         </button>
 
         <nav className="flex flex-col gap-0.5 px-3 py-1.5">
-          {nav.map((item) => {
-            const esRev = item.to === '/revisiones'
-            const count = esRev ? revCount : item.badge ? poCount : 0
-            const countLabel = esRev ? `${count} en revisión` : `${count} preguntas para vos`
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                data-tour={item.to.slice(1)}
-                className={({ isActive }) =>
-                  `flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm transition-colors hover:bg-hover ${
-                    isActive ? 'bg-hover font-bold text-ink' : 'font-medium text-label'
-                  }`
-                }
-              >
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {count > 0 && (
-                  <span
-                    aria-label={countLabel}
-                    className="flex h-[19px] min-w-[19px] flex-none items-center justify-center rounded-[10px] bg-brand px-[5px] text-[11px] font-bold text-white"
-                  >
-                    {count}
-                  </span>
-                )}
-              </NavLink>
-            )
-          })}
+          {navPrincipal.map(renderItem)}
+
+          <button
+            type="button"
+            onClick={alternarMas}
+            aria-expanded={mostrarMas}
+            className="mt-1 flex items-center gap-[11px] rounded-[9px] px-[11px] py-2 text-sm font-medium text-label transition-colors hover:bg-hover"
+          >
+            <svg
+              {...iconProps}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform ${mostrarMas ? 'rotate-90' : ''}`}
+            >
+              <path d="M6 3.5L10.5 8L6 12.5" />
+            </svg>
+            <span className="flex-1 text-left">Más</span>
+          </button>
+
+          {mostrarMas && navSecundaria.map(renderItem)}
         </nav>
 
         <div className="mt-auto p-3">

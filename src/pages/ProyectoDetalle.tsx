@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Tables, TablesUpdate } from '../lib/database.types.ts'
 import { estadoVM, fmtFecha, ESTADOS, fmtFechaHora, diasHasta } from '../lib/ui.ts'
+import { etiquetaOrigen, origenValido } from '../lib/navegacion.ts'
 import { useProyectos, useActualizarProyecto, useEliminarProyecto } from '../data/proyectos.ts'
 import { useModulos, useCrearModulo, useActualizarModulo } from '../data/modulos.ts'
 import {
@@ -29,11 +30,11 @@ type EstadoModulo = Modulo['estado']
 function moduloEstadoVM(estado: EstadoModulo): { label: string; bg: string; fg: string } {
   switch (estado) {
     case 'cerrado':
-      return { label: 'Cerrado', bg: '#e7efe9', fg: '#477155' }
+      return { label: 'Cerrado', bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)' }
     case 'en_revision':
-      return { label: 'En revisión', bg: '#e8eef6', fg: '#43618f' }
+      return { label: 'En revisión', bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
     default:
-      return { label: 'Abierto', bg: '#f0ede7', fg: '#8a8276' }
+      return { label: 'Abierto', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
   }
 }
 
@@ -55,6 +56,10 @@ export default function ProyectoDetalle() {
   const actualizar = useActualizarTarea()
   const [searchParams, setSearchParams] = useSearchParams()
   const tareaIdParam = searchParams.get('tarea')
+  // De dónde vino (Mis tareas, Hoy, Revisiones…). Sin `de`, el volver es a Proyectos.
+  const origen = origenValido(searchParams.get('de'))
+  const volverA = origen ?? '/proyectos'
+  const volverLabel = etiquetaOrigen(origen)
 
   const [vista, setVista] = useState<'lista' | 'kanban'>(() => {
     try {
@@ -86,7 +91,13 @@ export default function ProyectoDetalle() {
     }
   }, [tareaIdParam, tareasProyecto, modulos])
 
-  const onCerrarPanel = () => {
+  // Si se entró directo a la tarea desde otra vista, cerrar el panel devuelve ahí:
+  // el proyecto nunca fue el destino elegido. Si no, solo se cierra el panel.
+  const onCerrarPanel = useCallback(() => {
+    if (origen) {
+      navigate(origen)
+      return
+    }
     setSel(null)
     setSearchParams(
       (prev) => {
@@ -96,7 +107,7 @@ export default function ProyectoDetalle() {
       },
       { replace: true }
     )
-  }
+  }, [origen, navigate, setSearchParams])
   const [nuevoModulo, setNuevoModulo] = useState('')
   const crearModulo = useCrearModulo()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -112,7 +123,9 @@ export default function ProyectoDetalle() {
         el.isContentEditable
 
       if (e.key === 'Escape') {
-        if (!typing) setSel(null)
+        // Cerrar por Esc pasa por el mismo camino que la X: limpia `?tarea` (si no,
+        // el próximo refetch de tareas vuelve a abrir el panel) y respeta el origen.
+        if (!typing) onCerrarPanel()
         return
       }
       if (typing) return
@@ -134,7 +147,7 @@ export default function ProyectoDetalle() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [onCerrarPanel])
 
   const proyecto = (proyectos ?? []).find((p) => p.id === id)
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
@@ -172,13 +185,13 @@ export default function ProyectoDetalle() {
         <div className="mx-auto max-w-[960px] px-11 pb-20 pt-[34px]">
           <button
             type="button"
-            onClick={() => navigate('/proyectos')}
+            onClick={() => navigate(volverA)}
             className="mb-[18px] flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 3L5 8l5 5" />
             </svg>
-            Proyectos
+            {volverLabel}
           </button>
 
           <div className="mb-6 flex items-start justify-between gap-6">
@@ -252,9 +265,9 @@ export default function ProyectoDetalle() {
             <div className="h-[34px] w-px flex-none bg-line" />
             <div className="flex flex-none gap-[22px]">
               <Metrica valor={total} label="tareas" />
-              <Metrica valor={curso} label="en curso" color="#43618f" />
-              <Metrica valor={hechas} label="hechas" color="#477155" />
-              {vencidasProy > 0 && <Metrica valor={vencidasProy} label="vencidas" color="#b5532f" />}
+              <Metrica valor={curso} label="en curso" color="var(--color-info)" />
+              <Metrica valor={hechas} label="hechas" color="var(--color-ok)" />
+              {vencidasProy > 0 && <Metrica valor={vencidasProy} label="vencidas" color="var(--color-danger)" />}
             </div>
           </div>
 
@@ -334,7 +347,7 @@ export default function ProyectoDetalle() {
                 />
               ))}
               <div className="flex items-center gap-[11px] px-0.5 py-1">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-dot)" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
                   <path d="M8 3.5v9M3.5 8h9" />
                 </svg>
                 <input
@@ -373,7 +386,7 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
 
   if (confirmando) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-[#e6c9bf] bg-[#fbeee8] px-2.5 py-1.5">
+      <div className="flex items-center gap-2 rounded-lg border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-2.5 py-1.5">
         <span className="text-[12px] font-semibold text-brand-strong">¿Eliminar «{nombre}»?</span>
         <button
           type="button"
@@ -381,7 +394,7 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
             eliminar.mutate(proyectoId)
             navigate('/proyectos')
           }}
-          className="rounded-md bg-brand px-2 py-[3px] text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+          className="rounded-md bg-brand px-2 py-[3px] text-[11px] font-bold text-on-brand transition-opacity hover:opacity-90"
         >
           Sí, eliminar
         </button>
@@ -402,7 +415,7 @@ function EliminarProyecto({ proyectoId, nombre }: { proyectoId: string; nombre: 
       onClick={() => setConfirmando(true)}
       title="Eliminar proyecto"
       aria-label="Eliminar proyecto"
-      className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-[#e6c9bf] hover:bg-[#fbeee8] hover:text-brand"
+      className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-[var(--color-danger-line)] hover:bg-[var(--color-danger-tint)] hover:text-brand"
     >
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4.5h10M6.5 4V2.8h3V4M5 4.5l.5 8.5h5l.5-8.5M6.7 6.5v5M9.3 6.5v5" />
@@ -451,7 +464,7 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
       {abierto && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-[12px] border border-line bg-surface p-3 shadow-lg">
+          <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-[12px] border border-line bg-surface p-3 shadow-[var(--shadow-pop)]">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
               Equipo · {lista.length}
             </div>
@@ -467,7 +480,7 @@ function EquipoProyecto({ proyectoId, personas }: { proyectoId: string; personas
                     type="button"
                     onClick={() => quitar.mutate({ proyectoId, personaId: m.id })}
                     aria-label={`Quitar a ${m.nombre}`}
-                    className="flex h-5 w-5 items-center justify-center rounded text-muted transition-colors hover:bg-[#fbeee9] hover:text-[#b5532f]"
+                    className="flex h-5 w-5 items-center justify-center rounded text-muted transition-colors hover:bg-[var(--color-danger-tint)] hover:text-[var(--color-danger)]"
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                       <path d="M4 4l8 8M12 4l-8 8" />
@@ -611,7 +624,7 @@ function CorreccionesClienteSeccion({
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{t.titulo}</span>
                 <span
                   className="flex-none rounded-md px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
-                  style={{ background: '#f9ecdc', color: '#a96a23' }}
+                  style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                 >
                   Corrección
                 </span>
@@ -624,7 +637,7 @@ function CorreccionesClienteSeccion({
                 >
                   {vm.label}
                 </span>
-                <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? '#c4bdb1'} size={26} />
+                <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? 'var(--color-avatar-empty)'} size={26} />
               </div>
             )
           })}
@@ -778,7 +791,7 @@ function ModuloSeccion({
           {modulo.estado === 'en_revision' && (
             <Link
               to="/revisiones"
-              className="rounded-md border border-[#cfd9e8] bg-[#eef2f8] px-2 py-[3px] text-[11px] font-semibold text-[#43618f] transition-colors hover:bg-[#e4ebf4]"
+              className="rounded-md border border-[var(--color-info-line)] bg-[var(--color-info-tint)] px-2 py-[3px] text-[11px] font-semibold text-[var(--color-info)] transition-colors hover:bg-[var(--color-info-line)]"
               title="Pendiente del responsable de visión"
             >
               En revisión →
@@ -835,7 +848,7 @@ function ModuloSeccion({
               {t.tipo === 'correccion' && (
                 <span
                   className="flex-none rounded-md px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
-                  style={{ background: '#f9ecdc', color: '#a96a23' }}
+                  style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                 >
                   Corrección
                 </span>
@@ -844,7 +857,7 @@ function ModuloSeccion({
               {resp ? (
                 <Avatar nombre={resp.nombre} color={resp.color} size={26} />
               ) : (
-                <Avatar nombre="—" color="#c4bdb1" size={26} />
+                <Avatar nombre="—" color="var(--color-avatar-empty)" size={26} />
               )}
               <EstadoChip estado={t.estado} onClick={() => ciclarEstado(t.id, t.estado)} />
             </button>
@@ -852,7 +865,7 @@ function ModuloSeccion({
         })}
 
         <div className="flex items-center gap-[11px] px-4 py-2.5">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-dot)" strokeWidth="1.8" strokeLinecap="round" className="flex-none">
             <path d="M8 3.5v9M3.5 8h9" />
           </svg>
           <input
@@ -910,7 +923,7 @@ function FeedbackModulo({
           const autor = personaPorId.get(c.autor_id)
           return (
             <div key={c.id} className="flex gap-2.5">
-              <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={22} />
+              <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={22} />
               <div className="min-w-0 flex-1">
                 <div className="mb-0.5 flex items-baseline gap-2">
                   <span className="text-[12px] font-bold">{autor?.nombre ?? 'Alguien'}</span>

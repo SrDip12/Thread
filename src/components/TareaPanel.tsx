@@ -23,8 +23,8 @@ type Proyecto = Tables<'proyectos'>
 // Chip de tipo: 'tarea' neutro, 'correccion' con acento ámbar de alerta.
 function tipoVM(tipo: Tarea['tipo']): { label: string; bg: string; fg: string } {
   return tipo === 'correccion'
-    ? { label: 'Corrección', bg: '#f9ecdc', fg: '#a96a23' }
-    : { label: 'Tarea', bg: '#f0ede7', fg: '#8a8276' }
+    ? { label: 'Corrección', bg: 'var(--color-warn-tint)', fg: 'var(--color-warn)' }
+    : { label: 'Tarea', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)' }
 }
 
 export default function TareaPanel({
@@ -109,7 +109,7 @@ export default function TareaPanel({
         <div className="flex items-center gap-2 text-[12.5px] text-muted">
           <span className="inline-block h-2 w-2 rounded-[2px]" style={{ background: proyecto.color }} />
           {proyecto.nombre}
-          <span className="text-[#d6cfc4]">/</span>
+          <span className="text-[var(--color-faint)]">/</span>
           {moduloNombre}
         </div>
         <button
@@ -125,7 +125,7 @@ export default function TareaPanel({
       </div>
 
       {estaBloqueada && (
-        <div className="mx-[22px] mt-4 rounded-lg border border-[#e6c9bf] bg-[#fbeee8] p-3 text-xs text-brand-strong flex-none">
+        <div className="mx-[22px] mt-4 rounded-lg border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] p-3 text-xs text-brand-strong flex-none">
           <div className="flex items-center gap-1.5 font-bold mb-1">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="3" y="11" width="10" height="4" rx="1" />
@@ -449,7 +449,7 @@ function Comentarios({
             const pendiente = c.para_po && !c.resuelto
             return (
               <div key={c.id} className="flex gap-[11px]">
-                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={28} />
+                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={28} />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-baseline gap-2">
                     <span className="text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
@@ -474,7 +474,7 @@ function Comentarios({
                     {c.para_po && (
                       <div
                         className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold"
-                        style={{ color: pendiente ? '#bb6a3e' : '#7e8a7e' }}
+                        style={{ color: pendiente ? 'var(--color-brand-deep)' : 'var(--color-ok-dot)' }}
                       >
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                           <path d="M4 2.5v11" strokeLinecap="round" />
@@ -495,7 +495,7 @@ function Comentarios({
                               cambios: { resuelto: true },
                             })
                           }
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#e0bfac] bg-surface px-[11px] py-[5px] text-xs font-semibold text-brand-deep transition-colors hover:bg-[#fdf6f1]"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-danger-line)] bg-surface px-[11px] py-[5px] text-xs font-semibold text-brand-deep transition-colors hover:bg-[var(--color-brand-soft)]"
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M3.5 8.5l3 3 6-6.5" />
@@ -539,13 +539,13 @@ function Comentarios({
                     }}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
-                      seleccionado ? 'bg-brand text-white font-bold' : 'hover:bg-hover text-ink font-medium'
+                      seleccionado ? 'bg-brand text-on-brand font-bold' : 'hover:bg-hover text-ink font-medium'
                     }`}
                   >
                     <Avatar nombre={p.nombre} color={p.color} size={20} />
                     <div className="min-w-0 flex-1">
-                      <div className={`truncate ${seleccionado ? 'text-white' : 'text-ink'}`}>{p.nombre}</div>
-                      <div className={`truncate ${seleccionado ? 'text-white/80' : 'text-muted-soft'}`} style={{ fontSize: '10px' }}>
+                      <div className={`truncate ${seleccionado ? 'text-on-brand' : 'text-ink'}`}>{p.nombre}</div>
+                      <div className={`truncate ${seleccionado ? 'text-on-brand/80' : 'text-muted-soft'}`} style={{ fontSize: '10px' }}>
                         {p.rol === 'po' ? 'Product Owner' : 'Developer'}
                       </div>
                     </div>
@@ -569,7 +569,7 @@ function Comentarios({
               type="button"
               onClick={enviar}
               disabled={!texto.trim() || !yoId}
-              className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
+              className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand-strong disabled:opacity-50"
             >
               Comentar
             </button>

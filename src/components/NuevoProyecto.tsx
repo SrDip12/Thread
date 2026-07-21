@@ -106,11 +106,11 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-[rgba(28,27,25,0.4)] p-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-[var(--color-scrim)] p-6"
       onClick={onCerrar}
     >
       <div
-        className="mt-[6vh] w-full max-w-[560px] rounded-[15px] border border-line bg-surface p-6 shadow-[0_20px_60px_-20px_rgba(40,35,30,0.4)]"
+        className="mt-[6vh] w-full max-w-[560px] rounded-[15px] border border-line bg-surface p-6 shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -182,7 +182,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
             type="button"
             onClick={() => void analizar()}
             disabled={ocupado}
-            className="mb-4 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mb-4 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {analizando ? 'Analizando…' : 'Analizar con IA'}
           </button>
@@ -256,7 +256,7 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
             type="button"
             onClick={() => void crear()}
             disabled={!nombre.trim() || ocupado}
-            className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {creando
               ? 'Creando…'

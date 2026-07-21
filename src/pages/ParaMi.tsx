@@ -9,6 +9,7 @@ import { usePersonas } from '../data/personas.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { Skeleton, EmptyState } from '../components/ui.tsx'
 import { fmtFechaHora } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 
 export default function ParaMi() {
   const navigate = useNavigate()
@@ -27,7 +28,7 @@ export default function ParaMi() {
       <div className="mb-2 flex items-center gap-2.5">
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">Para mí</h1>
         {count > 0 && (
-          <span className="flex h-6 min-w-[24px] items-center justify-center rounded-xl bg-brand px-[7px] text-[13px] font-bold text-white">
+          <span className="flex h-6 min-w-[24px] items-center justify-center rounded-xl bg-brand px-[7px] text-[13px] font-bold text-on-brand">
             {count}
           </span>
         )}
@@ -74,15 +75,15 @@ export default function ParaMi() {
           return (
             <div key={q.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-[17px]">
               <div className="mb-[11px] flex items-center gap-2 text-xs text-muted">
-                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? '#c4bdb1' }} />
+                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? 'var(--color-avatar-empty)' }} />
                 <span className="font-semibold text-label">{proy?.nombre ?? 'Proyecto'}</span>
-                <span className="text-[#d6cfc4]">/</span>
+                <span className="text-[var(--color-faint)]">/</span>
                 <span>{tarea?.modulos?.nombre ?? ''}</span>
               </div>
               <div className="flex gap-3">
                 <div
                   className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-[10px] font-bold text-white"
-                  style={{ background: autor?.color ?? '#c4bdb1' }}
+                  style={{ background: autor?.color ?? 'var(--color-avatar-empty)' }}
                 >
                   {(autor?.nombre ?? '—').slice(0, 2).toUpperCase()}
                 </div>
@@ -99,15 +100,15 @@ export default function ParaMi() {
                   <div className="flex items-center gap-2.5">
                     <button
                       type="button"
-                      onClick={() => proy && tarea && navigate(`/proyectos/${proy.id}?tarea=${tarea.id}`)}
-                      className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[#f7f4ef]"
+                      onClick={() => proy && tarea && navigate(rutaTarea(proy.id, tarea.id, '/para-mi'))}
+                      className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-[var(--color-hover)]"
                     >
                       <span className="text-xs text-muted">↗</span> {tarea?.titulo ?? 'Ver tarea'}
                     </button>
                     <button
                       type="button"
                       onClick={() => resolver.mutate(q.id)}
-                      className="flex items-center gap-1.5 rounded-lg bg-[#e7efe9] px-[13px] py-1.5 text-[12.5px] font-semibold text-[#477155] transition-colors hover:bg-[#dce8df]"
+                      className="flex items-center gap-1.5 rounded-lg bg-[var(--color-ok-tint)] px-[13px] py-1.5 text-[12.5px] font-semibold text-[var(--color-ok)] transition-colors hover:bg-[var(--color-ok-line)]"
                     >
                       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M3.5 8.5l3 3 6-6.5" />
@@ -144,7 +145,7 @@ export default function ParaMi() {
                               },
                             )
                           }}
-                          className="rounded-lg bg-brand px-[13px] py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
+                          className="rounded-lg bg-brand px-[13px] py-1.5 text-[12.5px] font-semibold text-on-brand transition-colors hover:bg-brand/90 disabled:opacity-40"
                         >
                           Responder
                         </button>

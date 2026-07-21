@@ -7,6 +7,7 @@ import { useReuniones, type Reunion } from '../data/reuniones.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { estadoVM, ESTADOS, diasHasta, TIPOS_REUNION, fmtFecha } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 import { Eyebrow, EstadoChip, FechaTag, Skeleton, EmptyState } from '../components/ui.tsx'
 
 // Días desde hoy (0 = hoy) hasta el momento de la reunión, en días de calendario.
@@ -81,7 +82,7 @@ export default function Hoy() {
         {!cargando && (
           <p className="mt-[7px] text-sm text-muted-soft">
             {vencidas.length > 0 && (
-              <span className="font-semibold text-[#b5532f]">
+              <span className="font-semibold text-[var(--color-danger)]">
                 {vencidas.length} {vencidas.length === 1 ? 'tarea vencida' : 'tareas vencidas'} ·{' '}
               </span>
             )}
@@ -110,17 +111,6 @@ export default function Hoy() {
           titulo="Día despejado"
           descripcion="Sin vencimientos ni reuniones a la vista. Mirá el backlog de tus proyectos si querés adelantar."
         />
-      )}
-
-      {(reunionesHoy.length > 0 || reunionesProximas.length > 0) && (
-        <SeccionHoy titulo="Reuniones" extra={`${reunionesHoy.length} hoy`}>
-          {reunionesHoy.map((r) => (
-            <FilaReunion key={r.id} r={r} color={proyectoPorId.get(r.proyecto_id)?.color} hoy />
-          ))}
-          {reunionesProximas.map((r) => (
-            <FilaReunion key={r.id} r={r} color={proyectoPorId.get(r.proyecto_id)?.color} />
-          ))}
-        </SeccionHoy>
       )}
 
       {vencidas.length > 0 && (
@@ -154,6 +144,18 @@ export default function Hoy() {
           ))}
         </SeccionHoy>
       )}
+
+      {/* Las reuniones van al final: lo primero que se ve al abrir la app son las tareas. */}
+      {(reunionesHoy.length > 0 || reunionesProximas.length > 0) && (
+        <SeccionHoy titulo="Reuniones" extra={`${reunionesHoy.length} hoy`}>
+          {reunionesHoy.map((r) => (
+            <FilaReunion key={r.id} r={r} color={proyectoPorId.get(r.proyecto_id)?.color} hoy />
+          ))}
+          {reunionesProximas.map((r) => (
+            <FilaReunion key={r.id} r={r} color={proyectoPorId.get(r.proyecto_id)?.color} />
+          ))}
+        </SeccionHoy>
+      )}
     </div>
   )
 }
@@ -174,7 +176,7 @@ function SeccionHoy({
       <div className="mb-[9px] flex items-center gap-2.5 px-0.5">
         <h2
           className="m-0 text-[13px] font-bold uppercase tracking-[0.02em]"
-          style={{ color: alerta ? '#b5532f' : 'var(--color-label)' }}
+          style={{ color: alerta ? 'var(--color-danger)' : 'var(--color-label)' }}
         >
           {titulo}
         </h2>
@@ -183,7 +185,7 @@ function SeccionHoy({
       </div>
       <div
         className={`overflow-hidden rounded-[13px] border bg-surface ${
-          alerta ? 'border-[#e6c9bf]' : 'border-line'
+          alerta ? 'border-[var(--color-danger-line)]' : 'border-line'
         }`}
       >
         {children}
@@ -208,7 +210,7 @@ function FilaTareaHoy({
       <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
       <button
         type="button"
-        onClick={() => proy && onAbrir(`/proyectos/${proy.id}?tarea=${t.id}`)}
+        onClick={() => proy && onAbrir(rutaTarea(proy.id, t.id, '/hoy'))}
         className="min-w-0 flex-1 truncate text-left text-sm font-medium text-ink hover:underline"
       >
         {t.titulo}

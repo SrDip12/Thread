@@ -71,7 +71,7 @@ export default function ChatProyecto() {
         type="button"
         onClick={() => setAbierto(true)}
         aria-label="Abrir chat del equipo"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_8px_24px_-6px_rgba(40,35,30,0.4)] transition-transform hover:scale-105"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[var(--shadow-pop)] transition-transform hover:scale-105"
         style={{ background: color }}
       >
         <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -82,7 +82,7 @@ export default function ChatProyecto() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex h-[480px] w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-[15px] border border-line bg-surface shadow-[0_20px_60px_-20px_rgba(40,35,30,0.45)]">
+    <div className="fixed bottom-6 right-6 z-40 flex h-[480px] w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-[15px] border border-line bg-surface shadow-[var(--shadow-pop)]">
       <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 flex-none rounded-[3px]" style={{ background: color }} />
@@ -129,7 +129,7 @@ export default function ChatProyecto() {
           const mio = m.autor_id === persona?.id
           return (
             <div key={m.id} className={`flex gap-2.5 ${mio ? 'flex-row-reverse' : ''}`}>
-              <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={28} />
+              <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={28} />
               <div className={`min-w-0 max-w-[74%] ${mio ? 'text-right' : ''}`}>
                 <div className={`mb-0.5 flex items-center gap-1.5 text-[11px] ${mio ? 'justify-end' : ''}`}>
                   <span className="font-semibold text-ink-soft">{mio ? 'Vos' : (autor?.nombre ?? 'Alguien')}</span>

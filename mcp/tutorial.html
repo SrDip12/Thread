@@ -1,0 +1,315 @@
+<title>Thread MCP · Guía para el equipo</title>
+<style>
+  :root {
+    --canvas: #faf9f7;
+    --surface: #ffffff;
+    --ink: #2b2622;
+    --muted: #857b70;
+    --line: #e9e3da;
+    --brand: #c96442;
+    --brand-soft: #f5e7e0;
+    --code-bg: #2a2521;
+    --code-ink: #ece4d8;
+    --code-line: #40392f;
+    --good: #4f7a52;
+    --warn: #b8863b;
+    --radius: 12px;
+    --maxw: 720px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #1b1916;
+      --surface: #242019;
+      --ink: #ece5db;
+      --muted: #a99e8f;
+      --line: #35302a;
+      --brand: #dc8563;
+      --brand-soft: #3a2c24;
+      --code-bg: #12100d;
+      --code-ink: #e6ddd0;
+      --code-line: #2c261f;
+      --good: #7fac82;
+      --warn: #d3a862;
+    }
+  }
+  :root[data-theme="light"] {
+    --canvas: #faf9f7; --surface: #ffffff; --ink: #2b2622; --muted: #857b70;
+    --line: #e9e3da; --brand: #c96442; --brand-soft: #f5e7e0;
+    --code-bg: #2a2521; --code-ink: #ece4d8; --code-line: #40392f;
+    --good: #4f7a52; --warn: #b8863b;
+  }
+  :root[data-theme="dark"] {
+    --canvas: #1b1916; --surface: #242019; --ink: #ece5db; --muted: #a99e8f;
+    --line: #35302a; --brand: #dc8563; --brand-soft: #3a2c24;
+    --code-bg: #12100d; --code-ink: #e6ddd0; --code-line: #2c261f;
+    --good: #7fac82; --warn: #d3a862;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+  }
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* ── Encabezado ── */
+  header {
+    padding: 72px 0 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.14em; color: var(--brand);
+    display: flex; align-items: center; gap: 9px; margin: 0 0 18px;
+  }
+  .eyebrow .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--brand);
+    flex: none;
+  }
+  h1 {
+    font-size: clamp(30px, 6vw, 44px);
+    line-height: 1.08; font-weight: 800; letter-spacing: -0.03em;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .lede { font-size: 18px; color: var(--muted); margin: 0; max-width: 60ch; }
+
+  main { padding: 8px 0 96px; }
+
+  h2 {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+    margin: 56px 0 24px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+
+  /* ── Pasos ── */
+  .step { display: flex; gap: 20px; padding: 8px 0 28px; }
+  .step + .step { border-top: 1px dashed var(--line); padding-top: 28px; }
+  .num {
+    flex: none; width: 38px; height: 38px; border-radius: 10px;
+    background: var(--brand-soft); color: var(--brand);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-body { min-width: 0; flex: 1; padding-top: 4px; }
+  .step-body h3 { margin: 0 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .step-body p { margin: 0 0 12px; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  /* ── Bloques de comando ── */
+  pre {
+    background: var(--code-bg); color: var(--code-ink);
+    border: 1px solid var(--code-line); border-radius: 10px;
+    padding: 14px 16px; margin: 0 0 12px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.7;
+  }
+  pre .c { color: #9c9184; } /* comentario */
+  pre .k { color: var(--brand); } /* palabra clave/comando */
+  code.inline {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    font-size: 0.86em; background: var(--brand-soft); color: var(--brand);
+    padding: 1px 6px; border-radius: 5px; white-space: nowrap;
+  }
+
+  /* ── Aviso ── */
+  .note {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--warn);
+    border-radius: 8px; padding: 13px 15px; margin: 4px 0 0; font-size: 14.5px;
+  }
+  .note.ok { border-left-color: var(--good); }
+  .note b { color: var(--ink); }
+  .note svg { flex: none; margin-top: 2px; }
+
+  /* ── Tabla de herramientas ── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 480px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  tr:last-child td { border-bottom: 0; }
+  td.tool { white-space: nowrap; }
+  .pill {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    font-size: 12.5px; font-weight: 500;
+    background: var(--brand-soft); color: var(--brand);
+    padding: 3px 8px; border-radius: 6px;
+  }
+
+  /* ── Ejemplos de prompt ── */
+  .prompts { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 560px) { .prompts { grid-template-columns: 1fr 1fr; } }
+  .prompt {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px; font-size: 15px;
+  }
+  .prompt .q { font-weight: 600; margin: 0 0 4px; }
+  .prompt .q::before { content: "“"; color: var(--brand); }
+  .prompt .q::after { content: "”"; color: var(--brand); }
+  .prompt .r { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+  ul.clean { margin: 0; padding-left: 20px; }
+  ul.clean li { margin-bottom: 6px; }
+
+  footer {
+    border-top: 1px solid var(--line); padding: 28px 0 40px;
+    color: var(--muted); font-size: 13.5px;
+  }
+  a { color: var(--brand); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow"><span class="dot"></span> Thread · Asistente de tareas</p>
+    <h1>Manejá tus tareas hablando con Claude</h1>
+    <p class="lede">Conectá Thread a Claude una sola vez y después pedile las cosas en palabras:
+      ver qué tenés para hoy, empezar una tarea, completarla o mandarla a revisión. Sin abrir la app.</p>
+  </header>
+
+  <main>
+    <h2>Antes de empezar — necesitás</h2>
+    <ul class="clean">
+      <li><b>Node.js 20+</b> instalado. Verificá con <code class="inline">node -v</code>.</li>
+      <li>El repo de <b>Thread</b> en tu compu (te lo pasa quien administra el proyecto).</li>
+      <li><b>Claude Code</b> (recomendado) o <b>Claude Desktop</b>.</li>
+      <li>Tu <b>email y contraseña de Thread</b> — los mismos con los que entrás a la app.</li>
+    </ul>
+
+    <h2>Puesta en marcha — 4 pasos</h2>
+
+    <div class="step">
+      <div class="num mono">1</div>
+      <div class="step-body">
+        <h3>Traé el proyecto e instalá</h3>
+        <p>Abrí una terminal en la carpeta del repo y corré:</p>
+<pre class="mono"><span class="c"># dentro de la carpeta del proyecto Thread</span>
+<span class="k">git</span> pull
+<span class="k">npm</span> install</pre>
+        <p><code class="inline">npm install</code> baja todo, incluido el conector (MCP). Una sola vez.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num mono">2</div>
+      <div class="step-body">
+        <h3>Poné tu login de Thread</h3>
+        <p>Creá un archivo llamado <code class="inline">.env.local</code> en la raíz del proyecto con tus datos:</p>
+<pre class="mono">THREAD_EMAIL=<span class="k">vos@equipo.com</span>
+THREAD_PASSWORD=<span class="k">tu-contraseña</span></pre>
+        <div class="note">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round"><path d="M8 1.5 1 14h14L8 1.5Z"/><path d="M8 6.5v3.2"/><path d="M8 12h.01"/></svg>
+          <span><b>Privado.</b> Ese archivo queda solo en tu compu y no se sube al repo.
+            Son tus credenciales personales: Claude ve exactamente lo que verías vos en la app.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num mono">3</div>
+      <div class="step-body">
+        <h3>Conectalo a Claude</h3>
+        <p><b>Claude Code:</b> nada que hacer. Al abrir la carpeta del proyecto, Claude detecta el conector
+          <span class="pill">thread</span> y te pregunta si lo aprobás. Aceptá y listo.</p>
+        <p><b>Claude Desktop:</b> Ajustes → Developer → Edit Config, y agregá el bloque
+          (cambiá la ruta por la de tu carpeta):</p>
+<pre class="mono">{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"thread"</span>: {
+      "command": "node",
+      "args": ["C:/ruta/a/Thread/mcp/server.mjs"]
+    }
+  }
+}</pre>
+        <p>Guardá y reiniciá Claude Desktop.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="num mono">4</div>
+      <div class="step-body">
+        <h3>Probá que anda</h3>
+        <p>Escribile a Claude:</p>
+<pre class="mono"><span class="k">¿qué tareas tengo para hoy?</span></pre>
+        <div class="note ok">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--good)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5 6 12l7.5-8"/></svg>
+          <span>Si te devuelve tu lista de tareas, quedó conectado. Si dice que faltan
+            <code class="inline">THREAD_EMAIL</code> / <code class="inline">THREAD_PASSWORD</code>, revisá el paso 2.</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>Qué le podés pedir</h2>
+    <div class="prompts">
+      <div class="prompt">
+        <p class="q">¿qué tengo pendiente esta semana?</p>
+        <p class="r">Lista tus tareas ordenadas por vencimiento.</p>
+      </div>
+      <div class="prompt">
+        <p class="q">empezá la tarea del login</p>
+        <p class="r">La pasa a «En curso».</p>
+      </div>
+      <div class="prompt">
+        <p class="q">marcá «diseñar navbar» como hecha</p>
+        <p class="r">La completa.</p>
+      </div>
+      <div class="prompt">
+        <p class="q">mandá la API de pagos a revisión</p>
+        <p class="r">Avisa al responsable de revisión.</p>
+      </div>
+      <div class="prompt">
+        <p class="q">creá una tarea «arreglar footer» en el proyecto Web para mí</p>
+        <p class="r">La crea y te la asigna.</p>
+      </div>
+      <div class="prompt">
+        <p class="q">contame de qué se trata «exportar PDF»</p>
+        <p class="r">Muestra el detalle y los comentarios.</p>
+      </div>
+    </div>
+    <p style="margin-top:16px; color:var(--muted); font-size:14.5px;">
+      Podés nombrar la tarea por su título (aunque sea parte) — si hay varias parecidas, Claude te muestra
+      las opciones para que elijas.</p>
+
+    <h2>Todo lo que sabe hacer</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Herramienta</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td class="tool"><span class="pill">mis_tareas</span></td><td>Tus tareas: pendientes, hechas o todas.</td></tr>
+          <tr><td class="tool"><span class="pill">listar_tareas</span></td><td>Tareas por proyecto, estado, responsable o vencidas.</td></tr>
+          <tr><td class="tool"><span class="pill">ver_tarea</span></td><td>Detalle completo de una tarea + sus comentarios.</td></tr>
+          <tr><td class="tool"><span class="pill">crear_tarea</span></td><td>Nueva tarea con responsable y fecha.</td></tr>
+          <tr><td class="tool"><span class="pill">empezar_tarea</span></td><td>La pasa a «En curso».</td></tr>
+          <tr><td class="tool"><span class="pill">completar_tarea</span></td><td>La marca como hecha.</td></tr>
+          <tr><td class="tool"><span class="pill">enviar_a_revision</span></td><td>La manda a revisión y avisa al responsable.</td></tr>
+          <tr><td class="tool"><span class="pill">comentar_tarea</span></td><td>Agrega un comentario.</td></tr>
+          <tr><td class="tool"><span class="pill">asignar_tarea</span></td><td>Asigna o reasigna el responsable.</td></tr>
+          <tr><td class="tool"><span class="pill">revisiones_pendientes</span></td><td>Tareas esperando revisión.</td></tr>
+          <tr><td class="tool"><span class="pill">aprobar_tarea</span> · <span class="pill">devolver_tarea</span></td><td>Resolver una revisión (devolver pide motivo). Para quien revisa.</td></tr>
+          <tr><td class="tool"><span class="pill">listar_proyectos</span> · <span class="pill">equipo</span></td><td>Ver proyectos y personas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Si algo no anda</h2>
+    <ul class="clean">
+      <li><b>«Faltan THREAD_EMAIL / THREAD_PASSWORD»</b> → el archivo <code class="inline">.env.local</code> no existe o está mal escrito. Revisá el paso 2.</li>
+      <li><b>«Login falló»</b> → email o contraseña incorrectos. Son los mismos con los que entrás a la app de Thread.</li>
+      <li><b>«No hay persona registrada con ese email»</b> → tu usuario todavía no está cargado en el equipo. Avisale a quien administra el proyecto.</li>
+      <li><b>Claude Code no muestra el conector</b> → asegurate de abrir la carpeta del proyecto (donde está <code class="inline">.mcp.json</code>) y de haber corrido <code class="inline">npm install</code>.</li>
+    </ul>
+  </main>
+
+  <footer>
+    <div class="wrap" style="padding:0;">Thread · conector MCP. Todo lo que hacés desde Claude respeta tus permisos: es lo mismo que harías dentro de la app.</div>
+  </footer>
+</div>

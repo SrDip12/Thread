@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM, ESTADOS, diasHasta } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 import { useProyectos } from '../data/proyectos.ts'
 import { useModulos } from '../data/modulos.ts'
 import { useRealtimeProyecto } from '../data/realtime.ts'
@@ -40,11 +41,11 @@ function fechaISO(diasOffset: number): string {
 function sprintEstadoVM(estado: Sprint['estado']): { label: string; bg: string; fg: string; dot: string } {
   switch (estado) {
     case 'activo':
-      return { label: 'Activo', bg: '#e8eef6', fg: '#43618f', dot: '#6c8ac4' }
+      return { label: 'Activo', bg: 'var(--color-info-tint)', fg: 'var(--color-info)', dot: 'var(--color-info-dot)' }
     case 'cerrado':
-      return { label: 'Cerrado', bg: '#e7efe9', fg: '#477155', dot: '#6fa07f' }
+      return { label: 'Cerrado', bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)', dot: 'var(--color-ok-dot)' }
     default:
-      return { label: 'Planificado', bg: '#f0ede7', fg: '#8a8276', dot: '#bcb5a8' }
+      return { label: 'Planificado', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)', dot: 'var(--color-neutral-dot)' }
   }
 }
 
@@ -62,7 +63,7 @@ export default function SprintPage() {
   useRealtimeProyecto(id, (modulosProyecto ?? []).map((m) => m.id))
 
   const proyecto = (proyectos ?? []).find((p) => p.id === id)
-  const acento = proyecto?.color ?? '#8a8276'
+  const acento = proyecto?.color ?? 'var(--color-neutral)'
 
   const lista = [...(sprints ?? [])].sort(
     (a, b) =>
@@ -228,7 +229,7 @@ function CrearSprintRapido({
         <button
           type="button"
           onClick={crearSprint}
-          className="flex-none rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+          className="flex-none rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
         >
           Crear
         </button>
@@ -299,10 +300,10 @@ function VistaSprint({
     diasFin === null
       ? null
       : diasFin < 0
-        ? { label: `venció hace ${-diasFin} ${diasFin === -1 ? 'día' : 'días'}`, bg: '#fbeee8', fg: '#b5532f' }
+        ? { label: `venció hace ${-diasFin} ${diasFin === -1 ? 'día' : 'días'}`, bg: 'var(--color-danger-tint)', fg: 'var(--color-danger)' }
         : diasFin === 0
-          ? { label: 'termina hoy', bg: '#fdf6f1', fg: '#c96442' }
-          : { label: `quedan ${diasFin} ${diasFin === 1 ? 'día' : 'días'}`, bg: '#e8eef6', fg: '#43618f' }
+          ? { label: 'termina hoy', bg: 'var(--color-brand-soft)', fg: 'var(--color-brand)' }
+          : { label: `quedan ${diasFin} ${diasFin === 1 ? 'día' : 'días'}`, bg: 'var(--color-info-tint)', fg: 'var(--color-info)' }
 
   const tieneCierre = Boolean(sprint.cierre_logros || sprint.cierre_pegados || sprint.cierre_cambio)
 
@@ -332,7 +333,7 @@ function VistaSprint({
               onClick={iniciar}
               disabled={hayOtroActivo || actualizarSprint.isPending}
               title={hayOtroActivo ? 'Ya hay un sprint activo: cerralo primero' : 'Poner este sprint en marcha'}
-              className="ml-auto rounded-lg bg-brand px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+              className="ml-auto rounded-lg bg-brand px-3.5 py-1.5 text-[12.5px] font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               Iniciar sprint
             </button>
@@ -432,7 +433,7 @@ function VistaSprint({
               todasLasTareas={todasLasTareas ?? []}
               moduloNombres={new Map((modulos ?? []).map((m) => [m.id, m.nombre]))}
               onAbrir={(taskId) => {
-                navigate(`/proyectos/${proyectoId}?tarea=${taskId}`)
+                navigate(rutaTarea(proyectoId, taskId, `/proyectos/${proyectoId}/sprint`))
               }}
               onMoverTarea={(taskId, nuevoEstado) => {
                 const t = (todasLasTareas ?? []).find((x) => x.id === taskId)
@@ -491,9 +492,9 @@ function FilaTarea({
     <div className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0">
       <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
       <Link
-        to={`/proyectos/${proyectoId}?tarea=${tarea.id}`}
+        to={rutaTarea(proyectoId, tarea.id, `/proyectos/${proyectoId}/sprint`)}
         className="min-w-0 flex-1 truncate text-sm font-medium hover:underline hover:text-brand flex items-center gap-1.5"
-        style={{ color: vm.done ? '#a39d92' : '#1c1b19' }}
+        style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
       >
         {isBlocked && (
           <span className="text-brand flex-none" title="Tarea bloqueada por tareas pendientes">
@@ -514,7 +515,7 @@ function FilaTarea({
       {persona ? (
         <Avatar nombre={persona.nombre} color={persona.color} size={26} />
       ) : (
-        <Avatar nombre="—" color="#c4bdb1" size={26} />
+        <Avatar nombre="—" color="var(--color-avatar-empty)" size={26} />
       )}
       <EstadoChip estado={tarea.estado} onClick={onCiclar} />
     </div>
@@ -592,7 +593,7 @@ function TareasSprint({
 
         {!soloLectura && (
           <div className="flex items-center gap-2.5 border-t border-line-soft px-4 py-2.5">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bcb5a8" strokeWidth="1.8" strokeLinecap="round" className="flex-none" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--color-neutral-dot)" strokeWidth="1.8" strokeLinecap="round" className="flex-none" aria-hidden="true">
               <path d="M8 3.5v9M3.5 8h9" />
             </svg>
             <input
@@ -678,7 +679,7 @@ function Backlog({
               >
                 <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
                 <Link
-                  to={`/proyectos/${proyectoId}?tarea=${t.id}`}
+                  to={rutaTarea(proyectoId, t.id, `/proyectos/${proyectoId}/sprint`)}
                   className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:underline hover:text-brand flex items-center gap-1.5"
                 >
                   {isBlocked && (
@@ -755,7 +756,7 @@ function PulsoEquipo({
             const autor = personaPorId.get(p.persona_id)
             return (
               <div key={p.id} className="flex items-start gap-3 border-b border-line-soft px-4 py-[11px] last:border-b-0">
-                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={26} />
+                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={26} />
                 <div className="min-w-0 flex-1">
                   <div className="text-[12.5px] font-semibold text-ink">{autor?.nombre ?? 'Alguien'}</div>
                   <div className="text-sm text-muted-soft">{p.texto}</div>

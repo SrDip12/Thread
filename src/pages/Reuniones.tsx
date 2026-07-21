@@ -54,7 +54,7 @@ export default function Reuniones() {
           <button
             type="button"
             onClick={() => setCreando((v) => !v)}
-            className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
+            className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-canvas transition-colors hover:bg-[var(--color-ink-soft)]"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M8 3v10M3 8h10" />
@@ -111,7 +111,7 @@ export default function Reuniones() {
               <button
                 type="button"
                 onClick={() => setCreando(true)}
-                className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b]"
+                className="flex items-center gap-1.5 rounded-[9px] bg-ink px-[15px] py-2.5 text-[13.5px] font-semibold text-canvas transition-colors hover:bg-[var(--color-ink-soft)]"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M8 3v10M3 8h10" />
@@ -133,7 +133,7 @@ export default function Reuniones() {
               key={m.id}
               type="button"
               onClick={() => navigate(`/reuniones/${m.id}`)}
-              className="rounded-[14px] border border-line bg-surface px-[19px] py-[17px] text-left transition-all hover:-translate-y-px hover:shadow-[0_8px_24px_-12px_rgba(40,35,30,0.16)]"
+              className="rounded-[14px] border border-line bg-surface px-[19px] py-[17px] text-left transition-all hover:-translate-y-px hover:shadow-[var(--shadow-card)]"
             >
               <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
                 <span
@@ -359,14 +359,14 @@ function NuevaReunionForm({
                 onClick={() => toggleAsistente(p.id)}
                 className="flex items-center gap-1.5 rounded-[9px] border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors"
                 style={{
-                  borderColor: activo ? p.color : '#e6e2da',
-                  background: activo ? `${p.color}1a` : '#fff',
-                  color: activo ? '#1c1b19' : '#6f6a62',
+                  borderColor: activo ? p.color : 'var(--color-line)',
+                  background: activo ? `${p.color}1a` : 'var(--color-surface)',
+                  color: activo ? 'var(--color-ink)' : 'var(--color-label)',
                 }}
               >
                 <span
                   className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: p.color || '#c4bdb1' }}
+                  style={{ background: p.color || 'var(--color-avatar-empty)' }}
                 />
                 {p.nombre}
               </button>
@@ -376,7 +376,7 @@ function NuevaReunionForm({
       </div>
 
       {crear.isError && (
-        <div className="mb-3 rounded-[10px] border border-[#f0d8cc] bg-[#fbeee9] px-3 py-2.5 text-[13px] text-[#b5532f]">
+        <div className="mb-3 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
           No se pudo crear la reunión.
         </div>
       )}
@@ -393,7 +393,7 @@ function NuevaReunionForm({
           type="button"
           onClick={onCrear}
           disabled={!proyectoValido || crear.isPending}
-          className="rounded-[9px] bg-[#c96442] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#b85636] disabled:opacity-50"
+          className="rounded-[9px] bg-brand px-4 py-2 text-[13.5px] font-semibold text-on-brand transition-colors hover:bg-[var(--color-brand-strong)] disabled:opacity-50"
         >
           {crear.isPending ? 'Creando…' : 'Crear reunión'}
         </button>

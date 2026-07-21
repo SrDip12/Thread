@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM, fmtFecha, fmtRelativo, fmtFechaHora } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
 import {
@@ -150,7 +151,7 @@ function TareasRevision({
           return (
             <div key={t.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-4">
               <div className="mb-2 flex items-center gap-2 text-xs text-muted">
-                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? '#c4bdb1' }} />
+                <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? 'var(--color-avatar-empty)' }} />
                 <span className="font-semibold text-label">{proy?.nombre ?? 'Proyecto'}</span>
                 <span className="text-faint">/</span>
                 <span>{t.modulos?.nombre ?? ''}</span>
@@ -202,7 +203,7 @@ function TareasRevision({
                       type="button"
                       onClick={() => devolver(t)}
                       disabled={!motivo.trim() || actualizar.isPending}
-                      className="rounded-[9px] bg-[#b5532f] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
+                      className="rounded-[9px] bg-[var(--color-danger-solid)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
                     >
                       Devolver con motivo
                     </button>
@@ -212,7 +213,7 @@ function TareasRevision({
                 <div className="mt-2.5 flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={() => proy && navigate(`/proyectos/${proy.id}?tarea=${t.id}`)}
+                    onClick={() => proy && navigate(rutaTarea(proy.id, t.id, '/revisiones'))}
                     className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-hover"
                   >
                     Ver tarea ↗
@@ -224,7 +225,7 @@ function TareasRevision({
                       setDevolviendoId(t.id)
                       setMotivo('')
                     }}
-                    className="rounded-lg border border-line bg-canvas px-3.5 py-1.5 text-[12.5px] font-semibold text-[#b5532f] transition-colors hover:bg-hover"
+                    className="rounded-lg border border-line bg-canvas px-3.5 py-1.5 text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-hover"
                   >
                     Devolver
                   </button>
@@ -232,7 +233,7 @@ function TareasRevision({
                     type="button"
                     onClick={() => aprobar(t)}
                     disabled={actualizar.isPending}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#477155] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-[var(--color-ok-solid)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
                   >
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M3.5 8.5l3 3 6-6.5" />
@@ -314,7 +315,7 @@ function ModulosRevision({
                 <div className="mb-1 flex items-center gap-2">
                   <span
                     className="inline-block h-2 w-2 flex-none rounded-[2px]"
-                    style={{ background: m.proyectos?.color ?? '#c4bdb1' }}
+                    style={{ background: m.proyectos?.color ?? 'var(--color-avatar-empty)' }}
                   />
                   <span className="truncate text-[11.5px] text-muted-soft">
                     {m.proyectos?.nombre ?? 'Proyecto'}
@@ -424,7 +425,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
         )}
         <span
           className="rounded-[7px] px-2.5 py-[3px] text-[11.5px] font-bold"
-          style={{ background: '#e8eef6', color: '#43618f' }}
+          style={{ background: 'var(--color-info-tint)', color: 'var(--color-info)' }}
         >
           En revisión
         </span>
@@ -458,7 +459,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
       </div>
       {total > 0 && (
         <div className="mb-3">
-          <ProgressBar pct={pct} color={pendientes === 0 ? '#477155' : proyecto?.color ?? '#c96442'} />
+          <ProgressBar pct={pct} color={pendientes === 0 ? 'var(--color-ok)' : proyecto?.color ?? '#c96442'} />
         </div>
       )}
       <div className="mb-7 overflow-hidden rounded-[13px] border border-line bg-surface">
@@ -477,14 +478,14 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
               <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
               <span
                 className="min-w-0 flex-1 truncate text-sm font-medium"
-                style={{ color: vm.done ? '#a39d92' : '#1c1b19' }}
+                style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
               >
                 {t.titulo}
               </span>
               {t.tipo === 'correccion' && (
                 <span
                   className="flex-none rounded-md px-[7px] py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
-                  style={{ background: '#f9ecdc', color: '#a96a23' }}
+                  style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                 >
                   Corrección
                 </span>
@@ -496,7 +497,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
               >
                 {vm.label}
               </span>
-              <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? '#c4bdb1'} size={26} />
+              <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? 'var(--color-avatar-empty)'} size={26} />
             </div>
           )
         })}
@@ -543,7 +544,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
                 type="button"
                 onClick={devolverConMotivo}
                 disabled={!motivo.trim() || resolver.isPending}
-                className="rounded-[9px] bg-[#b5532f] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
+                className="rounded-[9px] bg-[var(--color-danger-solid)] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#9d4527] disabled:opacity-50"
               >
                 Devolver con motivo
               </button>
@@ -554,7 +555,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
             {pendienteConfirmar && (
               <div
                 className="mb-3.5 rounded-[10px] px-3.5 py-2.5 text-[13px] font-medium"
-                style={{ background: '#f9ecdc', color: '#a96a23' }}
+                style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
               >
                 {pendientes === 1
                   ? '1 tarea sin terminar.'
@@ -567,7 +568,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
                 type="button"
                 onClick={() => setDevolviendo(true)}
                 disabled={!esResponsableVision || resolver.isPending}
-                className="rounded-[9px] border border-line bg-canvas px-4 py-2 text-[13.5px] font-semibold text-[#b5532f] transition-colors hover:bg-hover disabled:opacity-50"
+                className="rounded-[9px] border border-line bg-canvas px-4 py-2 text-[13.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-hover disabled:opacity-50"
               >
                 Devolver
               </button>
@@ -575,7 +576,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
                 type="button"
                 onClick={aprobar}
                 disabled={!esResponsableVision || resolver.isPending}
-                className="flex items-center gap-1.5 rounded-[9px] bg-[#477155] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[9px] bg-[var(--color-ok-solid)] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3.5 8.5l3 3 6-6.5" />
@@ -639,7 +640,7 @@ function HiloModulo({
             const autor = personaPorId.get(c.autor_id)
             return (
               <div key={c.id} className="flex gap-[11px]">
-                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? '#c4bdb1'} size={28} />
+                <Avatar nombre={autor?.nombre ?? '—'} color={autor?.color ?? 'var(--color-avatar-empty)'} size={28} />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-baseline gap-2">
                     <span className="text-[13px] font-bold">{autor?.nombre ?? 'Alguien'}</span>
@@ -673,7 +674,7 @@ function HiloModulo({
               type="button"
               onClick={enviar}
               disabled={!texto.trim() || !yo}
-              className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
+              className="rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand-strong disabled:opacity-50"
             >
               Comentar
             </button>

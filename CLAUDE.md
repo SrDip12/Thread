@@ -102,6 +102,7 @@ Para una entidad/operación nueva: agregá el hook en su módulo de `src/data/`,
 `/design` (export de Claude Design) es la fuente visual de la verdad — **no modificar**. Lenguaje: minimalista cálido, lienzo hueso `#faf9f7`, acento terracota `#c96442`, un color de acento por proyecto (`proyectos.color`), estados gris/azul/verde, tipografía Manrope + JetBrains Mono (métricas).
 
 - Tokens estáticos → `src/index.css` (`@theme`): `bg-canvas`, `text-ink`, `border-line`, `bg-surface`, `text-muted`, `bg-brand`, `bg-track`, etc.
+- **Tema oscuro**: `:root.dark` re-mapea los mismos tokens; ningún componente conoce el tema. Por eso **no se escriben hex sueltos** en `.tsx`/`ui.ts` — todo color de estado sale de los semánticos (`--color-danger|warn|info|ok|neutral|plum` con sus `-tint`/`-line`/`-dot`), la elevación de `--shadow-pop`/`--shadow-card`, el velo de modal de `--color-scrim`, y el texto sobre un relleno `bg-brand` usa `text-on-brand` (blanco en claro, oscuro en el tema oscuro, donde la terracota se aclara). Únicos hex legítimos: la paleta de acentos por proyecto (`COLORES_PROYECTO`, `PALETA` de Equipo) y los sólidos `--color-*-solid` de botones destructivos/confirmar, iguales en ambos temas.
 - Colores dinámicos (acento por proyecto, estados de tarea) → inline desde `src/lib/ui.ts` (`estadoVM`, `iniciales`, `fmtFecha`).
 - Presentacionales reutilizables → `src/components/ui.tsx` (`Avatar`, `AvatarStack`, `EstadoChip`, `FechaTag`, `ProgressBar`, `Eyebrow`, `InlineEdit`, `Skeleton`, `EmptyState`).
 - Señal de vencimiento: `fechaVM`/`diasHasta` en `src/lib/ui.ts` + `FechaTag` (rojo vencida, marca hoy, ámbar mañana). Usada en todas las filas de tarea.
@@ -155,6 +156,24 @@ vercel deploy               # deploy por CLI (alternativa al git import)
 
 Para `vercel dev` con el secret local: `vercel env add GROQ_API_KEY` (remoto) o un `.env.local` con `GROQ_API_KEY=...` (local, no commitear).
 
+## Servidor MCP (`/mcp`)
+
+`mcp/server.mjs` (ESM plano, sin build) expone las tareas como herramientas MCP por stdio para
+Claude Code/Desktop. Cada persona lo corre con su login de la app (`THREAD_EMAIL`/`THREAD_PASSWORD`
+en `.env.local`); usa `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` de `.env` y la misma RLS que la web.
+`.mcp.json` en la raíz lo registra a nivel proyecto (Claude Code lo ofrece al abrir el repo).
+Tools: `mis_tareas`, `listar_tareas`, `ver_tarea`, `crear_tarea`, `empezar_tarea`, `completar_tarea`,
+`enviar_a_revision`, `revisiones_pendientes`, `aprobar_tarea`, `devolver_tarea`, `comentar_tarea`,
+`asignar_tarea`, `listar_proyectos`, `equipo`. Genera las mismas notificaciones in-app que la web
+(tipo `revision` para transiciones de revisión). Setup y ejemplos: `mcp/README.md`.
+Correr a mano: `npm run mcp`. Smoke test: es stdio JSON-RPC (initialize → tools/list).
+
 ## Navegación base
 
-Sidebar: Hoy · Proyectos · Mis tareas · Para mí · Reuniones · Calendario · Revisiones · Equipo. `/` redirige a `/hoy`.
+Sidebar en dos grupos (`src/components/Layout.tsx`):
+- **Siempre visible** (el día a día es tareas): Hoy · Mis tareas · Para mí · Revisiones.
+- **Bajo «Más»**, colapsado por defecto (armado del proyecto, se usa fuerte al principio): Proyectos · Reuniones · Calendario · Equipo. Estado en `localStorage.nav_mas`; se despliega solo si la ruta activa cae ahí o si corre el onboarding (para que el ítem activo y los targets del tour nunca queden invisibles).
+
+`/` redirige a `/hoy`.
+
+**Volver al origen** (`src/lib/navegacion.ts`): una tarea siempre se abre dentro de su proyecto (`/proyectos/:id?tarea=…`) pero se llega desde muchas vistas. `rutaTarea(proyectoId, tareaId, de)` agrega `&de=<ruta>`; `ProyectoDetalle` lo lee y con eso el botón de volver muestra la vista de origen ("Mis tareas", "Hoy", …) y cerrar el panel (X o Esc) devuelve ahí en vez de tirar a `/proyectos`. Sin `de` el comportamiento es el de antes. `origenValido` rechaza cualquier cosa que no sea una ruta interna; `volverDesde(pathname)` es el helper para los saltos flotantes (campana, ⌘K).

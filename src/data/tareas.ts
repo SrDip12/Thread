@@ -344,14 +344,20 @@ export function useActualizarTarea() {
       moduloId: string
       cambios: TablesUpdate<'tareas'>
     }): Promise<Tarea> => {
-      // El estado previo solo hace falta para notificar una asignación nueva;
-      // en el resto de updates (ciclar estado, fechas…) va directo el UPDATE.
+      // El estado previo hace falta para notificar una asignación nueva o una
+      // transición de revisión; en el resto de updates (fechas…) va directo el UPDATE.
       const notificar = Boolean(cambios.responsable_id) && cambios.responsable_id !== yoId
-      let previa: { responsable_id: string | null; titulo: string; modulo_id: string } | null = null
-      if (notificar) {
+      const cambiaEstado = Boolean(cambios.estado)
+      let previa: {
+        responsable_id: string | null
+        titulo: string
+        modulo_id: string
+        estado: Tarea['estado']
+      } | null = null
+      if (notificar || cambiaEstado) {
         const { data: actual, error: errGet } = await supabase
           .from('tareas')
-          .select('responsable_id, titulo, modulo_id')
+          .select('responsable_id, titulo, modulo_id, estado')
           .eq('id', id)
           .single()
         if (errGet) throw errGet
@@ -385,6 +391,55 @@ export function useActualizarTarea() {
           })
         } catch (e) {
           console.error('Error al insertar notificación de asignación:', e)
+        }
+      }
+
+      // Transiciones de revisión: avisar al responsable de visión cuando una
+      // tarea entra a revisión, y al responsable cuando se la aprueban o devuelven.
+      if (previa && cambios.estado && cambios.estado !== previa.estado) {
+        try {
+          const entraARevision = cambios.estado === 'revision'
+          const saleDeRevision = previa.estado === 'revision'
+          if (entraARevision || saleDeRevision) {
+            const { data: mod } = await supabase
+              .from('modulos')
+              .select('proyecto_id, proyectos(id, responsable_vision_id)')
+              .eq('id', previa.modulo_id)
+              .single()
+            const proyecto = (mod as unknown as {
+              proyecto_id: string
+              proyectos: { id: string; responsable_vision_id: string | null } | null
+            } | null)?.proyectos
+            const avisos: { persona_id: string; texto: string }[] = []
+            if (entraARevision && proyecto?.responsable_vision_id && proyecto.responsable_vision_id !== yoId) {
+              avisos.push({
+                persona_id: proyecto.responsable_vision_id,
+                texto: `envió a revisión la tarea "${previa.titulo}"`,
+              })
+            }
+            if (saleDeRevision && previa.responsable_id && previa.responsable_id !== yoId) {
+              if (cambios.estado === 'hecho') {
+                avisos.push({ persona_id: previa.responsable_id, texto: `aprobó tu tarea "${previa.titulo}"` })
+              } else if (cambios.estado === 'en_curso') {
+                avisos.push({ persona_id: previa.responsable_id, texto: `devolvió tu tarea "${previa.titulo}"` })
+              }
+            }
+            if (avisos.length) {
+              await supabase.from('notificaciones').insert(
+                avisos.map((a) => ({
+                  persona_id: a.persona_id,
+                  autor_id: yoId,
+                  tipo: 'revision',
+                  texto: a.texto,
+                  tarea_id: id,
+                  proyecto_id: proyecto?.id ?? null,
+                  leido: false,
+                })),
+              )
+            }
+          }
+        } catch (e) {
+          console.error('Error al insertar notificación de revisión:', e)
         }
       }
 

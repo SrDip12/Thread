@@ -6,6 +6,7 @@ import { useReuniones } from '../data/reuniones.ts'
 import { useMisTareas, type TareaConProyecto } from '../data/tareas.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
 import { TIPOS_REUNION as TIPOS, estadoVM, fechaVM } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 import { Eyebrow, Skeleton } from '../components/ui.tsx'
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -171,7 +172,7 @@ export default function Calendario() {
                 >
                   <div
                     className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] ${
-                      esHoy ? 'bg-brand font-bold text-white' : delMes ? 'text-ink' : 'text-faint'
+                      esHoy ? 'bg-brand font-bold text-on-brand' : delMes ? 'text-ink' : 'text-faint'
                     }`}
                   >
                     {dia.getDate()}
@@ -203,13 +204,13 @@ export default function Calendario() {
                       const venc = fechaVM(t.fecha)
                       const vm = estadoVM(t.estado)
                       const estilo = venc?.vencida
-                        ? { background: '#fbeee8', color: '#b5532f' }
+                        ? { background: 'var(--color-danger-tint)', color: 'var(--color-danger)' }
                         : { background: vm.bg, color: vm.fg }
                       return (
                         <button
                           key={t.id}
                           type="button"
-                          onClick={() => proy && navigate(`/proyectos/${proy.id}?tarea=${t.id}`)}
+                          onClick={() => proy && navigate(rutaTarea(proy.id, t.id, '/calendario'))}
                           title={`${t.titulo}${proy ? ` · ${proy.nombre}` : ''}`}
                           className="flex items-center gap-1 rounded-[6px] px-1.5 py-1 text-left text-[11.5px] font-semibold leading-tight transition-opacity hover:opacity-80"
                           style={estilo}

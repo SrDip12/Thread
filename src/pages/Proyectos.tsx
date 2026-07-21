@@ -35,7 +35,7 @@ export default function Proyectos() {
         <button
           type="button"
           onClick={() => setCreando(true)}
-          className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+          className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
         >
           + Nuevo proyecto
         </button>
@@ -67,7 +67,7 @@ export default function Proyectos() {
             <button
               type="button"
               onClick={() => setCreando(true)}
-              className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+              className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
             >
               + Nuevo proyecto
             </button>
@@ -87,7 +87,7 @@ export default function Proyectos() {
               key={p.id}
               type="button"
               onClick={() => navigate(`/proyectos/${p.id}`)}
-              className="overflow-hidden rounded-[15px] border border-line bg-surface text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-10px_rgba(40,35,30,0.18)]"
+              className="overflow-hidden rounded-[15px] border border-line bg-surface text-left transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
             >
               <div className="h-1" style={{ background: p.color }} />
               <div className="px-[19px] pb-[17px] pt-[18px]">
@@ -110,7 +110,7 @@ export default function Proyectos() {
                   <div className="font-mono text-xs text-muted">
                     {s?.modulos ?? 0} mód · {s?.total ?? 0} tareas
                     {(s?.vencidas ?? 0) > 0 && (
-                      <span className="ml-1.5 rounded bg-[#fbeee8] px-1.5 py-[1px] font-bold text-[#b5532f]">
+                      <span className="ml-1.5 rounded bg-[var(--color-danger-tint)] px-1.5 py-[1px] font-bold text-[var(--color-danger)]">
                         {s?.vencidas} venc.
                       </span>
                     )}

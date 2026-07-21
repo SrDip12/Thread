@@ -115,9 +115,9 @@ export function Avatar({
       style={{
         width: size,
         height: size,
-        background: color || '#c4bdb1',
+        background: color || 'var(--color-avatar-empty)',
         fontSize: Math.max(8, Math.round(size * 0.36)),
-        border: ring ? '2px solid #fff' : undefined,
+        border: ring ? '2px solid var(--color-surface)' : undefined,
       }}
     >
       {iniciales(nombre)}

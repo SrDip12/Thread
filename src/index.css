@@ -28,6 +28,43 @@
   --color-brand-strong: #b85636;
   --color-brand-tint: #f8ece2;
   --color-brand-deep: #bb6a3e;
+  --color-brand-soft: #fdf6f1;
+  /* Texto sobre un relleno `bg-brand`. En oscuro la terracota se aclara, así que
+     el blanco pierde contraste (2.6:1) y el texto pasa a ser oscuro. */
+  --color-on-brand: #ffffff;
+
+  /* Semánticos de estado (chips, señales de vencimiento, tints).
+     Cada uno tiene remap en :root.dark; usarlos siempre vía var(--...) */
+  --color-danger: #b5532f;
+  --color-danger-tint: #fbeee8;
+  --color-danger-line: #e6c9bf;
+  --color-warn: #a96a23;
+  --color-warn-tint: #f9ecdc;
+  --color-warn-line: #ecdcc2;
+  --color-info: #43618f;
+  --color-info-tint: #e8eef6;
+  --color-info-line: #cfd9e8;
+  --color-info-dot: #6c8ac4;
+  --color-ok: #477155;
+  --color-ok-tint: #e7efe9;
+  --color-ok-line: #dce8df;
+  --color-ok-dot: #6fa07f;
+  --color-neutral: #8a8276;
+  --color-neutral-tint: #f0ede7;
+  --color-neutral-dot: #bcb5a8;
+  --color-plum: #7a5a8c;
+  --color-plum-tint: #f0e9f3;
+  --color-avatar-empty: #c4bdb1;
+
+  /* Sólidos para botones (texto blanco encima): iguales en ambos temas. */
+  --color-danger-solid: #b5532f;
+  --color-ok-solid: #477155;
+
+  /* Elevación y velo de modal. En oscuro las sombras suben para que los
+     paneles flotantes sigan despegándose del fondo. */
+  --shadow-pop: 0 20px 60px -20px rgba(40, 35, 30, 0.4);
+  --shadow-card: 0 8px 24px -10px rgba(40, 35, 30, 0.18);
+  --color-scrim: rgba(28, 27, 25, 0.4);
 
   /* Radios */
   --radius-chip: 8px;
@@ -41,22 +78,53 @@
 :root.dark {
   color-scheme: dark;
 
-  --color-canvas: #1a1815;
-  --color-surface: #232120;
-  --color-ink: #f3efe8;
-  --color-ink-soft: #d6d1c8;
-  --color-line: #34312c;
-  --color-line-soft: #2a2723;
-  --color-hover: #2d2a26;
-  --color-row-hover: #211f1d;
-  --color-track: #322f2a;
+  --color-canvas: #171512;
+  --color-surface: #23211d;
+  --color-ink: #f2eee7;
+  --color-ink-soft: #d8d3c9;
+  --color-line: #37332c;
+  --color-line-soft: #2b2823;
+  --color-hover: #2f2c26;
+  --color-row-hover: #26231f;
+  --color-track: #35322b;
 
-  --color-muted: #9c958a;
-  --color-muted-soft: #aaa298;
-  --color-faint: #6f695f;
-  --color-label: #b3aca1;
+  --color-muted: #a19a8e;
+  --color-muted-soft: #b0a89d;
+  --color-faint: #736c61;
+  --color-label: #b8b1a5;
 
+  /* Terracota un paso más claro: mantiene contraste sobre canvas oscuro. */
+  --color-brand: #d97757;
+  --color-brand-strong: #e08a6c;
   --color-brand-tint: #3a2a20;
+  --color-brand-deep: #cf8a5b;
+  --color-brand-soft: #33241c;
+  --color-on-brand: #21160f;
+
+  --color-danger: #e2917a;
+  --color-danger-tint: #3b241d;
+  --color-danger-line: #5a3428;
+  --color-warn: #d9a35e;
+  --color-warn-tint: #38291a;
+  --color-warn-line: #4a3820;
+  --color-info: #8fa9d4;
+  --color-info-tint: #232c3b;
+  --color-info-line: #35455e;
+  --color-info-dot: #6c8ac4;
+  --color-ok: #85b295;
+  --color-ok-tint: #22312a;
+  --color-ok-line: #2c4034;
+  --color-ok-dot: #6fa07f;
+  --color-neutral: #a29a8d;
+  --color-neutral-tint: #33302a;
+  --color-neutral-dot: #7d766b;
+  --color-plum: #b39ac4;
+  --color-plum-tint: #2f2836;
+  --color-avatar-empty: #57524b;
+
+  --shadow-pop: 0 20px 60px -18px rgba(0, 0, 0, 0.72);
+  --shadow-card: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --color-scrim: rgba(8, 7, 6, 0.62);
 }
 
 body {

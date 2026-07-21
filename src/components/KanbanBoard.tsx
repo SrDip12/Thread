@@ -57,7 +57,7 @@ export default function KanbanBoard({
             key={estado}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, estado)}
-            className="flex-1 min-w-[220px] rounded-[13px] bg-[#f4f2ee] p-3 flex flex-col gap-3 min-h-[500px] border border-line-soft transition-colors duration-200"
+            className="flex-1 min-w-[220px] rounded-[13px] bg-[var(--color-neutral-tint)] p-3 flex flex-col gap-3 min-h-[500px] border border-line-soft transition-colors duration-200"
           >
             {/* Header de la columna */}
             <div className="flex items-center justify-between px-1.5 py-0.5">
@@ -73,7 +73,7 @@ export default function KanbanBoard({
             {/* Lista de tarjetas */}
             <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[70vh] custom-scrollbar">
               {tareasColumna.length === 0 ? (
-                <div className="text-center py-8 text-[11.5px] text-faint border border-dashed border-[#d8d3ca] rounded-lg">
+                <div className="text-center py-8 text-[11.5px] text-faint border border-dashed border-[var(--color-line)] rounded-lg">
                   Arrastra tareas aquí
                 </div>
               ) : (
@@ -118,7 +118,7 @@ export default function KanbanBoard({
                         {t.tipo === 'correccion' && (
                           <span
                             className="flex-none rounded-md px-1.5 py-[2px] text-[8.5px] font-bold uppercase tracking-[0.03em]"
-                            style={{ background: '#f9ecdc', color: '#a96a23' }}
+                            style={{ background: 'var(--color-warn-tint)', color: 'var(--color-warn)' }}
                           >
                             !
                           </span>
@@ -140,7 +140,7 @@ export default function KanbanBoard({
                         {resp ? (
                           <Avatar nombre={resp.nombre} color={resp.color} size={22} />
                         ) : (
-                          <Avatar nombre="—" color="#c4bdb1" size={22} />
+                          <Avatar nombre="—" color="var(--color-avatar-empty)" size={22} />
                         )}
                       </div>
                     </div>

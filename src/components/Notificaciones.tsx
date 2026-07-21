@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useNotificaciones, useMarcarLeida, useMarcarTodasLeidas } from '../data/notificaciones.ts'
 import { useRealtimeNotificaciones } from '../data/realtime.ts'
 import { fmtRelativo } from '../lib/ui.ts'
+import { rutaTarea, volverDesde } from '../lib/navegacion.ts'
 import { Avatar } from './ui.tsx'
 
 export default function Campana() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { persona } = useAuth()
   const personaId = persona?.id ?? ''
 
@@ -43,7 +45,7 @@ export default function Campana() {
           <path d="M6.5 13a1.5 1.5 0 0 0 3 0" />
         </svg>
         {noLeidas > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-on-brand">
             {noLeidas}
           </span>
         )}
@@ -52,7 +54,7 @@ export default function Campana() {
       {abierto && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-          <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px] rounded-[12px] border border-line bg-surface p-2 shadow-lg">
+          <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px] rounded-[12px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
             <div className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
               Notificaciones
             </div>
@@ -72,14 +74,14 @@ export default function Campana() {
                         }
                         if (n.proyecto_id) {
                           if (n.tarea_id) {
-                            navigate(`/proyectos/${n.proyecto_id}?tarea=${n.tarea_id}`)
+                            navigate(rutaTarea(n.proyecto_id, n.tarea_id, volverDesde(pathname)))
                           } else {
                             navigate(`/proyectos/${n.proyecto_id}`)
                           }
                         }
                       }}
                       className={`flex w-full gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover ${
-                        !n.leido ? 'bg-[#fdf6f1]/60' : ''
+                        !n.leido ? 'bg-[var(--color-brand-soft)]/60' : ''
                       }`}
                     >
                       <Avatar nombre={n.autor_nombre} color={n.autor_color} size={26} />
@@ -101,11 +103,11 @@ export default function Campana() {
                         <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
                           <span className="inline-block h-1.5 w-1.5 flex-none rounded-[1px]" style={{ background: n.proyecto_color }} />
                           <span className="truncate">{n.proyecto_nombre}</span>
-                          <span className="text-[#d6cfc4]">·</span>
+                          <span className="text-[var(--color-faint)]">·</span>
                           <span className="flex-none">{fmtRelativo(n.created_at)}</span>
                           {!n.leido && (
                             <>
-                              <span className="text-[#d6cfc4]">·</span>
+                              <span className="text-[var(--color-faint)]">·</span>
                               <span className="h-1.5 w-1.5 rounded-full bg-brand flex-none" />
                             </>
                           )}

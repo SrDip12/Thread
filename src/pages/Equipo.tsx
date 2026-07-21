@@ -72,7 +72,7 @@ export default function Equipo() {
           type="button"
           onClick={agregar}
           disabled={!nombre.trim() || !email.trim()}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-strong disabled:opacity-50"
         >
           Agregar
         </button>
@@ -168,7 +168,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
             <button
               type="button"
               onClick={guardar}
-              className="flex-1 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong"
+              className="flex-1 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand hover:bg-brand-strong"
             >
               Guardar
             </button>
@@ -213,7 +213,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
           onClick={() => {
             if (confirm(`¿Eliminar a ${persona.nombre}?`)) eliminar.mutate(persona.id)
           }}
-          className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:bg-[#fbeee9] hover:text-[#b5532f]"
+          className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:bg-[var(--color-danger-tint)] hover:text-[var(--color-danger)]"
         >
           Eliminar
         </button>
@@ -240,7 +240,7 @@ function Swatches({ valor, onChange }: { valor: string; onChange: (c: string) =>
           type="button"
           onClick={() => onChange(c)}
           className="h-6 w-6 rounded-md transition-transform hover:scale-110"
-          style={{ background: c, outline: valor === c ? '2px solid #1c1b19' : 'none', outlineOffset: 1 }}
+          style={{ background: c, outline: valor === c ? '2px solid var(--color-ink)' : 'none', outlineOffset: 1 }}
           aria-label={`Color ${c}`}
         />
       ))}

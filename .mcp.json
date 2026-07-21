@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "thread": {
+      "command": "node",
+      "args": ["mcp/server.mjs"]
+    }
+  }
+}

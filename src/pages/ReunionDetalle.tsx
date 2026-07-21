@@ -318,7 +318,7 @@ export default function ReunionDetalle() {
               type="time"
               value={reunion.hora ? reunion.hora.slice(0, 5) : ''}
               onChange={(e) => onCambiarHora(e.target.value)}
-              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-[#c96442]"
+              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-brand"
             />
           </label>
           <label className="flex items-center gap-2 text-[12.5px] text-muted">
@@ -326,7 +326,7 @@ export default function ReunionDetalle() {
             <select
               value={reunion.alerta_min ?? ''}
               onChange={(e) => onCambiarAlerta(e.target.value)}
-              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-[#c96442]"
+              className="rounded-[8px] border border-line bg-canvas px-2 py-1.5 text-[12.5px] text-ink outline-none focus:border-brand"
             >
               {ALERTAS.map((a) => (
                 <option key={a.label} value={a.min ?? ''}>{a.label}</option>
@@ -348,7 +348,7 @@ export default function ReunionDetalle() {
           aria-label="Descripción de la reunión"
           placeholder="Agenda, objetivo, temas a tratar…"
           rows={3}
-          className="mb-7 w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[13px] text-sm leading-relaxed text-ink outline-none focus:border-[#c96442]"
+          className="mb-7 w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[13px] text-sm leading-relaxed text-ink outline-none focus:border-brand"
         />
 
         <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
@@ -361,7 +361,7 @@ export default function ReunionDetalle() {
           aria-label="Notas de la reunión"
           placeholder="Anotá lo que se habló: decisiones, pendientes, quién hace qué y para cuándo…"
           rows={9}
-          className="w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[15px] text-sm leading-relaxed text-ink outline-none focus:border-[#c96442]"
+          className="w-full resize-y rounded-[13px] border border-line bg-canvas px-4 py-[15px] text-sm leading-relaxed text-ink outline-none focus:border-brand"
         />
 
         <div className="mt-3.5 flex flex-wrap items-center gap-3">
@@ -369,11 +369,11 @@ export default function ReunionDetalle() {
             type="button"
             onClick={() => void onExtraer()}
             disabled={cargandoIA || !notas.trim()}
-            className="flex items-center gap-2 rounded-[10px] bg-ink px-[17px] py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#33302b] disabled:opacity-50"
+            className="flex items-center gap-2 rounded-[10px] bg-ink px-[17px] py-2.5 text-[13.5px] font-semibold text-canvas transition-colors hover:bg-[var(--color-ink-soft)] disabled:opacity-50"
           >
             {cargandoIA ? (
               <>
-                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-canvas/40 border-t-canvas" aria-hidden="true" />
                 Analizando notas…
               </>
             ) : (
@@ -393,14 +393,14 @@ export default function ReunionDetalle() {
         </div>
 
         {esCliente && (
-          <div className="mt-3 rounded-[10px] border border-[#ecdcc2] bg-[#fbf2e4] px-3 py-2.5 text-[12.5px] text-[#8a5a1c]">
+          <div className="mt-3 rounded-[10px] border border-[var(--color-warn-line)] bg-[var(--color-warn-tint)] px-3 py-2.5 text-[12.5px] text-[var(--color-warn)]">
             Reunión con el cliente · los ítems extraídos se crean como <strong>correcciones</strong>.
             Si una corrección toca un módulo cerrado, el módulo se reabre.
           </div>
         )}
 
         {reabiertos.length > 0 && (
-          <div className="mt-3 rounded-[10px] border border-[#ecdcc2] bg-[#fbf2e4] px-3 py-2.5 text-[13px] text-[#8a5a1c]">
+          <div className="mt-3 rounded-[10px] border border-[var(--color-warn-line)] bg-[var(--color-warn-tint)] px-3 py-2.5 text-[13px] text-[var(--color-warn)]">
             {reabiertos.map((nombre) => (
               <div key={nombre}>Se reabrió el módulo <strong>{nombre}</strong> por una corrección del cliente.</div>
             ))}
@@ -408,7 +408,7 @@ export default function ReunionDetalle() {
         )}
 
         {errorIA && (
-          <div className="mt-3.5 rounded-[10px] border border-[#f0d8cc] bg-[#fbeee9] px-3 py-2.5 text-[13px] text-[#b5532f]">
+          <div className="mt-3.5 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
             {errorIA}
           </div>
         )}
@@ -416,7 +416,7 @@ export default function ReunionDetalle() {
         {revision && (
           <div className="mt-6 overflow-hidden rounded-[15px] border border-line bg-canvas">
             <div className="flex items-center gap-2 border-b border-line-soft bg-surface px-[18px] py-3.5">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#bb6a3e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--color-brand-deep)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M8 1.5l1.6 3.5L13.5 6.5 10.7 9.2l.7 3.9L8 11.3 3.6 13.1l.7-3.9L1.5 6.5l3.9-1.5z" />
               </svg>
               <span className="text-[13.5px] font-bold">
@@ -442,13 +442,13 @@ export default function ReunionDetalle() {
                     type="checkbox"
                     checked={f.incluir}
                     onChange={(e) => actualizarFila(f.id, { incluir: e.target.checked })}
-                    className="h-[18px] w-[18px] flex-none accent-[#c96442]"
+                    className="h-[18px] w-[18px] flex-none accent-brand"
                   />
                   <input
                     value={f.titulo}
                     onChange={(e) => actualizarFila(f.id, { titulo: e.target.value })}
                     aria-label="Título de la tarea"
-                    className="min-w-0 flex-1 rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-sm font-medium text-ink outline-none focus:border-[#c96442]"
+                    className="min-w-0 flex-1 rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-sm font-medium text-ink outline-none focus:border-brand"
                   />
                 </label>
                 <div className="flex flex-wrap items-center gap-2 pl-[30px] md:pl-0">
@@ -500,7 +500,7 @@ export default function ReunionDetalle() {
                 type="button"
                 onClick={onConfirmar}
                 disabled={incluidas.length === 0}
-                className="flex items-center gap-1.5 rounded-[9px] bg-[#c96442] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#b85636] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[9px] bg-brand px-4 py-2 text-[13.5px] font-semibold text-on-brand transition-colors hover:bg-[var(--color-brand-strong)] disabled:opacity-50"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M8 3v10M3 8h10" />
@@ -532,7 +532,7 @@ export default function ReunionDetalle() {
                     key={t.id}
                     className="flex items-center gap-3 border-b border-line-soft px-4 py-[11px]"
                   >
-                    <span className="h-[9px] w-[9px] flex-none rounded-full bg-[#bcb5a8]" />
+                    <span className="h-[9px] w-[9px] flex-none rounded-full bg-[var(--color-neutral-dot)]" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                       {t.titulo}
                     </span>
@@ -545,7 +545,7 @@ export default function ReunionDetalle() {
                         {proy.nombre}
                       </span>
                     )}
-                    <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? '#c4bdb1'} size={26} />
+                    <Avatar nombre={resp?.nombre ?? '—'} color={resp?.color ?? 'var(--color-avatar-empty)'} size={26} />
                   </div>
                 )
               })}

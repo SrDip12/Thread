@@ -15,13 +15,13 @@ export interface EstadoVM {
 export function estadoVM(estado: EstadoTarea): EstadoVM {
   switch (estado) {
     case 'hecho':
-      return { label: 'Hecho', bg: '#e7efe9', fg: '#477155', dot: '#6fa07f', done: true }
+      return { label: 'Hecho', bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)', dot: 'var(--color-ok-dot)', done: true }
     case 'revision':
-      return { label: 'En revisión', bg: '#fdf6f1', fg: '#c96442', dot: '#c96442', done: false }
+      return { label: 'En revisión', bg: 'var(--color-brand-soft)', fg: 'var(--color-brand)', dot: 'var(--color-brand)', done: false }
     case 'en_curso':
-      return { label: 'En curso', bg: '#e8eef6', fg: '#43618f', dot: '#6c8ac4', done: false }
+      return { label: 'En curso', bg: 'var(--color-info-tint)', fg: 'var(--color-info)', dot: 'var(--color-info-dot)', done: false }
     default:
-      return { label: 'Próximo', bg: '#f0ede7', fg: '#8a8276', dot: '#bcb5a8', done: false }
+      return { label: 'Próximo', bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)', dot: 'var(--color-neutral-dot)', done: false }
   }
 }
 
@@ -29,11 +29,11 @@ export const ESTADOS: EstadoTarea[] = ['proximo', 'en_curso', 'revision', 'hecho
 
 // Tipo de reunión → etiqueta + colores (chip). Compartido por Reuniones/Calendario/Hoy.
 export const TIPOS_REUNION: Record<Enums<'tipo_reunion'>, { label: string; color: string; tint: string }> = {
-  sprint_planning: { label: 'Sprint planning', color: '#bb6a3e', tint: '#f8ece2' },
-  retro: { label: 'Retro', color: '#477155', tint: '#e7efe9' },
-  sync: { label: 'Sync', color: '#43618f', tint: '#e8eef6' },
-  cliente: { label: 'Cliente', color: '#a96a23', tint: '#f9ecdc' },
-  otro: { label: 'Otro', color: '#7a5a8c', tint: '#f0e9f3' },
+  sprint_planning: { label: 'Sprint planning', color: 'var(--color-brand-deep)', tint: 'var(--color-brand-tint)' },
+  retro: { label: 'Retro', color: 'var(--color-ok)', tint: 'var(--color-ok-tint)' },
+  sync: { label: 'Sync', color: 'var(--color-info)', tint: 'var(--color-info-tint)' },
+  cliente: { label: 'Cliente', color: 'var(--color-warn)', tint: 'var(--color-warn-tint)' },
+  otro: { label: 'Otro', color: 'var(--color-plum)', tint: 'var(--color-plum-tint)' },
 }
 
 // Paleta de acentos por proyecto (un color por proyecto, según /design).
@@ -110,9 +110,9 @@ export function fechaVM(iso: string | null, done = false): FechaVM | null {
   if (!corta) return null
   if (done) return { label: corta, fg: 'var(--color-muted)', vencida: false }
   const dias = diasHasta(iso)
-  if (dias < 0) return { label: corta, fg: '#b5532f', bg: '#fbeee8', vencida: true }
-  if (dias === 0) return { label: 'hoy', fg: '#c96442', bg: '#fdf6f1', vencida: false }
-  if (dias === 1) return { label: 'mañana', fg: '#a96a23', bg: '#f9ecdc', vencida: false }
+  if (dias < 0) return { label: corta, fg: 'var(--color-danger)', bg: 'var(--color-danger-tint)', vencida: true }
+  if (dias === 0) return { label: 'hoy', fg: 'var(--color-brand)', bg: 'var(--color-brand-soft)', vencida: false }
+  if (dias === 1) return { label: 'mañana', fg: 'var(--color-warn)', bg: 'var(--color-warn-tint)', vencida: false }
   return { label: corta, fg: 'var(--color-muted)', vencida: false }
 }
 

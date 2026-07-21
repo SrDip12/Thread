@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useMisTareas, useActualizarTarea, type TareaConProyecto } from '../data/tareas.ts'
 import { estadoVM, ESTADOS, diasHasta } from '../lib/ui.ts'
+import { rutaTarea } from '../lib/navegacion.ts'
 import { Eyebrow, EstadoChip, FechaTag, Skeleton, EmptyState } from '../components/ui.tsx'
 
 interface Grupo {
@@ -65,7 +66,7 @@ export default function MisTareas() {
         <Eyebrow>
           {pendientes.length} pendientes
           {vencidas.length > 0 && (
-            <span className="ml-1.5 rounded bg-[#fbeee8] px-1.5 py-[1px] font-bold text-[#b5532f]">
+            <span className="ml-1.5 rounded bg-[var(--color-danger-tint)] px-1.5 py-[1px] font-bold text-[var(--color-danger)]">
               {vencidas.length} vencidas
             </span>
           )}
@@ -142,7 +143,7 @@ export default function MisTareas() {
                   <span className="h-[9px] w-[9px] flex-none rounded-full" style={{ background: vm.dot }} />
                   <button
                     type="button"
-                    onClick={() => navigate(`/proyectos/${g.proyectoId}?tarea=${t.id}`)}
+                    onClick={() => navigate(rutaTarea(g.proyectoId, t.id, '/mis-tareas'))}
                     className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:underline"
                     style={{ color: vm.done ? 'var(--color-muted)' : 'var(--color-ink)' }}
                   >
