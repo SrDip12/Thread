@@ -28,8 +28,8 @@ export default function Proyectos() {
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
 
   return (
-    <div className="mx-auto max-w-[1120px] px-11 pb-20 pt-10">
-      <div className="mb-[30px] flex items-end justify-between">
+    <div className="mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-11 pb-20 pt-10">
+      <div className="mb-[30px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>{t('proyectos.eyebrow')}</Eyebrow>
           <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('proyectos.titulo')}</h1>
@@ -46,7 +46,7 @@ export default function Proyectos() {
       {creando && <NuevoProyecto onCerrar={() => setCreando(false)} />}
 
       {isLoading && (
-        <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(310px,1fr))]">
+        <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr))]">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-[176px] rounded-[15px]" />
           ))}
@@ -77,7 +77,7 @@ export default function Proyectos() {
         />
       )}
 
-      <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(310px,1fr))]">
+      <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr))]">
         {(proyectos ?? []).map((p) => {
           const s = stats?.[p.id]
           const miembros = (s?.miembros ?? [])

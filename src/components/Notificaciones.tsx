@@ -56,7 +56,7 @@ export default function Campana() {
       {abierto && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-          <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px] rounded-[12px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)]">
+          <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(300px,calc(100vw-2rem))] rounded-[12px] border border-line bg-surface p-2 shadow-[var(--shadow-pop)] lg:left-0 lg:right-auto">
             <div className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
               {t('notif.titulo')}
             </div>

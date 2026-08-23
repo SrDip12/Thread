@@ -12,6 +12,7 @@ import ChatProyecto from './ChatProyecto.tsx'
 import Campana from './Notificaciones.tsx'
 import Onboarding, { onboardingPendiente } from './Onboarding.tsx'
 import { useChequearVencimientos } from '../data/notificaciones.ts'
+import { useEsCompacto } from '../lib/useMedia.ts'
 
 const iconProps = {
   width: 17,
@@ -136,6 +137,8 @@ export default function Layout() {
   useChequearVencimientos(persona?.id ?? '')
   const [tourAbierto, setTourAbierto] = useState(onboardingPendiente)
   const [paletaAbierta, setPaletaAbierta] = useState(false)
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const esCompacto = useEsCompacto()
   const { pathname } = useLocation()
   // «Más» arranca colapsado: el día a día es tareas; proyectos/reuniones/equipo
   // se usan fuerte solo al armar el proyecto. Persistido por usuario.
@@ -170,6 +173,26 @@ export default function Layout() {
       // localStorage puede fallar (modo privado); el tema igual aplica en esta sesión.
     }
   }
+
+  // Navegar cierra el drawer: en mobile el sidebar tapa el contenido.
+  useEffect(() => {
+    setMenuAbierto(false)
+  }, [pathname])
+
+  // Drawer abierto bloquea el scroll del body y se cierra con Escape.
+  useEffect(() => {
+    if (!menuAbierto) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onEsc = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuAbierto(false)
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onEsc)
+    }
+  }, [menuAbierto])
 
   // Cmd/Ctrl+K alterna la paleta de comandos desde cualquier vista.
   useEffect(() => {
@@ -228,13 +251,35 @@ export default function Layout() {
       </a>
       <Onboarding abierto={tourAbierto} onCerrar={() => setTourAbierto(false)} />
       <CommandPalette abierto={paletaAbierta} onCerrar={() => setPaletaAbierta(false)} />
-      <aside className="sticky top-0 flex h-screen w-[248px] flex-none flex-col border-r border-line bg-canvas">
+      {menuAbierto && (
+        <div
+          onClick={() => setMenuAbierto(false)}
+          aria-hidden="true"
+          className="fixed inset-0 z-40 bg-[var(--color-scrim)] backdrop-blur-[2px] lg:hidden"
+        />
+      )}
+      <aside
+        aria-hidden={esCompacto && !menuAbierto}
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[248px] flex-none flex-col border-r border-line bg-canvas transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 ${
+          menuAbierto ? 'translate-x-0 shadow-[var(--shadow-pop)]' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center gap-2.5 px-[18px] pb-3.5 pt-[22px]">
           <div className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] bg-brand">
             <div className="h-[9px] w-[9px] rounded-full bg-[#faf2ee]" />
           </div>
           <div className="text-base font-extrabold tracking-[-0.02em]">Thread</div>
-          <Campana />
+          {!esCompacto && <Campana />}
+          <button
+            type="button"
+            onClick={() => setMenuAbierto(false)}
+            aria-label={t('nav.cerrarMenu')}
+            className="ml-auto flex h-8 w-8 flex-none items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-ink lg:hidden"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
         </div>
 
         <button
@@ -336,9 +381,40 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main id="contenido" className="min-w-0 flex-1">
-        <Outlet />
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-canvas/85 px-4 py-2.5 backdrop-blur-md lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMenuAbierto(true)}
+            aria-label={t('nav.abrirMenu')}
+            aria-expanded={menuAbierto}
+            className="flex h-9 w-9 flex-none items-center justify-center rounded-[9px] text-ink-soft transition-colors hover:bg-hover"
+          >
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />
+            </svg>
+          </button>
+          <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[8px] bg-brand">
+            <div className="h-2 w-2 rounded-full bg-[#faf2ee]" />
+          </div>
+          <div className="text-[15px] font-extrabold tracking-[-0.02em]">Thread</div>
+          <button
+            type="button"
+            onClick={() => setPaletaAbierta(true)}
+            aria-label={t('nav.buscar')}
+            className="ml-auto flex h-9 w-9 flex-none items-center justify-center rounded-[9px] text-muted transition-colors hover:bg-hover hover:text-ink"
+          >
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="M13.5 13.5L10.5 10.5" />
+            </svg>
+          </button>
+          {esCompacto && <Campana />}
+        </header>
+        <main id="contenido" className="min-w-0 flex-1">
+          <Outlet />
+        </main>
+      </div>
 
       <ChatProyecto />
     </div>

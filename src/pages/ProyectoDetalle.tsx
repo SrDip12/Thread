@@ -185,8 +185,10 @@ export default function ProyectoDetalle() {
 
   return (
     <div ref={rootRef} className="flex">
-      <div className="h-screen flex-1 overflow-auto">
-        <div className="mx-auto max-w-[960px] px-11 pb-20 pt-[34px]">
+      {/* En mobile el scroll lo lleva el body (el topbar del Layout ya ocupa alto);
+          desde lg la columna tiene su propio scroll para que el panel lateral quede fijo. */}
+      <div className="min-w-0 flex-1 lg:h-screen lg:overflow-auto">
+        <div className="mx-auto max-w-[960px] px-4 sm:px-6 lg:px-11 pb-20 pt-[34px]">
           <button
             type="button"
             onClick={() => navigate(volverA)}
@@ -198,7 +200,7 @@ export default function ProyectoDetalle() {
             {volverLabel}
           </button>
 
-          <div className="mb-6 flex items-start justify-between gap-6">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="mb-[5px] flex items-center gap-[11px]">
                 <span className="h-3.5 w-3.5 flex-none rounded" style={{ background: proyecto.color }} />
@@ -206,8 +208,8 @@ export default function ProyectoDetalle() {
               </div>
               <div className="pl-[25px] text-sm text-muted-soft">{proyecto.descripcion ?? ''}</div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex rounded-lg border border-line bg-surface p-0.5 mr-1">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+              <div className="flex flex-none rounded-lg border border-line bg-surface p-0.5 sm:mr-1">
                 <button
                   type="button"
                   onClick={() => cambiarVista('lista')}
@@ -230,7 +232,7 @@ export default function ProyectoDetalle() {
               <button
                 type="button"
                 onClick={() => navigate(`/proyectos/${id}/gantt`)}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
+                className="flex flex-none items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 4h7M2 8h11M2 12h5" />
@@ -240,7 +242,7 @@ export default function ProyectoDetalle() {
               <button
                 type="button"
                 onClick={() => navigate(`/proyectos/${id}/sprint`)}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
+                className="flex flex-none items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 8h12M8 2v12" />
@@ -252,7 +254,7 @@ export default function ProyectoDetalle() {
             </div>
           </div>
 
-          <div className="mb-[30px] flex items-center gap-[22px] rounded-[13px] border border-line bg-surface px-5 py-[15px]">
+          <div className="mb-[30px] flex flex-col gap-4 rounded-[13px] border border-line bg-surface px-4 py-[15px] sm:flex-row sm:items-center sm:gap-[22px] sm:px-5">
             <div className="min-w-0 flex-1">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[12.5px] font-semibold text-muted-soft">
@@ -282,13 +284,13 @@ export default function ProyectoDetalle() {
           {vista === 'kanban' ? (
             <div className="flex flex-col gap-4">
               {/* Filtro por Módulo */}
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <div className="mb-2 flex items-center justify-between">
+                <label className="flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold text-muted">
                   {t('proyectoDetalle.filtrarModulo')}
                   <select
                     value={moduloFiltro}
                     onChange={(e) => setModuloFiltro(e.target.value)}
-                    className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
+                    className="min-w-0 max-w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand"
                   >
                     <option value="todos">{t('proyectoDetalle.todosModulos')}</option>
                     {(modulos ?? []).map((m) => (
@@ -773,11 +775,11 @@ function ModuloSeccion({
 
   return (
     <div className={`mb-[30px] ${cerrado ? 'opacity-60' : ''}`}>
-      <div className="mb-[9px] flex items-center gap-2.5 px-0.5">
+      <div className="mb-[9px] flex flex-wrap items-center gap-2.5 px-0.5">
         <button
           type="button"
           onClick={() => cerrado && setAbiertoManual((v) => !v)}
-          className={`m-0 text-[13px] font-bold uppercase tracking-[0.02em] text-label ${
+          className={`m-0 min-w-0 truncate text-[13px] font-bold uppercase tracking-[0.02em] text-label ${
             cerrado ? 'cursor-pointer' : 'cursor-default'
           }`}
           title={cerrado ? (colapsado ? t('proyectoDetalle.expandirModulo') : t('proyectoDetalle.colapsarModulo')) : undefined}

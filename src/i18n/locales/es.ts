@@ -42,6 +42,8 @@ export const es = {
     idioma: 'Idioma',
     verRecorrido: 'Ver el recorrido',
     cerrarSesion: 'Cerrar sesión',
+    abrirMenu: 'Abrir menú',
+    cerrarMenu: 'Cerrar menú',
   },
   login: {
     titulo: 'Iniciar sesión',

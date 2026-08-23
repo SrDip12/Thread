@@ -63,7 +63,7 @@ export default function MisTareas() {
   }
 
   return (
-    <div className="mx-auto max-w-[880px] px-11 pb-[90px] pt-10">
+    <div className="mx-auto max-w-[880px] px-4 sm:px-6 lg:px-11 pb-[90px] pt-10">
       <div className="mb-5">
         <Eyebrow>
           {t('misTareas.pendientesCount', { count: pendientes.length })}
@@ -151,7 +151,7 @@ export default function MisTareas() {
                   >
                     {t.titulo}
                   </button>
-                  <span className="text-[11.5px] text-faint">{t.modulos?.nombre}</span>
+                  <span className="hidden flex-none text-[11.5px] text-faint sm:inline">{t.modulos?.nombre}</span>
                   <FechaTag fecha={t.fecha} done={vm.done} />
                   <EstadoChip estado={t.estado} onClick={() => ciclar(t)} />
                 </div>

@@ -42,6 +42,8 @@ export const en = {
     idioma: 'Language',
     verRecorrido: 'View the tour',
     cerrarSesion: 'Sign out',
+    abrirMenu: 'Open menu',
+    cerrarMenu: 'Close menu',
   },
   login: {
     titulo: 'Sign in',

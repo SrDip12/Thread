@@ -158,13 +158,13 @@ export default function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-[var(--color-scrim)] p-6"
+      className="fixed inset-0 z-[60] flex items-start justify-center bg-[var(--color-scrim)] p-4 sm:p-6"
       onClick={cerrar}
     >
       <div
         role="dialog"
         aria-label={t('cmdk.paletaComandos')}
-        className="mt-[12vh] w-full max-w-[520px] overflow-hidden rounded-[15px] border border-line bg-surface shadow-[var(--shadow-pop)]"
+        className="mt-[8vh] flex max-h-[80dvh] w-full max-w-[520px] flex-col overflow-hidden rounded-[15px] sm:mt-[12vh] border border-line bg-surface shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -173,9 +173,9 @@ export default function CommandPalette({
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={t('cmdk.placeholder')}
-          className="w-full border-b border-line bg-transparent px-4 py-3.5 text-[15px] text-ink outline-none placeholder:text-faint"
+          className="w-full flex-none border-b border-line bg-transparent px-4 py-3.5 text-[16px] text-ink outline-none placeholder:text-faint sm:text-[15px]"
         />
-        <div className="max-h-[50vh] overflow-auto p-1.5">
+        <div className="min-h-0 flex-1 overflow-auto p-1.5">
           {items.length === 0 ? (
             <div className="px-3 py-6 text-center text-[13px] text-faint">{t('cmdk.nadaCoincide')}</div>
           ) : (

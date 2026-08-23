@@ -34,7 +34,7 @@ export default function Equipo() {
   }
 
   return (
-    <div className="mx-auto max-w-[920px] px-11 pb-[90px] pt-10">
+    <div className="mx-auto max-w-[920px] px-4 sm:px-6 lg:px-11 pb-[90px] pt-10">
       <div className="mb-[30px]">
         <Eyebrow>{t('equipo.personasCount', { count: personas?.length ?? 0 })}</Eyebrow>
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('nav.equipo')}</h1>
@@ -46,7 +46,7 @@ export default function Equipo() {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder={t('equipo.nombrePlaceholder')}
-            className="w-44 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface"
+            className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface sm:w-44"
           />
         </Campo>
         <Campo label={t('equipo.email')}>
@@ -54,7 +54,7 @@ export default function Equipo() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t('equipo.emailPlaceholder')}
-            className="w-52 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface"
+            className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:bg-surface sm:w-52"
           />
         </Campo>
         <Campo label={t('equipo.rol')}>
@@ -81,7 +81,7 @@ export default function Equipo() {
       </div>
 
       {isLoading && (
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="rounded-[15px] border border-line bg-surface p-5">
               <div className="flex items-center gap-3">
@@ -116,7 +116,7 @@ export default function Equipo() {
       )}
 
       {!isLoading && (personas?.length ?? 0) > 0 && (
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]">
           {(personas ?? []).map((p) => (
             <PersonaCard key={p.id} persona={p} />
           ))}
@@ -227,7 +227,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex w-full flex-col gap-1 sm:w-auto">
       <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">{label}</span>
       {children}
     </label>

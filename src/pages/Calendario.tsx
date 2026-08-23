@@ -79,8 +79,8 @@ export default function Calendario() {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1))
 
   return (
-    <div className="mx-auto max-w-[1040px] px-11 pb-20 pt-10">
-      <div className="mb-[26px] flex items-end justify-between gap-6">
+    <div className="mx-auto max-w-[1040px] px-4 sm:px-6 lg:px-11 pb-20 pt-10">
+      <div className="mb-[26px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>{t('calendario.reunionesCount', { count: reuniones?.length ?? 0 })}</Eyebrow>
           <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('calendario.titulo')}</h1>
@@ -140,7 +140,7 @@ export default function Calendario() {
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
           aria-label={t('calendario.filtrarProyecto')}
-          className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
+          className="min-w-0 max-w-full rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
         >
           <option value="">{t('calendario.todosProyectos')}</option>
           {(proyectos ?? []).map((p) => (
@@ -155,7 +155,7 @@ export default function Calendario() {
         <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
           <div className="grid grid-cols-7 border-b border-line">
             {DIAS.map((d) => (
-              <div key={d} className="px-2.5 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+              <div key={d} className="truncate px-1 py-2 text-center text-[10px] font-bold uppercase tracking-[0.04em] text-faint sm:px-2.5 sm:text-left sm:text-[11px]">
                 {d}
               </div>
             ))}
@@ -168,12 +168,12 @@ export default function Calendario() {
               return (
                 <div
                   key={i}
-                  className={`min-h-[104px] border-b border-r border-line-soft p-1.5 ${
+                  className={`min-h-[62px] border-b border-r border-line-soft p-1 sm:min-h-[104px] sm:p-1.5 ${
                     delMes ? '' : 'bg-canvas/40'
                   } ${(i + 1) % 7 === 0 ? 'border-r-0' : ''}`}
                 >
                   <div
-                    className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] ${
+                    className={`mb-1 flex h-[22px] w-[22px] items-center justify-center rounded-full font-mono text-[11px] sm:h-6 sm:w-6 sm:text-[12px] ${
                       esHoy ? 'bg-brand font-bold text-on-brand' : delMes ? 'text-ink' : 'text-faint'
                     }`}
                   >
@@ -190,13 +190,13 @@ export default function Calendario() {
                           type="button"
                           onClick={() => navigate(`/reuniones/${r.id}`)}
                           title={r.descripcion ?? r.titulo}
-                          className="flex items-center gap-1 rounded-[6px] px-1.5 py-1 text-left text-[11.5px] font-semibold leading-tight transition-opacity hover:opacity-80"
+                          className="flex items-center gap-1 rounded-[5px] px-1 py-[3px] text-left text-[10px] font-semibold leading-tight transition-opacity hover:opacity-80 sm:rounded-[6px] sm:px-1.5 sm:py-1 sm:text-[11.5px]"
                           style={{ background: tipo.tint, color: tipo.color }}
                         >
                           {proyecto && (
                             <span className="inline-block h-1.5 w-1.5 flex-none rounded-[1px]" style={{ background: proyecto.color }} />
                           )}
-                          {hora && <span className="flex-none font-mono text-[10px] opacity-80">{hora}</span>}
+                          {hora && <span className="hidden flex-none font-mono text-[10px] opacity-80 sm:inline">{hora}</span>}
                           <span className="min-w-0 flex-1 truncate">{r.titulo}</span>
                         </button>
                       )
@@ -214,7 +214,7 @@ export default function Calendario() {
                           type="button"
                           onClick={() => proy && navigate(rutaTarea(proy.id, t.id, '/calendario'))}
                           title={`${t.titulo}${proy ? ` · ${proy.nombre}` : ''}`}
-                          className="flex items-center gap-1 rounded-[6px] px-1.5 py-1 text-left text-[11.5px] font-semibold leading-tight transition-opacity hover:opacity-80"
+                          className="flex items-center gap-1 rounded-[5px] px-1 py-[3px] text-left text-[10px] font-semibold leading-tight transition-opacity hover:opacity-80 sm:rounded-[6px] sm:px-1.5 sm:py-1 sm:text-[11.5px]"
                           style={estilo}
                         >
                           <span className="inline-block h-1.5 w-1.5 flex-none rounded-full" style={{ background: proy?.color ?? vm.dot }} />
