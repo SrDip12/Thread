@@ -92,11 +92,11 @@ export default function ProyectoGantt() {
   const sinFecha = (tareas ?? []).filter((t) => !rango(t)).length
 
   if (!proyecto) {
-    return <div className="px-11 pt-10 text-sm text-muted">{t('gantt.cargando')}</div>
+    return <div className="px-4 sm:px-6 lg:px-11 pt-10 text-sm text-muted">{t('gantt.cargando')}</div>
   }
 
   return (
-    <div className="mx-auto max-w-[1160px] px-11 pb-20 pt-[34px]">
+    <div className="mx-auto max-w-[1160px] px-4 sm:px-6 lg:px-11 pb-20 pt-[34px]">
       <button
         type="button"
         onClick={() => navigate(`/proyectos/${id}`)}

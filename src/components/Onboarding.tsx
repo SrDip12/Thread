@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEsCompacto } from '../lib/useMedia.ts'
 
 // Tour guiado de primer login. Sin dependencias: el spotlight es un recuadro sobre
 // el elemento [data-tour=...] con un box-shadow gigante que oscurece el resto.
@@ -38,6 +39,7 @@ export default function Onboarding({ abierto, onCerrar }: { abierto: boolean; on
   const { t } = useTranslation()
   const [i, setI] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  const esCompacto = useEsCompacto()
 
   const pasos = t('onboarding.pasos', { returnObjects: true }) as unknown as { titulo: string; texto: string }[]
   const target = TARGETS[i]
@@ -52,11 +54,12 @@ export default function Onboarding({ abierto, onCerrar }: { abierto: boolean; on
   // Recalcular el rect del target en cada paso y al redimensionar.
   useLayoutEffect(() => {
     if (!abierto) return
-    const actualizar = () => setRect(rectDe(target))
+    // En compacto el sidebar está fuera de pantalla: sin rect, la tarjeta va centrada.
+    const actualizar = () => setRect(esCompacto ? null : rectDe(target))
     actualizar()
     window.addEventListener('resize', actualizar)
     return () => window.removeEventListener('resize', actualizar)
-  }, [abierto, target])
+  }, [abierto, target, esCompacto])
 
   if (!abierto) return null
 
@@ -92,7 +95,7 @@ export default function Onboarding({ abierto, onCerrar }: { abierto: boolean; on
       )}
 
       <div
-        className="absolute w-[300px] rounded-2xl border border-line bg-canvas p-5 shadow-xl"
+        className="absolute w-[min(300px,calc(100vw-2rem))] rounded-2xl border border-line bg-canvas p-5 shadow-xl"
         style={cardStyle}
       >
         <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted">

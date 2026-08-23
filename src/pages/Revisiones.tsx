@@ -116,7 +116,7 @@ function TareasRevision({
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-11 pb-24 pt-10">
+    <div className="mx-auto max-w-[820px] px-4 sm:px-6 lg:px-11 pb-24 pt-10">
       <div className="mb-4">
         <Eyebrow>{tr('revisiones.tareasEsperando', { count: tareas.length })}</Eyebrow>
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{tr('nav.revisiones')}</h1>
@@ -272,9 +272,10 @@ function ModulosRevision({
   const seleccionado = lista.find((m) => m.id === selId) ?? lista[0] ?? null
 
   return (
-    <div className="flex">
-      <div className="h-screen w-[330px] flex-none overflow-auto border-r border-line bg-canvas">
-        <div className="px-6 pb-4 pt-10">
+    <div className="flex flex-col lg:flex-row">
+      {/* Mobile: lista arriba, detalle abajo. Desde lg: dos paneles con scroll propio. */}
+      <div className="w-full border-b border-line bg-canvas pb-4 lg:h-screen lg:w-[330px] lg:flex-none lg:overflow-auto lg:border-b-0 lg:border-r lg:pb-0">
+        <div className="px-4 pb-4 pt-8 sm:px-6 lg:pt-10">
           <Eyebrow>{tr('nav.enRevision', { count: lista.length })}</Eyebrow>
           <h1 className="m-0 text-[24px] font-extrabold tracking-[-0.025em]">{tr('nav.revisiones')}</h1>
           <p className="mt-[7px] text-[13px] text-muted-soft">
@@ -337,11 +338,11 @@ function ModulosRevision({
         </div>
       </div>
 
-      <div className="h-screen flex-1 overflow-auto">
+      <div className="min-w-0 flex-1 lg:h-screen lg:overflow-auto">
         {seleccionado ? (
           <DetalleRevision key={seleccionado.id} modulo={seleccionado} />
         ) : (
-          <div className="flex h-full items-center justify-center px-11">
+          <div className="flex h-full items-center justify-center px-4 sm:px-6 lg:px-11">
             <EmptyState
               icon={
                 <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -417,7 +418,7 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-11 pb-24 pt-[34px]">
+    <div className="mx-auto max-w-[820px] px-4 sm:px-6 lg:px-11 pb-24 pt-[34px]">
       <div className="mb-[7px] flex flex-wrap items-center gap-2.5">
         {proyecto && (
           <span className="flex items-center gap-1.5 rounded-[7px] border border-line bg-canvas px-[9px] py-[3px] text-xs font-semibold text-ink-soft">

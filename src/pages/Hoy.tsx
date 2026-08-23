@@ -75,7 +75,7 @@ export default function Hoy() {
   })
 
   return (
-    <div className="mx-auto max-w-[880px] px-11 pb-[90px] pt-10">
+    <div className="mx-auto max-w-[880px] px-4 sm:px-6 lg:px-11 pb-[90px] pt-10">
       <div className="mb-[30px]">
         <Eyebrow>{fechaLarga}</Eyebrow>
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">
@@ -221,7 +221,7 @@ function FilaTareaHoy({
         {t.titulo}
       </button>
       {proy && (
-        <span className="flex flex-none items-center gap-1.5 text-[11.5px] text-muted-soft">
+        <span className="hidden flex-none items-center gap-1.5 text-[11.5px] text-muted-soft sm:flex">
           <span className="inline-block h-2 w-2 rounded-[2px]" style={{ background: proy.color }} />
           {proy.nombre}
         </span>

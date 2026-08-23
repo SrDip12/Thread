@@ -74,7 +74,7 @@ export default function ChatProyecto() {
         type="button"
         onClick={() => setAbierto(true)}
         aria-label={t('chat.abrir')}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[var(--shadow-pop)] transition-transform hover:scale-105"
+        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[var(--shadow-pop)] sm:bottom-6 sm:right-6 transition-transform hover:scale-105"
         style={{ background: color }}
       >
         <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -85,7 +85,7 @@ export default function ChatProyecto() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex h-[480px] w-[360px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-[15px] border border-line bg-surface shadow-[var(--shadow-pop)]">
+    <div className="fixed bottom-4 right-4 z-40 flex h-[min(480px,70dvh)] w-[360px] max-w-[calc(100vw-2rem)] flex-col sm:bottom-6 sm:right-6 overflow-hidden rounded-[15px] border border-line bg-surface shadow-[var(--shadow-pop)]">
       <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 flex-none rounded-[3px]" style={{ background: color }} />

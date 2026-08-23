@@ -30,8 +30,8 @@ export default function Reuniones() {
   )
 
   return (
-    <div className="mx-auto max-w-[860px] px-11 pb-20 pt-10">
-      <div className="mb-[30px] flex items-end justify-between gap-6">
+    <div className="mx-auto max-w-[860px] px-4 sm:px-6 lg:px-11 pb-20 pt-10">
+      <div className="mb-[30px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>{t('reuniones.registradas', { count: reuniones?.length ?? 0 })}</Eyebrow>
           <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('reuniones.titulo')}</h1>
@@ -64,13 +64,13 @@ export default function Reuniones() {
         </div>
       </div>
 
-      <div className="mb-6 flex items-center gap-2.5">
+      <div className="mb-6 flex flex-wrap items-center gap-2.5">
         <label htmlFor="filtro-proyecto" className="text-xs font-medium text-muted">{t('common.proyecto')}</label>
         <select
           id="filtro-proyecto"
           value={filtroProyecto ?? ''}
           onChange={(e) => setFiltroProyecto(e.target.value || null)}
-          className="rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
+          className="min-w-0 max-w-full rounded-[9px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none"
         >
           <option value="">{t('calendario.todosProyectos')}</option>
           {(proyectos ?? []).map((p) => (
@@ -250,7 +250,7 @@ function NuevaReunionForm({
         {t('reuniones.registrarReunion')}
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Campo label={t('common.proyecto')}>
           <select
             value={proyectoId}

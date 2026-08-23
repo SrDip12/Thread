@@ -49,7 +49,7 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="flex gap-4 min-h-[500px] items-start select-none">
+    <div className="-mx-4 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-4 pb-2 min-h-[500px] select-none sm:-mx-6 sm:px-6 lg:mx-0 lg:overflow-x-visible lg:px-0">
       {COLUMNAS.map(({ estado, labelKey }) => {
         const tareasColumna = tareas.filter((t) => t.estado === estado)
         const vm = estadoVM(estado)
@@ -59,7 +59,7 @@ export default function KanbanBoard({
             key={estado}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, estado)}
-            className="flex-1 min-w-[220px] rounded-[13px] bg-[var(--color-neutral-tint)] p-3 flex flex-col gap-3 min-h-[500px] border border-line-soft transition-colors duration-200"
+            className="flex w-[82vw] max-w-[300px] flex-none snap-start flex-col gap-3 rounded-[13px] border border-line-soft bg-[var(--color-neutral-tint)] p-3 min-h-[500px] transition-colors duration-200 sm:w-[300px] lg:w-auto lg:max-w-none lg:flex-1 lg:min-w-[220px]"
           >
             {/* Header de la columna */}
             <div className="flex items-center justify-between px-1.5 py-0.5">

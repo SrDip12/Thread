@@ -136,6 +136,44 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Nada debe generar scroll lateral: `clip` recorta sin crear contenedor de
+   scroll, así el `position: sticky` del sidebar y de los headers sigue andando. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* iOS hace zoom al enfocar un input de menos de 16px. En pantallas táctiles
+   se sube la tipografía de los campos; el resto de la densidad no cambia. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='color']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Táctil: sin delay de 300ms al tocar y sin flash gris de Android. */
+@media (pointer: coarse) {
+  button,
+  a,
+  [role='button'],
+  label,
+  select,
+  summary {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Barras de scroll finas donde no hay puntero fino (mobile). */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
 ::selection {
   background: #f1d9cf;
 }

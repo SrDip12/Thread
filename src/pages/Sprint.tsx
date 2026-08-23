@@ -80,7 +80,7 @@ export default function SprintPage() {
 
   return (
     <div className="h-screen overflow-auto bg-canvas">
-      <div className="mx-auto max-w-[960px] px-11 pb-20 pt-[34px]">
+      <div className="mx-auto max-w-[960px] px-4 sm:px-6 lg:px-11 pb-20 pt-[34px]">
         <Link
           to={`/proyectos/${id}`}
           className="mb-[18px] inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-ink"
@@ -91,7 +91,7 @@ export default function SprintPage() {
           {proyecto?.nombre ?? t('common.proyecto')}
         </Link>
 
-        <div className="mb-5 flex items-center gap-[11px]">
+        <div className="mb-5 flex flex-wrap items-center gap-[11px]">
           <span className="h-3.5 w-3.5 flex-none rounded" style={{ background: acento }} />
           <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.025em]">{t('sprint.titulo')}</h1>
           {lista.length > 0 && (
@@ -515,7 +515,7 @@ function FilaTarea({
       </Link>
       <FechaTag fecha={tarea.fecha} done={vm.done} />
       {tarea.modulos?.nombre && (
-        <span className="flex-none rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted">
+        <span className="hidden max-w-[140px] flex-none truncate rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted sm:inline-block">
           {tarea.modulos.nombre}
         </span>
       )}
@@ -703,7 +703,7 @@ function Backlog({
                 </Link>
                 <FechaTag fecha={tarea.fecha} done={vm.done} />
                 {tarea.modulos?.nombre && (
-                  <span className="flex-none rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted">
+                  <span className="hidden max-w-[140px] flex-none truncate rounded bg-track px-2 py-0.5 text-[11px] font-medium text-muted sm:inline-block">
                     {tarea.modulos.nombre}
                   </span>
                 )}

@@ -60,7 +60,7 @@ export default function TareaPanel({
       <aside
         aria-busy="true"
         aria-label={t('tareaPanel.cargandoTarea')}
-        className="flex h-screen w-[430px] flex-none flex-col border-l border-line bg-surface"
+        className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-auto border-line bg-surface lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[430px] lg:flex-none lg:border-l"
       >
         <div className="flex items-center justify-between border-b border-line-soft px-[22px] py-4">
           <Skeleton className="h-3.5 w-40" />
@@ -107,7 +107,7 @@ export default function TareaPanel({
   const estaBloqueada = blockersIncompletos.length > 0
 
   return (
-    <aside className="flex h-screen w-[430px] flex-none flex-col overflow-auto border-l border-line bg-surface">
+    <aside className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-auto border-line bg-surface lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[430px] lg:flex-none lg:border-l">
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-soft bg-surface px-[22px] py-4">
         <div className="flex items-center gap-2 text-[12.5px] text-muted">
           <span className="inline-block h-2 w-2 rounded-[2px]" style={{ background: proyecto.color }} />

@@ -219,7 +219,7 @@ export default function ReunionDetalle() {
   if (isLoading) {
     return (
       <div className="h-screen overflow-auto">
-        <div className="mx-auto max-w-[780px] px-11 pb-24 pt-[34px]">
+        <div className="mx-auto max-w-[780px] px-4 sm:px-6 lg:px-11 pb-24 pt-[34px]">
           <Skeleton className="mb-[18px] h-4 w-24 rounded" />
           <Skeleton className="mb-[7px] h-6 w-64 rounded" />
           <Skeleton className="mb-[26px] h-8 w-80 rounded" />
@@ -231,7 +231,7 @@ export default function ReunionDetalle() {
   }
   if (!reunion) {
     return (
-      <div className="mx-auto max-w-[780px] px-11 pt-[60px]">
+      <div className="mx-auto max-w-[780px] px-4 sm:px-6 lg:px-11 pt-[60px]">
         <EmptyState
           icon={
             <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
@@ -270,7 +270,7 @@ export default function ReunionDetalle() {
 
   return (
     <div className="h-screen overflow-auto">
-      <div className="mx-auto max-w-[780px] px-11 pb-24 pt-[34px]">
+      <div className="mx-auto max-w-[780px] px-4 sm:px-6 lg:px-11 pb-24 pt-[34px]">
         <button
           type="button"
           onClick={() => navigate('/reuniones')}
@@ -304,7 +304,7 @@ export default function ReunionDetalle() {
           )}
         </div>
 
-        <div className="mb-[26px] flex items-start justify-between gap-5">
+        <div className="mb-[26px] flex flex-wrap items-start justify-between gap-4">
           <h1 className="m-0 text-[25px] font-extrabold tracking-[-0.025em]">{reunion.titulo}</h1>
           <div className="flex-none pt-1">
             <AvatarStack
@@ -534,7 +534,7 @@ export default function ReunionDetalle() {
                       {tc.titulo}
                     </span>
                     {proy && (
-                      <span className="flex flex-none items-center gap-1.5 text-[11.5px] text-muted-soft">
+                      <span className="hidden flex-none items-center gap-1.5 text-[11.5px] text-muted-soft sm:flex">
                         <span
                           className="inline-block h-2 w-2 rounded-[2px]"
                           style={{ background: proy.color }}

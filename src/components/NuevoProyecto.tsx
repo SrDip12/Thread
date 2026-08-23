@@ -108,11 +108,11 @@ export default function NuevoProyecto({ onCerrar }: { onCerrar: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-[var(--color-scrim)] p-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-[var(--color-scrim)] p-4 sm:p-6"
       onClick={onCerrar}
     >
       <div
-        className="mt-[6vh] w-full max-w-[560px] rounded-[15px] border border-line bg-surface p-6 shadow-[var(--shadow-pop)]"
+        className="mt-[4vh] w-full max-w-[560px] rounded-[15px] border border-line bg-surface p-4 sm:mt-[6vh] sm:p-6 shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">

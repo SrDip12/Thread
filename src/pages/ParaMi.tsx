@@ -26,7 +26,7 @@ export default function ParaMi() {
   const count = preguntas?.length ?? 0
 
   return (
-    <div className="mx-auto max-w-[780px] px-11 pb-[90px] pt-10">
+    <div className="mx-auto max-w-[780px] px-4 sm:px-6 lg:px-11 pb-[90px] pt-10">
       <div className="mb-2 flex items-center gap-2.5">
         <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.025em]">{t('paraMi.titulo')}</h1>
         {count > 0 && (
@@ -76,7 +76,7 @@ export default function ParaMi() {
           const proy = tarea?.modulos?.proyectos
           return (
             <div key={q.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-[17px]">
-              <div className="mb-[11px] flex items-center gap-2 text-xs text-muted">
+              <div className="mb-[11px] flex min-w-0 items-center gap-2 text-xs text-muted">
                 <span className="inline-block h-2 w-2 flex-none rounded-[2px]" style={{ background: proy?.color ?? 'var(--color-avatar-empty)' }} />
                 <span className="font-semibold text-label">{proy?.nombre ?? t('common.proyecto')}</span>
                 <span className="text-[var(--color-faint)]">/</span>
