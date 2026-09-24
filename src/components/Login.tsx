@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { supabase } from '../lib/supabase.ts'
+import { useAuth } from '../auth/AuthProvider.tsx'
 
 export default function Login() {
   const { t } = useTranslation()
+  const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -14,8 +15,8 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setEnviando(true)
-    const { error: errLogin } = await supabase.auth.signInWithPassword({ email, password })
-    if (errLogin) setError(errLogin.message)
+    const errLogin = await signIn(email, password)
+    if (errLogin) setError(errLogin)
     setEnviando(false)
   }
 

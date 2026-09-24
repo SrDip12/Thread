@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Smoke test del servidor MCP para CI: lo arranca, hace el handshake y verifica
-// que exponga las 14 tools esperadas. No necesita credenciales ni red — solo
+// que exponga las tools esperadas. No necesita credenciales ni red — solo
 // prueba que el server carga, negocia el protocolo y declara sus herramientas.
 // Sale con código 0 si todo ok, 1 si algo falla.
 
@@ -25,6 +25,13 @@ const TOOLS_ESPERADAS = [
   'devolver_tarea',
   'comentar_tarea',
   'asignar_tarea',
+  'siguiente_tarea',
+  'contexto_proyecto',
+  'crear_modulo',
+  'registrar_avance',
+  'priorizar_tarea',
+  'registrar_decision',
+  'cartera',
 ]
 
 const proc = spawn('node', ['mcp/server.mjs'], { cwd: raiz })

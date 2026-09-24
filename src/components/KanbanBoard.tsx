@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Tables } from '../lib/database.types.ts'
 import { estadoVM } from '../lib/ui.ts'
-import { Avatar, FechaTag } from './ui.tsx'
+import { Avatar, FechaTag, PrioridadTag } from './ui.tsx'
 
 type Tarea = Tables<'tareas'>
 type Persona = Tables<'personas'>
@@ -137,6 +137,7 @@ export default function KanbanBoard({
 
                       <div className="flex items-center justify-between mt-2 pt-1 border-t border-line-soft">
                         <div className="flex items-center gap-2">
+                          {tarea.estado !== 'hecho' && <PrioridadTag prioridad={tarea.prioridad} />}
                           <FechaTag fecha={tarea.fecha} done={tarea.estado === 'hecho'} />
                         </div>
                         {resp ? (

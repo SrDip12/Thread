@@ -174,30 +174,32 @@ async function contextoTarea(tarea) {
   }
 }
 
-async function notificar({ persona_id, tipo, texto, tarea_id, proyecto_id }) {
-  const actual = await asegurarSesion()
-  if (!persona_id || persona_id === actual.id) return
-  const { error } = await supabase.from('notificaciones').insert({
-    persona_id,
-    autor_id: actual.id,
-    tipo,
-    texto,
-    tarea_id: tarea_id ?? null,
-    proyecto_id: proyecto_id ?? null,
-    leido: false,
-  })
-  if (error) console.error('No se pudo notificar:', error.message)
-}
+// Las notificaciones in-app (asignación, revisión, comentarios, menciones) las
+// generan triggers en la base (`tareas_notificar`, `comentarios_notificar`), igual
+// que para la web: acá no se insertan a mano.
 
 // ── Formato de salida ──────────────────────────────────────────────────────────
 const ESTADOS = { proximo: 'Próximo', en_curso: 'En curso', revision: 'En revisión', hecho: 'Hecha' }
+const PESO_PRIORIDAD = { alta: 0, media: 1, baja: 2 }
+
+// Orden de foco: prioridad alta primero, después por vencimiento (sin fecha al final).
+function compararFoco(a, b) {
+  const p = (PESO_PRIORIDAD[a.prioridad] ?? 1) - (PESO_PRIORIDAD[b.prioridad] ?? 1)
+  if (p !== 0) return p
+  if (a.fecha && b.fecha) return a.fecha.localeCompare(b.fecha)
+  if (a.fecha) return -1
+  if (b.fecha) return 1
+  return 0
+}
 
 function lineaTarea(t, extra = '') {
   const partes = [
     `[${ESTADOS[t.estado] ?? t.estado}]`,
+    t.prioridad === 'alta' ? '▲ALTA' : t.prioridad === 'baja' ? '▼baja' : '',
     t.titulo,
     t.fecha ? `· vence ${t.fecha}` : '',
     extra,
+    t.pr_url ? `· PR ${t.pr_url}` : '',
     `(id: ${t.id})`,
   ]
   return '- ' + partes.filter(Boolean).join(' ')
@@ -284,7 +286,8 @@ tool(
     if (error) throw error
     if (!data?.length) return texto('Sin tareas para ese filtro. 🎉')
     return texto(
-      data
+      [...data]
+        .sort(compararFoco)
         .map((t) => lineaTarea(t, `· ${t.modulos?.proyectos?.nombre ?? '?'} / ${t.modulos?.nombre ?? '?'}`))
         .join('\n'),
     )
@@ -349,13 +352,15 @@ tool(
     if (error) throw error
     const lineas = [
       `# ${t.titulo}`,
-      `Estado: ${ESTADOS[t.estado] ?? t.estado} · Tipo: ${t.tipo}`,
+      `Estado: ${ESTADOS[t.estado] ?? t.estado} · Tipo: ${t.tipo} · Prioridad: ${t.prioridad ?? 'media'}`,
       `Proyecto: ${ctx.proyecto?.nombre ?? '?'} / ${ctx.modulo}`,
       `Responsable: ${t.responsable_id ? nombres.get(t.responsable_id) ?? '?' : 'sin asignar'}`,
       `Fechas: inicio ${t.fecha_inicio ?? '—'} · vence ${t.fecha ?? '—'}`,
       t.descripcion ? `Descripción: ${t.descripcion}` : '',
       t.criterio ? `Criterio de aceptación: ${t.criterio}` : '',
+      t.pr_url ? `PR: ${t.pr_url}` : '',
       `Id: ${t.id}`,
+      `Para vincular un PR: incluí "Thread-Tarea: ${t.id}" en su descripción.`,
     ]
     if (comentarios?.length) {
       lineas.push('', 'Comentarios:')
@@ -376,9 +381,10 @@ tool(
     responsable: z.string().optional().describe('Nombre, email o "yo"'),
     fecha: z.string().optional().describe('Vencimiento YYYY-MM-DD'),
     descripcion: z.string().optional(),
+    criterio: z.string().optional().describe('Criterio de aceptación: cómo sé que está lista'),
+    prioridad: z.enum(['alta', 'media', 'baja']).optional(),
   },
-  async ({ titulo, proyecto, modulo, responsable, fecha, descripcion }) => {
-    const actual = await asegurarSesion()
+  async ({ titulo, proyecto, modulo, responsable, fecha, descripcion, criterio, prioridad }) => {
     const p = await resolverProyecto(proyecto)
     const m = await resolverModulo(p, modulo)
     const resp = responsable ? await resolverPersona(responsable) : null
@@ -390,18 +396,12 @@ tool(
         responsable_id: resp?.id ?? null,
         fecha: fecha ?? null,
         descripcion: descripcion ?? null,
+        criterio: criterio ?? null,
+        prioridad: prioridad ?? 'media',
       })
       .select()
       .single()
     if (error) throw error
-    if (resp && resp.id !== actual.id)
-      await notificar({
-        persona_id: resp.id,
-        tipo: 'asignacion',
-        texto: `Te asignó la tarea "${titulo}"`,
-        tarea_id: data.id,
-        proyecto_id: p.id,
-      })
     return texto(
       `Tarea creada en ${p.nombre} / ${m.nombre}:\n` +
         lineaTarea(data, resp ? `· ${resp.nombre}` : '· sin asignar'),
@@ -409,9 +409,9 @@ tool(
   },
 )
 
-// Cambio de estado con notificaciones de revisión (mismo comportamiento que la web).
+// Cambio de estado. Los avisos de revisión los genera el trigger; la aprobación
+// (revision → hecho) la valida la base: solo el responsable de visión / un PO.
 async function cambiarEstado(ref, nuevoEstado) {
-  const actual = await asegurarSesion()
   const previa = await resolverTarea(ref)
   const { data, error } = await supabase
     .from('tareas')
@@ -421,25 +421,6 @@ async function cambiarEstado(ref, nuevoEstado) {
     .single()
   if (error) throw error
   const ctx = await contextoTarea(data)
-
-  if (nuevoEstado === 'revision' && previa.estado !== 'revision') {
-    await notificar({
-      persona_id: ctx.proyecto?.responsable_vision_id,
-      tipo: 'revision',
-      texto: `envió a revisión la tarea "${data.titulo}"`,
-      tarea_id: data.id,
-      proyecto_id: ctx.proyecto?.id,
-    })
-  }
-  if (previa.estado === 'revision' && nuevoEstado === 'hecho') {
-    await notificar({
-      persona_id: data.responsable_id,
-      tipo: 'revision',
-      texto: `aprobó tu tarea "${data.titulo}"`,
-      tarea_id: data.id,
-      proyecto_id: ctx.proyecto?.id,
-    })
-  }
   return { data, previa, ctx }
 }
 
@@ -535,14 +516,7 @@ tool(
       texto: `Devuelta de revisión: ${motivo}`,
     })
     if (errCom) throw errCom
-    const { data, ctx } = await cambiarEstado(t.id, 'en_curso')
-    await notificar({
-      persona_id: data.responsable_id,
-      tipo: 'revision',
-      texto: `devolvió tu tarea "${data.titulo}": ${motivo}`,
-      tarea_id: data.id,
-      proyecto_id: ctx.proyecto?.id,
-    })
+    const { data } = await cambiarEstado(t.id, 'en_curso')
     return texto(`Devuelta a en curso: "${data.titulo}". Motivo registrado como comentario.`)
   },
 )
@@ -558,16 +532,6 @@ tool(
       .from('comentarios')
       .insert({ tarea_id: t.id, autor_id: actual.id, texto: cuerpo })
     if (error) throw error
-    if (t.responsable_id && t.responsable_id !== actual.id) {
-      const ctx = await contextoTarea(t)
-      await notificar({
-        persona_id: t.responsable_id,
-        tipo: 'comentario',
-        texto: `comentó en "${t.titulo}": "${cuerpo.slice(0, 50)}"`,
-        tarea_id: t.id,
-        proyecto_id: ctx.proyecto?.id,
-      })
-    }
     return texto(`Comentario agregado a "${t.titulo}".`)
   },
 )
@@ -586,15 +550,246 @@ tool(
       .select()
       .single()
     if (error) throw error
-    const ctx = await contextoTarea(data)
-    await notificar({
-      persona_id: p.id,
-      tipo: 'asignacion',
-      texto: `Te asignó la tarea "${data.titulo}"`,
-      tarea_id: data.id,
-      proyecto_id: ctx.proyecto?.id,
-    })
     return texto(`"${data.titulo}" asignada a ${p.nombre}.`)
+  },
+)
+
+// ── Herramientas para agentes de código ────────────────────────────────────────
+// Flujo pensado para Claude Code trabajando en el repo de un proyecto:
+//   siguiente_tarea → contexto_proyecto (o ver_tarea) → empezar_tarea → … →
+//   registrar_avance → PR con "Thread-Tarea: <id>" (el webhook la pasa a revisión).
+
+tool(
+  'siguiente_tarea',
+  'La próxima tarea en la que trabajar: tus tareas no hechas ni en revisión, ordenadas por prioridad y vencimiento, salteando las bloqueadas por dependencias abiertas. Opcional: limitar a un proyecto.',
+  { proyecto: z.string().optional().describe('Nombre o id del proyecto') },
+  async ({ proyecto }) => {
+    const actual = await asegurarSesion()
+    let q = supabase
+      .from('tareas')
+      .select('*, modulos(nombre, proyecto_id, proyectos(nombre))')
+      .eq('responsable_id', actual.id)
+      .in('estado', ['proximo', 'en_curso'])
+    if (proyecto) {
+      const p = await resolverProyecto(proyecto)
+      const mods = await modulosDeProyecto(p.id)
+      if (!mods.length) return texto(`"${p.nombre}" no tiene módulos ni tareas.`)
+      q = q.in('modulo_id', mods.map((m) => m.id))
+    }
+    const { data, error } = await q
+    if (error) throw error
+    if (!data?.length) return texto('No tenés tareas pendientes asignadas. Revisá `listar_tareas` para tomar una sin dueño.')
+
+    const ids = data.map((t) => t.id)
+    const { data: deps, error: errDeps } = await supabase
+      .from('tarea_dependencias')
+      .select('bloqueadora_id, bloqueada_id')
+      .in('bloqueada_id', ids)
+    if (errDeps) throw errDeps
+    const bloqueadoras = [...new Set((deps ?? []).map((d) => d.bloqueadora_id))]
+    const abiertas = new Set()
+    if (bloqueadoras.length) {
+      const { data: bs, error: errB } = await supabase
+        .from('tareas')
+        .select('id, estado')
+        .in('id', bloqueadoras)
+      if (errB) throw errB
+      for (const b of bs ?? []) if (b.estado !== 'hecho') abiertas.add(b.id)
+    }
+    const bloqueada = (t) => (deps ?? []).some((d) => d.bloqueada_id === t.id && abiertas.has(d.bloqueadora_id))
+
+    // En curso primero (terminar antes de empezar), después foco.
+    const orden = [...data].sort(
+      (a, b) => (a.estado === 'en_curso' ? 0 : 1) - (b.estado === 'en_curso' ? 0 : 1) || compararFoco(a, b),
+    )
+    const libres = orden.filter((t) => !bloqueada(t))
+    const elegida = libres[0]
+    if (!elegida) {
+      return texto(
+        'Todas tus tareas pendientes están bloqueadas por dependencias abiertas:\n' +
+          orden.map((t) => lineaTarea(t)).join('\n'),
+      )
+    }
+    const resto = libres.slice(1, 5)
+    return texto(
+      [
+        `Siguiente: ${elegida.titulo}`,
+        lineaTarea(elegida, `· ${elegida.modulos?.proyectos?.nombre ?? '?'} / ${elegida.modulos?.nombre ?? '?'}`),
+        elegida.descripcion ? `Descripción: ${elegida.descripcion}` : '',
+        elegida.criterio ? `Criterio de aceptación: ${elegida.criterio}` : 'Sin criterio de aceptación: definilo antes de empezar.',
+        '',
+        `Usá contexto_proyecto("${elegida.modulos?.proyectos?.nombre ?? ''}") para la definición del producto.`,
+        `Al abrir el PR incluí "Thread-Tarea: ${elegida.id}" en la descripción.`,
+        resto.length ? '\nDespués:\n' + resto.map((t) => lineaTarea(t)).join('\n') : '',
+        orden.length > libres.length ? `\n(${orden.length - libres.length} bloqueada/s por dependencias)` : '',
+      ]
+        .filter((l) => l !== '')
+        .join('\n'),
+    )
+  },
+)
+
+tool(
+  'contexto_proyecto',
+  'Contexto de producto para trabajar en un proyecto: definición (qué es, para quién, problema), repo, módulos con su estado y avance, decisiones recientes y correcciones abiertas. Leelo antes de implementar.',
+  { proyecto: z.string().describe('Nombre o id del proyecto') },
+  async ({ proyecto }) => {
+    const p = await resolverProyecto(proyecto)
+    const mods = await modulosDeProyecto(p.id)
+    const ids = mods.map((m) => m.id)
+    const [{ data: tareas, error: e1 }, { data: decisiones, error: e2 }] = await Promise.all([
+      ids.length
+        ? supabase.from('tareas').select('modulo_id, estado, tipo').in('modulo_id', ids)
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from('decisiones')
+        .select('texto, created_at')
+        .eq('proyecto_id', p.id)
+        .order('created_at', { ascending: false })
+        .limit(10),
+    ])
+    if (e1) throw e1
+    // Si la migración de decisiones no está aplicada, seguimos sin ellas.
+    if (e2) console.error('decisiones:', e2.message)
+    const nombres = await nombresPersonas([p.responsable_vision_id])
+    const porModulo = (id) => (tareas ?? []).filter((t) => t.modulo_id === id)
+    const correcciones = (tareas ?? []).filter((t) => t.tipo === 'correccion' && t.estado !== 'hecho').length
+    const lineas = [
+      `# ${p.nombre} [${p.estado}]`,
+      p.descripcion ? p.descripcion : '',
+      '',
+      '## Definición de producto',
+      `Qué es: ${p.que_es ?? '(sin definir)'}`,
+      `Para quién: ${p.para_quien ?? '(sin definir)'}`,
+      `Problema: ${p.problema ?? '(sin definir)'}`,
+      `Responsable de visión: ${p.responsable_vision_id ? nombres.get(p.responsable_vision_id) ?? '?' : '(sin asignar)'}`,
+      p.repo_url ? `Repo: ${p.repo_url}` : 'Repo: (sin configurar)',
+      '',
+      '## Módulos',
+      ...mods.map((m) => {
+        const ts = porModulo(m.id)
+        const hechas = ts.filter((t) => t.estado === 'hecho').length
+        return `- ${m.nombre} [${m.estado}] · ${hechas}/${ts.length} hechas`
+      }),
+      correcciones ? `\nCorrecciones abiertas: ${correcciones}` : '',
+    ]
+    if (decisiones?.length) {
+      lineas.push('', '## Decisiones recientes')
+      for (const d of decisiones) lineas.push(`- (${d.created_at.slice(0, 10)}) ${d.texto}`)
+    }
+    return texto(lineas.filter((l, i, arr) => !(l === '' && arr[i - 1] === '')).join('\n'))
+  },
+)
+
+tool(
+  'crear_modulo',
+  'Crea un módulo (área funcional) en un proyecto.',
+  {
+    proyecto: z.string().describe('Nombre o id del proyecto'),
+    nombre: z.string(),
+    descripcion: z.string().optional(),
+  },
+  async ({ proyecto, nombre, descripcion }) => {
+    const p = await resolverProyecto(proyecto)
+    const mods = await modulosDeProyecto(p.id)
+    if (mods.some((m) => m.nombre.toLowerCase() === nombre.toLowerCase()))
+      throw new Error(`Ya existe el módulo "${nombre}" en "${p.nombre}".`)
+    const { data, error } = await supabase
+      .from('modulos')
+      .insert({ proyecto_id: p.id, nombre, descripcion: descripcion ?? null, orden: mods.length })
+      .select()
+      .single()
+    if (error) throw error
+    return texto(`Módulo "${data.nombre}" creado en ${p.nombre} (id: ${data.id}).`)
+  },
+)
+
+tool(
+  'registrar_avance',
+  'Deja constancia de lo que hiciste en una tarea (queda como comentario). Opcional: vincular el PR y/o mandarla a revisión.',
+  {
+    tarea: z.string(),
+    resumen: z.string().describe('Qué se hizo, qué falta, decisiones técnicas relevantes'),
+    pr_url: z.string().url().optional(),
+    enviar_a_revision: z.boolean().optional(),
+  },
+  async ({ tarea, resumen, pr_url, enviar_a_revision }) => {
+    const actual = await asegurarSesion()
+    const t = await resolverTarea(tarea)
+    const { error: errCom } = await supabase
+      .from('comentarios')
+      .insert({ tarea_id: t.id, autor_id: actual.id, texto: `Avance: ${resumen}${pr_url ? `\nPR: ${pr_url}` : ''}` })
+    if (errCom) throw errCom
+    const cambios = {}
+    if (pr_url) cambios.pr_url = pr_url
+    if (enviar_a_revision && t.estado !== 'revision' && t.estado !== 'hecho') cambios.estado = 'revision'
+    if (Object.keys(cambios).length) {
+      const { error } = await supabase.from('tareas').update(cambios).eq('id', t.id)
+      if (error) throw error
+    }
+    return texto(
+      `Avance registrado en "${t.titulo}".` +
+        (cambios.pr_url ? ' PR vinculado.' : '') +
+        (cambios.estado ? ' Enviada a revisión.' : ''),
+    )
+  },
+)
+
+tool(
+  'priorizar_tarea',
+  'Cambia la prioridad de una tarea (alta | media | baja).',
+  { tarea: z.string(), prioridad: z.enum(['alta', 'media', 'baja']) },
+  async ({ tarea, prioridad }) => {
+    const t = await resolverTarea(tarea)
+    const { error } = await supabase.from('tareas').update({ prioridad }).eq('id', t.id)
+    if (error) throw error
+    return texto(`"${t.titulo}" ahora es prioridad ${prioridad}.`)
+  },
+)
+
+tool(
+  'registrar_decision',
+  'Registra una decisión de producto o técnica en el proyecto (qué se decidió y por qué).',
+  { proyecto: z.string(), decision: z.string() },
+  async ({ proyecto, decision }) => {
+    const actual = await asegurarSesion()
+    const p = await resolverProyecto(proyecto)
+    const { error } = await supabase
+      .from('decisiones')
+      .insert({ proyecto_id: p.id, autor_id: actual.id, texto: decision })
+    if (error) throw error
+    return texto(`Decisión registrada en ${p.nombre}.`)
+  },
+)
+
+tool(
+  'cartera',
+  'Salud de todos los proyectos activos: avance, vencidas, en revisión, sin dueño, prioridad alta y días sin actividad. Lo más en riesgo primero.',
+  {},
+  async () => {
+    const [{ data: salud, error: e1 }, { data: proyectos, error: e2 }] = await Promise.all([
+      supabase.from('v_salud_proyectos').select('*'),
+      supabase.from('proyectos').select('id, nombre, estado').eq('estado', 'activo'),
+    ])
+    if (e1) throw e1
+    if (e2) throw e2
+    const porId = new Map((salud ?? []).map((s) => [s.proyecto_id, s]))
+    const dias = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : 0)
+    const filas = (proyectos ?? [])
+      .map((p) => ({ p, s: porId.get(p.id) }))
+      .filter((f) => f.s)
+      .map(({ p, s }) => ({ p, s, inactivo: dias(s.ultima_actividad) }))
+      .sort((a, b) => b.s.vencidas - a.s.vencidas || b.inactivo - a.inactivo)
+    if (!filas.length) return texto('No hay proyectos activos.')
+    return texto(
+      filas
+        .map(({ p, s, inactivo }) => {
+          const pct = s.total ? Math.round((s.hechas / s.total) * 100) : 0
+          const riesgo = s.vencidas > 0 || inactivo >= 7 ? '🔴' : s.en_revision > 2 || s.sin_asignar > 0 ? '🟡' : '🟢'
+          return `${riesgo} ${p.nombre} · ${pct}% (${s.hechas}/${s.total}) · ${s.vencidas} vencidas · ${s.en_revision} en revisión · ${s.sin_asignar} sin dueño · ${s.alta_abiertas} alta · ${inactivo}d sin actividad`
+        })
+        .join('\n'),
+    )
   },
 )
 

@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { useMisTareas, useActualizarTarea, type TareaConProyecto } from '../data/tareas.ts'
-import { estadoVM, ESTADOS, diasHasta } from '../lib/ui.ts'
+import { estadoVM, ESTADOS, diasHasta, compararFoco } from '../lib/ui.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
-import { Eyebrow, EstadoChip, FechaTag, Skeleton, EmptyState } from '../components/ui.tsx'
+import { Eyebrow, EstadoChip, FechaTag, PrioridadTag, Skeleton, EmptyState } from '../components/ui.tsx'
 
 interface Grupo {
   proyectoId: string
@@ -22,14 +22,15 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: 'todas', label: 'misTareas.todas' },
 ]
 
-// Vencidas primero, luego por fecha ascendente; sin fecha al final; hechas últimas.
+// Hechas al final; vencidas primero; después foco (prioridad alta → baja, y por fecha).
 function ordenar(a: TareaConProyecto, b: TareaConProyecto): number {
   const aHecha = a.estado === 'hecho'
   const bHecha = b.estado === 'hecho'
   if (aHecha !== bHecha) return aHecha ? 1 : -1
-  const da = a.fecha ? diasHasta(a.fecha) : Infinity
-  const db = b.fecha ? diasHasta(b.fecha) : Infinity
-  return da - db
+  const aVencida = Boolean(a.fecha && diasHasta(a.fecha) < 0)
+  const bVencida = Boolean(b.fecha && diasHasta(b.fecha) < 0)
+  if (aVencida !== bVencida) return aVencida ? -1 : 1
+  return compararFoco(a, b)
 }
 
 export default function MisTareas() {
@@ -152,6 +153,7 @@ export default function MisTareas() {
                     {t.titulo}
                   </button>
                   <span className="hidden flex-none text-[11.5px] text-faint sm:inline">{t.modulos?.nombre}</span>
+                  {!vm.done && <PrioridadTag prioridad={t.prioridad} />}
                   <FechaTag fecha={t.fecha} done={vm.done} />
                   <EstadoChip estado={t.estado} onClick={() => ciclar(t)} />
                 </div>

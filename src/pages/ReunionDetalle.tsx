@@ -9,6 +9,8 @@ import { useSprints } from '../data/sprints.ts'
 import { useReunion, useAsistentes, useActualizarReunion } from '../data/reuniones.ts'
 import { alertas, pedirPermisoNotificaciones } from '../data/recordatorios.ts'
 import { useCrearTarea, useTareasReunion } from '../data/tareas.ts'
+import { useDecisiones, useCrearDecisiones } from '../data/decisiones.ts'
+import { useAuth } from '../auth/AuthProvider.tsx'
 import { extraerTareas, type TareaPropuesta } from '../lib/extraer.ts'
 import { Avatar, AvatarStack, Skeleton, EmptyState } from '../components/ui.tsx'
 
@@ -20,6 +22,13 @@ interface FilaRevision {
   responsableId: string
   moduloId: string
   fecha: string
+}
+
+// Decisión propuesta por la IA, editable antes de guardarla en el registro.
+interface DecisionRevision {
+  id: string
+  incluir: boolean
+  texto: string
 }
 
 export default function ReunionDetalle() {
@@ -40,6 +49,10 @@ export default function ReunionDetalle() {
   const { data: modulos } = useModulos(proyectoId)
   const { data: sprints } = useSprints(proyectoId)
   const { data: tareasCreadas } = useTareasReunion(id)
+  const { persona: yo } = useAuth()
+  const { data: decisionesProyecto } = useDecisiones(proyectoId)
+  const crearDecisiones = useCrearDecisiones()
+  const decisionesReunion = (decisionesProyecto ?? []).filter((d) => d.reunion_id === id)
 
   const personaPorId = useMemo(
     () => new Map((personas ?? []).map((p) => [p.id, p])),
@@ -117,6 +130,7 @@ export default function ReunionDetalle() {
   const [cargandoIA, setCargandoIA] = useState(false)
   const [errorIA, setErrorIA] = useState<string | null>(null)
   const [revision, setRevision] = useState<FilaRevision[] | null>(null)
+  const [decisionesRev, setDecisionesRev] = useState<DecisionRevision[]>([])
   // Nombres de módulos que se reabrieron al confirmar correcciones de cliente.
   const [reabiertos, setReabiertos] = useState<string[]>([])
 
@@ -162,7 +176,10 @@ export default function ReunionDetalle() {
         modulos: (modulos ?? []).map((m) => ({ id: m.id, nombre: m.nombre })),
         esCliente,
       })
-      setRevision(propuestas.map(aFila))
+      setRevision(propuestas.tareas.map(aFila))
+      setDecisionesRev(
+        propuestas.decisiones.map((texto) => ({ id: crypto.randomUUID(), incluir: true, texto })),
+      )
     } catch (e) {
       setErrorIA(e instanceof Error ? e.message : t('reunionDetalle.errExtraer'))
     } finally {
@@ -177,6 +194,7 @@ export default function ReunionDetalle() {
   }
 
   const incluidas = (revision ?? []).filter((f) => f.incluir && f.titulo.trim() && f.moduloId)
+  const decisionesIncluidas = decisionesRev.filter((d) => d.incluir && d.texto.trim())
 
   const onConfirmar = () => {
     if (!reunion) return
@@ -213,7 +231,20 @@ export default function ReunionDetalle() {
       setReabiertos([...aReabrir.values()])
     }
 
+    if (decisionesIncluidas.length) {
+      crearDecisiones.mutate({
+        proyectoId: reunion.proyecto_id,
+        nuevas: decisionesIncluidas.map((d) => ({
+          proyecto_id: reunion.proyecto_id,
+          reunion_id: reunion.id,
+          autor_id: yo?.id ?? null,
+          texto: d.texto.trim(),
+        })),
+      })
+    }
+
     setRevision(null)
+    setDecisionesRev([])
   }
 
   if (isLoading) {
@@ -427,7 +458,7 @@ export default function ReunionDetalle() {
               <span className="text-xs text-muted">{t('reunionDetalle.revisaDesmarca')}</span>
             </div>
 
-            {revision.length === 0 && (
+            {revision.length === 0 && decisionesRev.length === 0 && (
               <div className="px-[18px] py-5 text-[13px] text-muted">
                 {t('reunionDetalle.sinAccionables')}
               </div>
@@ -490,10 +521,47 @@ export default function ReunionDetalle() {
               </div>
             ))}
 
+            {decisionesRev.length > 0 && (
+              <div className="border-b border-line-soft bg-surface px-[18px] py-3.5">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+                  {t('reunionDetalle.decisionesDetectadas', { count: decisionesRev.length })}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {decisionesRev.map((d) => (
+                    <label key={d.id} className="flex items-center gap-3" style={{ opacity: d.incluir ? 1 : 0.5 }}>
+                      <input
+                        type="checkbox"
+                        checked={d.incluir}
+                        onChange={(e) =>
+                          setDecisionesRev((prev) =>
+                            prev.map((x) => (x.id === d.id ? { ...x, incluir: e.target.checked } : x)),
+                          )
+                        }
+                        className="h-[18px] w-[18px] flex-none accent-brand"
+                      />
+                      <input
+                        value={d.texto}
+                        onChange={(e) =>
+                          setDecisionesRev((prev) =>
+                            prev.map((x) => (x.id === d.id ? { ...x, texto: e.target.value } : x)),
+                          )
+                        }
+                        aria-label={t('reunionDetalle.decisionAria')}
+                        className="min-w-0 flex-1 rounded-[8px] border border-line bg-canvas px-2.5 py-1.5 text-sm text-ink outline-none focus:border-brand"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2.5 px-[18px] py-3.5">
               <button
                 type="button"
-                onClick={() => setRevision(null)}
+                onClick={() => {
+                  setRevision(null)
+                  setDecisionesRev([])
+                }}
                 className="rounded-[9px] border border-line bg-surface px-[15px] py-2 text-[13.5px] font-semibold text-ink-soft transition-colors hover:bg-hover"
               >
                 {t('reunionDetalle.descartar')}
@@ -501,7 +569,7 @@ export default function ReunionDetalle() {
               <button
                 type="button"
                 onClick={onConfirmar}
-                disabled={incluidas.length === 0}
+                disabled={incluidas.length === 0 && decisionesIncluidas.length === 0}
                 className="flex items-center gap-1.5 rounded-[9px] bg-brand px-4 py-2 text-[13.5px] font-semibold text-on-brand transition-colors hover:bg-[var(--color-brand-strong)] disabled:opacity-50"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -510,6 +578,8 @@ export default function ReunionDetalle() {
                 {esCliente
                   ? t('reunionDetalle.crearCorrecciones', { count: incluidas.length })
                   : t('reunionDetalle.crearTareas', { count: incluidas.length })}
+                {decisionesIncluidas.length > 0 &&
+                  ` · ${t('reunionDetalle.guardarDecisiones', { count: decisionesIncluidas.length })}`}
               </button>
             </div>
           </div>
@@ -547,6 +617,22 @@ export default function ReunionDetalle() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {decisionesReunion.length > 0 && (
+          <div className="mt-[30px]">
+            <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+              {t('reunionDetalle.decisionesTitulo', { count: decisionesReunion.length })}
+            </div>
+            <ul className="m-0 list-none overflow-hidden rounded-[13px] border border-line bg-canvas p-0">
+              {decisionesReunion.map((d) => (
+                <li key={d.id} className="flex gap-3 border-b border-line-soft px-4 py-[11px] text-sm text-ink last:border-b-0">
+                  <span className="mt-[7px] h-1.5 w-1.5 flex-none rounded-full bg-brand" />
+                  {d.texto}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

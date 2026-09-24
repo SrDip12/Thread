@@ -29,6 +29,50 @@ export function estadoVM(estado: EstadoTarea): EstadoVM {
 
 export const ESTADOS: EstadoTarea[] = ['proximo', 'en_curso', 'revision', 'hecho']
 
+// Chip de estado del sprint: azul activo, gris planificado, verde cerrado.
+export function sprintEstadoVM(estado: Enums<'estado_sprint'>): { label: string; bg: string; fg: string; dot: string } {
+  const t = i18n.t
+  switch (estado) {
+    case 'activo':
+      return { label: t('sprint.estadoActivo'), bg: 'var(--color-info-tint)', fg: 'var(--color-info)', dot: 'var(--color-info-dot)' }
+    case 'cerrado':
+      return { label: t('sprint.estadoCerrado'), bg: 'var(--color-ok-tint)', fg: 'var(--color-ok)', dot: 'var(--color-ok-dot)' }
+    default:
+      return { label: t('sprint.estadoPlanificado'), bg: 'var(--color-neutral-tint)', fg: 'var(--color-neutral)', dot: 'var(--color-neutral-dot)' }
+  }
+}
+
+// Prioridad: foco entre proyectos. Alta en rojo, baja atenuada, media sin marca.
+export type Prioridad = Enums<'prioridad_tarea'>
+export const PRIORIDADES: Prioridad[] = ['alta', 'media', 'baja']
+
+export function prioridadVM(p: Prioridad): { label: string; fg: string; bg: string } {
+  const t = i18n.t
+  switch (p) {
+    case 'alta':
+      return { label: t('prioridad.alta'), fg: 'var(--color-danger)', bg: 'var(--color-danger-tint)' }
+    case 'baja':
+      return { label: t('prioridad.baja'), fg: 'var(--color-muted)', bg: 'var(--color-neutral-tint)' }
+    default:
+      return { label: t('prioridad.media'), fg: 'var(--color-neutral)', bg: 'var(--color-neutral-tint)' }
+  }
+}
+
+const PESO_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 }
+
+// Orden de foco: prioridad (alta primero) y después vencimiento (sin fecha al final).
+export function compararFoco(
+  a: { prioridad: Prioridad; fecha: string | null },
+  b: { prioridad: Prioridad; fecha: string | null },
+): number {
+  const p = PESO_PRIORIDAD[a.prioridad] - PESO_PRIORIDAD[b.prioridad]
+  if (p !== 0) return p
+  if (a.fecha && b.fecha) return a.fecha.localeCompare(b.fecha)
+  if (a.fecha) return -1
+  if (b.fecha) return 1
+  return 0
+}
+
 // Tipo de reunión → etiqueta + colores (chip). Compartido por Reuniones/Calendario/Hoy.
 // Función (no const) para que la etiqueta reaccione al cambio de idioma.
 type TipoReunionVM = { label: string; color: string; tint: string }

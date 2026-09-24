@@ -1,8 +1,14 @@
 // Vercel Edge Function: POST /api/extraer-tareas
 // Recibe notas + personas + módulos, llama a Groq y devuelve tareas propuestas.
 // La API key SOLO vive como env var de Vercel (process.env.GROQ_API_KEY); NUNCA en el cliente.
+// Requiere sesión de Supabase de un miembro activo (header Authorization).
+
+import { autenticar, json } from './_lib/supabase'
 
 export const config = { runtime: 'edge' }
+
+// Límite defensivo del tamaño de las notas (tokens = plata).
+const MAX_NOTAS = 30_000
 
 // Modelo de Groq; constante fácil de cambiar.
 const MODEL = 'llama-3.3-70b-versatile'
@@ -27,13 +33,6 @@ interface TareaPropuesta {
   responsable_sugerido: string | null
   modulo_sugerido: string | null
   fecha: string | null
-}
-
-function json(cuerpo: unknown, status = 200): Response {
-  return new Response(JSON.stringify(cuerpo), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  })
 }
 
 function esRefEntidad(x: unknown): x is RefEntidad {
@@ -108,8 +107,10 @@ function construirPrompt(entrada: CuerpoEntrada): string {
     `Personas del equipo (usá el nombre EXACTO de esta lista para responsable_sugerido, o null si no se puede inferir): ${nombresPersonas}`,
     `Módulos existentes del proyecto (preferí uno de estos para modulo_sugerido; si la tarea pertenece a un área nueva podés proponer otro nombre, o null): ${nombresModulos}`,
     '',
+    'Además, listá en "decisiones" las DECISIONES tomadas en la reunión (qué se acordó y, si se dice, por qué), una frase cada una. No repitas las tareas ahí. Si no hubo decisiones, devolvé [].',
+    '',
     'Devolvé SOLO JSON con esta forma exacta, sin texto adicional:',
-    '{"tareas":[{"titulo":"...","responsable_sugerido":"<nombre exacto o null>","modulo_sugerido":"<nombre de módulo o null>","fecha":"YYYY-MM-DD o null"}]}',
+    '{"tareas":[{"titulo":"...","responsable_sugerido":"<nombre exacto o null>","modulo_sugerido":"<nombre de módulo o null>","fecha":"YYYY-MM-DD o null"}],"decisiones":["..."]}',
     '',
     'NOTAS DE LA REUNIÓN:',
     entrada.notas,
@@ -125,6 +126,9 @@ export default async function handler(request: Request): Promise<Response> {
     return json({ error: 'Método no permitido.' }, 405)
   }
 
+  const sesion = await autenticar(request)
+  if (sesion instanceof Response) return sesion
+
   let cuerpoCrudo: unknown
   try {
     cuerpoCrudo = await request.json()
@@ -138,6 +142,9 @@ export default async function handler(request: Request): Promise<Response> {
       { error: 'Datos inválidos: se requiere `notas` (texto no vacío), `personas` y `modulos`.' },
       400,
     )
+  }
+  if (entrada.notas.length > MAX_NOTAS) {
+    return json({ error: `Las notas son demasiado largas (máx. ${MAX_NOTAS} caracteres).` }, 400)
   }
 
   const groqKey = process.env.GROQ_API_KEY
@@ -196,5 +203,10 @@ export default async function handler(request: Request): Promise<Response> {
     if (normalizada) tareas.push(normalizada)
   }
 
-  return json({ tareas })
+  const decisionesCrudas = (parseado as Record<string, unknown>).decisiones
+  const decisiones = Array.isArray(decisionesCrudas)
+    ? decisionesCrudas.map(normalizarTexto).filter((d): d is string => d !== null)
+    : []
+
+  return json({ tareas, decisiones })
 }

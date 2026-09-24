@@ -50,6 +50,7 @@ export function useCrearProyecto() {
         para_quien: nuevo.para_quien ?? null,
         problema: nuevo.problema ?? null,
         responsable_vision_id: nuevo.responsable_vision_id ?? null,
+        repo_url: nuevo.repo_url ?? null,
         created_at: nuevo.created_at ?? new Date().toISOString(),
       }
       queryClient.setQueryData<Proyecto[]>(queryKey, (viejo) => [...(viejo ?? []), optimista])

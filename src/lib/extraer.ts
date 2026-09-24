@@ -4,6 +4,8 @@
 // Vercel. En `vite dev` el fetch fallará (404 / HTML) y el UI debe mostrar el error
 // con gracia.
 
+import { postApi } from './api.ts'
+
 export interface TareaPropuesta {
   titulo: string
   responsable_sugerido: string | null
@@ -30,12 +32,14 @@ function esTareaPropuesta(x: unknown): x is TareaPropuesta {
   )
 }
 
-export async function extraerTareas(input: ExtraerInput): Promise<TareaPropuesta[]> {
-  const res = await fetch('/api/extraer-tareas', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+export interface Extraccion {
+  tareas: TareaPropuesta[]
+  // Decisiones tomadas en la reunión (vacío en reuniones de cliente).
+  decisiones: string[]
+}
+
+export async function extraerTareas(input: ExtraerInput): Promise<Extraccion> {
+  const res = await postApi('/api/extraer-tareas', input)
 
   if (!res.ok) {
     let mensaje = `Error ${res.status} al extraer tareas`
@@ -48,9 +52,14 @@ export async function extraerTareas(input: ExtraerInput): Promise<TareaPropuesta
     throw new Error(mensaje)
   }
 
-  const datos = (await res.json()) as { tareas?: unknown }
+  const datos = (await res.json()) as { tareas?: unknown; decisiones?: unknown }
   if (!Array.isArray(datos.tareas)) {
     throw new Error('Respuesta inválida del servidor.')
   }
-  return datos.tareas.filter(esTareaPropuesta)
+  return {
+    tareas: datos.tareas.filter(esTareaPropuesta),
+    decisiones: Array.isArray(datos.decisiones)
+      ? datos.decisiones.filter((d): d is string => typeof d === 'string' && d.trim() !== '')
+      : [],
+  }
 }

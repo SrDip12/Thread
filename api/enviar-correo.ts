@@ -1,300 +1,133 @@
 // Vercel Edge Function: POST /api/enviar-correo
-// Recibe los datos de una pregunta, respuesta o mención y envía una notificación por correo.
-// Si no hay RESEND_API_KEY configurada, realiza una simulación en la consola.
+// Avisa por correo de un comentario: pregunta al PO, mención o respuesta a una pregunta.
+//
+// Recibe SOLO ids: { comentarioId, preguntaId? }. Destinatarios, textos y enlaces se
+// resuelven acá con la sesión del usuario (RLS), así el endpoint no sirve para mandar
+// correos arbitrarios. Solo el autor del comentario puede dispararlo, y una sola vez
+// (`comentarios.correo_enviado_at`).
+
+import { autenticar, json } from './_lib/supabase'
+import { enviarCorreo, mencionados, renderCorreo } from './_lib/correo'
 
 export const config = { runtime: 'edge' }
 
-function json(cuerpo: unknown, status = 200): Response {
-  return new Response(JSON.stringify(cuerpo), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  })
-}
+const COLOR = {
+  pregunta: { acento: '#c96442', fondo: '#fdf2f0' },
+  respuesta: { acento: '#2e9e7b', fondo: '#edfcf7' },
+  mencion: { acento: '#9a5cc4', fondo: '#f7f0fc' },
+} as const
 
-interface CuerpoCorreo {
-  tipo: 'pregunta' | 'respuesta' | 'mencion'
-  destinatarioEmail: string
-  destinatarioNombre: string
-  autorNombre: string
-  proyectoNombre: string
-  proyectoId: string
-  tareaTitulo: string
-  tareaId: string
-  comentarioTexto: string
-  preguntaTexto?: string // Requerido para respuestas
-  appUrl: string
+interface TareaCtx {
+  titulo: string
+  modulos: { proyectos: { id: string; nombre: string; responsable_vision_id: string | null } | null } | null
 }
 
 export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== 'POST') {
-    return json({ error: 'Método no permitido.' }, 405)
-  }
+  if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405)
 
-  let cuerpo: CuerpoCorreo
+  const sesion = await autenticar(request)
+  if (sesion instanceof Response) return sesion
+  const { supabase, personaId } = sesion
+
+  let cuerpo: { comentarioId?: unknown; preguntaId?: unknown }
   try {
-    cuerpo = (await request.json()) as CuerpoCorreo
+    cuerpo = (await request.json()) as typeof cuerpo
   } catch {
     return json({ error: 'El cuerpo de la solicitud debe ser JSON válido.' }, 400)
   }
+  if (typeof cuerpo.comentarioId !== 'string') return json({ error: 'Falta `comentarioId`.' }, 400)
+  const preguntaId = typeof cuerpo.preguntaId === 'string' ? cuerpo.preguntaId : null
 
-  const {
-    tipo = 'pregunta',
-    destinatarioEmail,
-    destinatarioNombre,
-    autorNombre,
-    proyectoNombre,
-    proyectoId,
-    tareaTitulo,
-    tareaId,
-    comentarioTexto,
-    preguntaTexto,
-    appUrl,
-  } = cuerpo
+  const { data: com, error: errCom } = await supabase
+    .from('comentarios')
+    .select('id, texto, autor_id, tarea_id, para_po, correo_enviado_at')
+    .eq('id', cuerpo.comentarioId)
+    .maybeSingle()
+  if (errCom) return json({ error: 'No se pudo leer el comentario.' }, 500)
+  if (!com || !com.tarea_id) return json({ error: 'Comentario no encontrado.' }, 404)
+  if (com.autor_id !== personaId) return json({ error: 'Solo el autor puede notificar su comentario.' }, 403)
+  if (com.correo_enviado_at) return json({ success: true, enviados: 0, yaEnviado: true })
 
-  if (!destinatarioEmail || !destinatarioNombre || !autorNombre || !tareaTitulo || !comentarioTexto) {
-    return json({ error: 'Faltan campos requeridos para enviar el correo.' }, 400)
-  }
+  const { data: tareaRaw } = await supabase
+    .from('tareas')
+    .select('titulo, modulos(proyectos(id, nombre, responsable_vision_id))')
+    .eq('id', com.tarea_id)
+    .maybeSingle()
+  const tarea = tareaRaw as unknown as TareaCtx | null
+  const proyecto = tarea?.modulos?.proyectos
+  if (!tarea || !proyecto) return json({ error: 'Tarea no encontrada.' }, 404)
 
-  const taskUrl = `${appUrl}/proyectos/${proyectoId}?tarea=${tareaId}`
+  const { data: personas } = await supabase
+    .from('personas')
+    .select('id, nombre, email')
+    .eq('activo', true)
+  const equipo = personas ?? []
+  const porId = new Map(equipo.map((p) => [p.id, p]))
+  const autor = porId.get(personaId)?.nombre ?? 'Alguien del equipo'
 
-  let emailHtml = ''
-  let subject = ''
-  let accentColor = '#c96442' // Default PO orange
-  let badgeLabel = 'Pregunta PO'
-  let badgeBg = '#fdf2f0'
-  let introText = ''
-  let buttonLabel = 'Responder Pregunta'
+  const origen = new URL(request.url).origin
+  const url = `${origen}/proyectos/${proyecto.id}?tarea=${com.tarea_id}`
 
-  if (tipo === 'pregunta') {
-    subject = `[Thread] Nueva pregunta de ${autorNombre} en ${proyectoNombre}`
-    accentColor = '#c96442'
-    badgeLabel = 'Pregunta PO'
-    badgeBg = '#fdf2f0'
-    introText = `<strong>${autorNombre}</strong> ha dejado una pregunta marcada para el Product Owner en el proyecto <strong>${proyectoNombre}</strong>.`
-    buttonLabel = 'Responder Pregunta'
-  } else if (tipo === 'respuesta') {
-    subject = `[Thread] Respuesta a tu pregunta en ${proyectoNombre}`
-    accentColor = '#2e9e7b'
-    badgeLabel = 'Pregunta Resuelta'
-    badgeBg = '#edfcf7'
-    introText = `<strong>${autorNombre}</strong> ha respondido a tu pregunta en el proyecto <strong>${proyectoNombre}</strong>.`
-    buttonLabel = 'Ver en Thread'
-  } else if (tipo === 'mencion') {
-    subject = `[Thread] Te mencionaron en la tarea "${tareaTitulo}"`
-    accentColor = '#9a5cc4' // Purple accent
-    badgeLabel = 'Mención'
-    badgeBg = '#f7f0fc'
-    introText = `<strong>${autorNombre}</strong> te ha mencionado en un comentario en el proyecto <strong>${proyectoNombre}</strong>.`
-    buttonLabel = 'Ver Comentario'
-  }
-
-  if (tipo === 'pregunta' || tipo === 'mencion') {
-    emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
-          <tr>
-            <td style="background-color: ${accentColor}; height: 6px; padding: 0;"></td>
-          </tr>
-          <tr>
-            <td style="padding: 40px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td>
-                    <span style="font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.025em;">Thread</span>
-                    <span style="font-size: 12px; font-weight: 600; color: ${accentColor}; background-color: ${badgeBg}; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">${badgeLabel}</span>
-                  </td>
-                </tr>
-              </table>
-              <p style="font-size: 15px; line-height: 1.5; color: #334155; margin: 0 0 16px 0; font-weight: 500;">
-                Hola <strong>${destinatarioNombre}</strong>,
-              </p>
-              <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-                ${introText}
-              </p>
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 32px;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${accentColor}; letter-spacing: 0.05em; margin-bottom: 8px;">Tarea</div>
-                    <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 12px; line-height: 1.4;">${tareaTitulo}</div>
-                    <div style="border-top: 1px dashed #e2e8f0; margin: 12px 0;"></div>
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 8px;">Comentario</div>
-                    <div style="font-size: 14px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${comentarioTexto}</div>
-                  </td>
-                </tr>
-              </table>
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background-color 0.2s ease;">
-                      ${buttonLabel}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px 32px; text-align: center;">
-              <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5;">
-                Recibes este correo porque eres miembro del proyecto.<br>
-                Thread App · Gestión de proyectos simple y enfocada.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `
-  } else {
-    // tipo === 'respuesta'
-    emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${subject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
-          <tr>
-            <td style="background-color: ${accentColor}; height: 6px; padding: 0;"></td>
-          </tr>
-          <tr>
-            <td style="padding: 40px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td>
-                    <span style="font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.025em;">Thread</span>
-                    <span style="font-size: 12px; font-weight: 600; color: ${accentColor}; background-color: ${badgeBg}; padding: 4px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle;">${badgeLabel}</span>
-                  </td>
-                </tr>
-              </table>
-              <p style="font-size: 15px; line-height: 1.5; color: #334155; margin: 0 0 16px 0; font-weight: 500;">
-                Hola <strong>${destinatarioNombre}</strong>,
-              </p>
-              <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-                ${introText}
-              </p>
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 32px;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 4px;">Tarea</div>
-                    <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 12px; line-height: 1.4;">${tareaTitulo}</div>
-                    
-                    <div style="border-top: 1px dashed #e2e8f0; margin: 12px 0;"></div>
-                    
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #c96442; letter-spacing: 0.05em; margin-bottom: 4px;">Tu pregunta original</div>
-                    <div style="font-size: 13.5px; line-height: 1.5; color: #475569; font-style: italic; margin-bottom: 14px; white-space: pre-wrap;">"${preguntaTexto || ''}"</div>
-                    
-                    <div style="border-top: 1px dashed #e2e8f0; margin: 12px 0;"></div>
-                    
-                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${accentColor}; letter-spacing: 0.05em; margin-bottom: 4px;">Respuesta de ${autorNombre}</div>
-                    <div style="font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 500; white-space: pre-wrap;">"${comentarioTexto}"</div>
-                  </td>
-                </tr>
-              </table>
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${taskUrl}" target="_blank" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background-color 0.2s ease;">
-                      ${buttonLabel}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px 32px; text-align: center;">
-              <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5;">
-                Recibes este correo porque hiciste una pregunta al PO en esta tarea.<br>
-                Thread App · Gestión de proyectos simple y enfocada.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `
-  }
-
-  const resendKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY
-
-  if (!resendKey) {
-    // Si no está configurada la API key, simulamos en la consola
-    console.log('\n==================================================')
-    console.log(`📬 [SIMULACIÓN DE ENVÍO DE EMAIL: ${tipo.toUpperCase()}]`)
-    console.log(`De: Thread App <onboarding@resend.dev>`)
-    console.log(`Para: ${destinatarioNombre} <${destinatarioEmail}>`)
-    console.log(`Asunto: ${subject}`)
-    console.log(`Tarea: "${tareaTitulo}"`)
-    if (tipo === 'respuesta') {
-      console.log(`Pregunta original: "${preguntaTexto}"`)
-      console.log(`Respuesta: "${comentarioTexto}"`)
-    } else {
-      console.log(`Comentario: "${comentarioTexto}"`)
+  type Destino = { id: string; tipo: keyof typeof COLOR; pregunta?: string }
+  const destinos: Destino[] = []
+  const ya = new Set<string>([personaId])
+  const sumar = (d: Destino) => {
+    if (!ya.has(d.id) && porId.has(d.id)) {
+      ya.add(d.id)
+      destinos.push(d)
     }
-    console.log(`Enlace: ${taskUrl}`)
-    console.log('==================================================\n')
-
-    return json({
-      success: true,
-      simulated: true,
-      message: `Correo simulado con éxito (RESEND_API_KEY no configurado)`,
-      data: {
-        to: destinatarioEmail,
-        subject,
-        html: emailHtml,
-      },
-    })
   }
 
-  // Si la clave existe, hacemos el envío real utilizando la API REST de Resend
-  try {
-    const fromEmail = process.env.RESEND_FROM || 'Thread App <onboarding@resend.dev>'
-    
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendKey}`,
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [destinatarioEmail],
-        subject,
-        html: emailHtml,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Error de Resend API:', errorText)
-      return json({ error: 'Error del proveedor de correo al enviar el email.' }, 502)
-    }
-
-    const data = await response.json()
-    return json({ success: true, message: 'Correo enviado con éxito', data })
-  } catch (error) {
-    console.error('Falla al enviar correo a través de Resend:', error)
-    return json({ error: 'Falla interna al enviar el correo.' }, 500)
+  if (preguntaId) {
+    const { data: preg } = await supabase
+      .from('comentarios')
+      .select('texto, autor_id, tarea_id')
+      .eq('id', preguntaId)
+      .maybeSingle()
+    if (preg && preg.tarea_id === com.tarea_id) sumar({ id: preg.autor_id, tipo: 'respuesta', pregunta: preg.texto })
   }
+  for (const p of mencionados(com.texto, equipo)) sumar({ id: p.id, tipo: 'mencion' })
+  if (com.para_po && proyecto.responsable_vision_id) sumar({ id: proyecto.responsable_vision_id, tipo: 'pregunta' })
+
+  let enviados = 0
+  for (const d of destinos) {
+    const p = porId.get(d.id)
+    if (!p?.email) continue
+    const c = COLOR[d.tipo]
+    const asunto =
+      d.tipo === 'pregunta'
+        ? `[Thread] Nueva pregunta de ${autor} en ${proyecto.nombre}`
+        : d.tipo === 'respuesta'
+          ? `[Thread] Respuesta a tu pregunta en ${proyecto.nombre}`
+          : `[Thread] Te mencionaron en "${tarea.titulo}"`
+    const intro =
+      d.tipo === 'pregunta'
+        ? `**${autor}** dejó una pregunta para el responsable del proyecto **${proyecto.nombre}**.`
+        : d.tipo === 'respuesta'
+          ? `**${autor}** respondió tu pregunta en **${proyecto.nombre}**.`
+          : `**${autor}** te mencionó en un comentario en **${proyecto.nombre}**.`
+    const html = renderCorreo({
+      acento: c.acento,
+      badge: d.tipo === 'pregunta' ? 'Pregunta' : d.tipo === 'respuesta' ? 'Respuesta' : 'Mención',
+      badgeFondo: c.fondo,
+      saludo: `Hola **${p.nombre}**,`,
+      intro,
+      bloques: [
+        { etiqueta: 'Tarea', texto: tarea.titulo },
+        ...(d.pregunta ? [{ etiqueta: 'Tu pregunta', texto: d.pregunta, cursiva: true }] : []),
+        { etiqueta: d.tipo === 'respuesta' ? `Respuesta de ${autor}` : 'Comentario', texto: com.texto },
+      ],
+      boton: { label: 'Ver en Thread', url },
+      pie: 'Recibís este correo porque sos parte del proyecto en Thread.',
+    })
+    const r = await enviarCorreo({ para: p.email, asunto, html })
+    if (r.ok) enviados++
+  }
+
+  await supabase
+    .from('comentarios')
+    .update({ correo_enviado_at: new Date().toISOString() })
+    .eq('id', com.id)
+
+  return json({ success: true, enviados })
 }

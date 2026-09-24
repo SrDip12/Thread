@@ -4,8 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types.ts'
 import { supabase } from '../lib/supabase.ts'
+import { postApi } from '../lib/api.ts'
 import { qk } from './queryKeys.ts'
-import i18n from '../i18n/index.ts'
 
 type Comentario = Tables<'comentarios'>
 
@@ -78,79 +78,24 @@ export function useResponderPregunta() {
       autorId: string
       texto: string
     }): Promise<void> => {
-      const { error: errInsert } = await supabase.from('comentarios').insert({
-        tarea_id: vars.tareaId,
-        autor_id: vars.autorId,
-        texto: vars.texto,
-      })
+      const { data: respuesta, error: errInsert } = await supabase
+        .from('comentarios')
+        .insert({
+          tarea_id: vars.tareaId,
+          autor_id: vars.autorId,
+          texto: vars.texto,
+        })
+        .select('id')
+        .single()
       if (errInsert) throw errInsert
       const { error: errUpdate } = await supabase
         .from('comentarios')
         .update({ resuelto: true })
         .eq('id', vars.preguntaId)
-      if (errUpdate) {
-        throw errUpdate
-      }
+      if (errUpdate) throw errUpdate
 
-      // Enviar la notificación de correo al desarrollador de manera asíncrona no bloqueante
-      (async () => {
-        try {
-          // 1. Obtener la pregunta original y el id de su creador
-          const { data: originalComment } = await supabase
-            .from('comentarios')
-            .select('texto, autor_id')
-            .eq('id', vars.preguntaId)
-            .single()
-
-          if (originalComment) {
-            // 2. Obtener los detalles del desarrollador que hizo la pregunta (destinatario)
-            const { data: devData } = await supabase
-              .from('personas')
-              .select('nombre, email')
-              .eq('id', originalComment.autor_id)
-              .single()
-
-            // 3. Obtener el nombre del PO que responde (autor del correo de respuesta)
-            const { data: poData } = await supabase
-              .from('personas')
-              .select('nombre')
-              .eq('id', vars.autorId)
-              .single()
-
-            // 4. Obtener detalles de la tarea y proyecto
-            const { data: taskData } = await supabase
-              .from('tareas')
-              .select('titulo, modulos(nombre, proyectos(id, nombre))')
-              .eq('id', vars.tareaId)
-              .single()
-
-            const rawTask = taskData as any
-            const proyectos = rawTask?.modulos?.proyectos
-
-            if (devData?.email && poData && taskData && proyectos) {
-              await fetch('/api/enviar-correo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tipo: 'respuesta',
-                  destinatarioEmail: devData.email,
-                  destinatarioNombre: devData.nombre,
-                  autorNombre: poData.nombre,
-                  proyectoNombre: proyectos.nombre,
-                  proyectoId: proyectos.id,
-                  tareaTitulo: taskData.titulo,
-                  tareaId: vars.tareaId,
-                  comentarioTexto: vars.texto,
-                  preguntaTexto: originalComment.texto,
-                  appUrl: window.location.origin,
-                }),
-              })
-            }
-          }
-        } catch (err) {
-          console.error('Error al notificar al desarrollador por correo:', err)
-        }
-      })()
+      // Correo a quien preguntó (y a los mencionados): lo resuelve el servidor.
+      avisarPorCorreo(respuesta.id, vars.preguntaId)
     },
     onMutate: async ({ preguntaId }) => {
       const queryKey = qk.comentarios.paraPo()
@@ -225,164 +170,11 @@ export function useCrearComentario() {
         .single()
       if (error) throw error
 
-      // Si es una pregunta para el PO y está ligada a una tarea, disparamos la notificación por correo
-      if (data.para_po && data.tarea_id) {
-        // Ejecutamos de forma asíncrona no bloqueante
-        (async () => {
-          try {
-            // 1. Obtener detalles de la tarea, su módulo y el proyecto asociado
-            const { data: taskData } = await supabase
-              .from('tareas')
-              .select('titulo, modulos(nombre, proyectos(id, nombre, responsable_vision_id))')
-              .eq('id', data.tarea_id as string)
-              .single()
-
-            const rawTask = taskData as any
-            const proyectos = rawTask?.modulos?.proyectos
-            const poId = proyectos?.responsable_vision_id
-
-            if (taskData && proyectos && poId) {
-              // 2. Obtener el email y nombre del Product Owner (PO)
-              const { data: poData } = await supabase
-                .from('personas')
-                .select('nombre, email')
-                .eq('id', poId)
-                .single()
-
-              // 3. Obtener el nombre del autor de la pregunta
-              const { data: autorData } = await supabase
-                .from('personas')
-                .select('nombre')
-                .eq('id', data.autor_id)
-                .single()
-
-              if (poData?.email) {
-                // 4. Enviar la notificación llamando a nuestra serverless function
-                await fetch('/api/enviar-correo', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    destinatarioEmail: poData.email,
-                    destinatarioNombre: poData.nombre,
-                    autorNombre: autorData?.nombre ?? 'Un miembro del equipo',
-                    proyectoNombre: proyectos.nombre,
-                    proyectoId: proyectos.id,
-                    tareaTitulo: taskData.titulo,
-                    tareaId: data.tarea_id,
-                    comentarioTexto: data.texto,
-                    appUrl: window.location.origin,
-                  }),
-                })
-              }
-            }
-          } catch (err) {
-            console.error('Error al enviar la notificación por correo al PO:', err)
-          }
-        })()
+      // Los avisos in-app los crea el trigger `comentarios_notificar`. El correo
+      // (pregunta al responsable de visión o mención) lo resuelve /api/enviar-correo.
+      if (data.tarea_id && (data.para_po || data.texto.includes('@'))) {
+        avisarPorCorreo(data.id)
       }
-
-      // Notificaciones In-App (menciones, preguntas y comentarios)
-      if (data.tarea_id) {
-        (async () => {
-          try {
-            const { data: taskData } = await supabase
-              .from('tareas')
-              .select('titulo, responsable_id, modulo_id, modulos(proyecto_id, proyectos(nombre, color, responsable_vision_id))')
-              .eq('id', data.tarea_id as string)
-              .single()
-
-            const rawTask = taskData as any
-            const proyectoId = rawTask?.modulos?.proyecto_id ?? null
-            const proyectos = rawTask?.modulos?.proyectos
-            const poId = proyectos?.responsable_vision_id
-
-            if (taskData) {
-              const { data: personas } = await supabase.from('personas').select('id, nombre, email')
-              const menciones: string[] = []
-              const textoLower = data.texto.toLowerCase()
-
-              for (const p of personas ?? []) {
-                const nombreClean = p.nombre.toLowerCase().replace(/\s+/g, '')
-                if (textoLower.includes(`@${nombreClean}`) || textoLower.includes(`@${p.nombre.toLowerCase()}`)) {
-                  if (p.id !== data.autor_id) {
-                    menciones.push(p.id)
-                  }
-                }
-              }
-
-              const autorPersona = personas?.find((p) => p.id === data.autor_id)
-              const autorNombre = autorPersona?.nombre ?? 'Un miembro del equipo'
-
-              // Crear notificaciones de mención
-              for (const pid of menciones) {
-                await supabase.from('notificaciones').insert({
-                  persona_id: pid,
-                  autor_id: data.autor_id,
-                  tipo: 'mencion',
-                  texto: i18n.t('notif.genMenciono', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
-                  tarea_id: data.tarea_id,
-                  proyecto_id: proyectoId,
-                  leido: false,
-                })
-
-                const mentionedUser = personas?.find((p) => p.id === pid)
-                if (mentionedUser?.email && proyectos) {
-                  await fetch('/api/enviar-correo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      tipo: 'mencion',
-                      destinatarioEmail: mentionedUser.email,
-                      destinatarioNombre: mentionedUser.nombre,
-                      autorNombre,
-                      proyectoNombre: proyectos.nombre,
-                      proyectoId: proyectos.id,
-                      tareaTitulo: taskData.titulo,
-                      tareaId: data.tarea_id,
-                      comentarioTexto: data.texto,
-                      appUrl: window.location.origin,
-                    }),
-                  })
-                }
-              }
-
-              // Si es pregunta para el PO y el PO no es el autor y no fue mencionado
-              if (data.para_po && poId && poId !== data.autor_id && !menciones.includes(poId)) {
-                await supabase.from('notificaciones').insert({
-                  persona_id: poId,
-                  autor_id: data.autor_id,
-                  tipo: 'pregunta',
-                  texto: i18n.t('notif.genPregunto', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
-                  tarea_id: data.tarea_id,
-                  proyecto_id: proyectoId,
-                  leido: false,
-                })
-              }
-
-              // Si tiene asignado y el asignado no es el autor, no es el PO notificado, y no fue mencionado
-              if (
-                taskData.responsable_id &&
-                taskData.responsable_id !== data.autor_id &&
-                !menciones.includes(taskData.responsable_id) &&
-                !(data.para_po && poId === taskData.responsable_id)
-              ) {
-                await supabase.from('notificaciones').insert({
-                  persona_id: taskData.responsable_id,
-                  autor_id: data.autor_id,
-                  tipo: 'comentario',
-                  texto: i18n.t('notif.genComento', { titulo: taskData.titulo, extracto: data.texto.slice(0, 50) }),
-                  tarea_id: data.tarea_id,
-                  proyecto_id: proyectoId,
-                  leido: false,
-                })
-              }
-            }
-          } catch (e) {
-            console.error('Error al insertar notificaciones en la base de datos:', e)
-          }
-        })()
-      }
-
       return data
     },
     onMutate: async (nuevo) => {
@@ -397,6 +189,7 @@ export function useCrearComentario() {
         texto: nuevo.texto,
         para_po: nuevo.para_po ?? false,
         resuelto: nuevo.resuelto ?? false,
+        correo_enviado_at: null,
         created_at: nuevo.created_at ?? new Date().toISOString(),
       }
       queryClient.setQueryData<Comentario[]>(queryKey, (viejo) => [...(viejo ?? []), optimista])
@@ -411,6 +204,15 @@ export function useCrearComentario() {
       void queryClient.invalidateQueries({ queryKey: qk.comentarios.all })
     },
   })
+}
+
+// Dispara el correo de un comentario sin bloquear la UI; un fallo solo se loguea.
+function avisarPorCorreo(comentarioId: string, preguntaId?: string) {
+  void postApi('/api/enviar-correo', { comentarioId, preguntaId })
+    .then(async (res) => {
+      if (!res.ok) console.error('No se pudo enviar el correo:', res.status, await res.text())
+    })
+    .catch((err: unknown) => console.error('No se pudo enviar el correo:', err))
 }
 
 // Actualizar comentario con merge optimista.

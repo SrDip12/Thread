@@ -6,6 +6,7 @@ import { estadoVM, fmtFecha, fmtRelativo, fmtFechaHora } from '../lib/ui.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
 import { useAuth } from '../auth/AuthProvider.tsx'
 import { usePersonas } from '../data/personas.ts'
+import { useProyectos } from '../data/proyectos.ts'
 import {
   useTareas,
   useTareasEnRevision,
@@ -18,10 +19,16 @@ import {
   useResolverRevision,
   type ModuloEnRevision,
 } from '../data/revisiones.ts'
-import { Avatar, Eyebrow, FechaTag, Skeleton, EmptyState, ProgressBar } from '../components/ui.tsx'
+import { Avatar, Eyebrow, FechaTag, PrioridadTag, Skeleton, EmptyState, ProgressBar } from '../components/ui.tsx'
 
 type Persona = Tables<'personas'>
 type Tab = 'tareas' | 'modulos'
+
+// Espejo en la UI de la función SQL `puede_aprobar` (la base es la que decide).
+function puedeAprobar(yo: Persona | null, visionId: string | null): boolean {
+  if (!yo) return false
+  return yo.rol === 'po' || !visionId || visionId === yo.id
+}
 
 // Selector Tareas/Módulos compartido por las dos vistas de la página.
 function Tabs({
@@ -99,9 +106,11 @@ function TareasRevision({
   const { data: personas } = usePersonas()
   const actualizar = useActualizarTarea()
   const crearComentario = useCrearComentario()
+  const { data: proyectos } = useProyectos()
   const [devolviendoId, setDevolviendoId] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
   const personaPorId = new Map((personas ?? []).map((p) => [p.id, p]))
+  const visionPorProyecto = new Map((proyectos ?? []).map((p) => [p.id, p.responsable_vision_id]))
 
   const aprobar = (tarea: TareaConProyecto) =>
     actualizar.mutate({ id: tarea.id, moduloId: tarea.modulo_id, cambios: { estado: 'hecho' } })
@@ -125,6 +134,12 @@ function TareasRevision({
         </p>
       </div>
       <div className="mb-6">{tabs}</div>
+
+      {actualizar.isError && (
+        <div className="mb-4 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-tint)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
+          {actualizar.error instanceof Error ? actualizar.error.message : tr('revisiones.errAprobar')}
+        </div>
+      )}
 
       {cargando && (
         <div className="flex flex-col gap-3">
@@ -151,6 +166,9 @@ function TareasRevision({
           const proy = t.modulos?.proyectos
           const resp = t.responsable_id ? personaPorId.get(t.responsable_id) : undefined
           const devolviendo = devolviendoId === t.id
+          const visionId = proy ? visionPorProyecto.get(proy.id) ?? null : null
+          const habilitado = puedeAprobar(yo, visionId)
+          const vision = visionId ? personaPorId.get(visionId) : undefined
           return (
             <div key={t.id} className="rounded-[13px] border border-line bg-surface px-[18px] py-4">
               <div className="mb-2 flex items-center gap-2 text-xs text-muted">
@@ -169,6 +187,7 @@ function TareasRevision({
                 <span className="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.01em] text-ink">
                   {t.titulo}
                 </span>
+                <PrioridadTag prioridad={t.prioridad} />
                 <FechaTag fecha={t.fecha} />
                 {resp && <Avatar nombre={resp.nombre} color={resp.color} size={24} />}
               </div>
@@ -222,6 +241,11 @@ function TareasRevision({
                     {tr('revisiones.verTareaExt')}
                   </button>
                   <div className="flex-1" />
+                  {!habilitado && (
+                    <span className="text-[11.5px] text-muted">
+                      {tr('revisiones.soloAprueba', { nombre: vision?.nombre ?? '' })}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -235,7 +259,7 @@ function TareasRevision({
                   <button
                     type="button"
                     onClick={() => aprobar(t)}
-                    disabled={actualizar.isPending}
+                    disabled={actualizar.isPending || !habilitado}
                     className="flex items-center gap-1.5 rounded-lg bg-[var(--color-ok-solid)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-[#3c624a] disabled:opacity-50"
                   >
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -376,9 +400,9 @@ function DetalleRevision({ modulo }: { modulo: ModuloEnRevision }) {
     [personas],
   )
 
-  // Permiso: solo el responsable de visión del proyecto puede aprobar/devolver.
-  const esResponsableVision =
-    Boolean(yo) && yo?.id === proyecto?.responsable_vision_id
+  // Permiso (mismo criterio que `puede_aprobar` en la base): responsable de visión,
+  // un PO, o cualquiera si el proyecto todavía no tiene responsable de visión.
+  const esResponsableVision = puedeAprobar(yo, proyecto?.responsable_vision_id ?? null)
   const responsableVision = proyecto?.responsable_vision_id
     ? personaPorId.get(proyecto.responsable_vision_id)
     : undefined

@@ -2,9 +2,6 @@ import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { qk } from './queryKeys.ts'
-import type { TablesInsert } from '../lib/database.types.ts'
-import { useMisTareas } from './tareas.ts'
-import { fmtFecha } from '../lib/ui.ts'
 import i18n from '../i18n/index.ts'
 
 export interface Notif {
@@ -17,10 +14,29 @@ export interface Notif {
   leido: boolean
   tarea_id: string | null
   tarea_titulo: string
+  tarea_fecha: string | null
   proyecto_id: string | null
   proyecto_nombre: string
   proyecto_color: string
   tipo: string
+  /** Sub-caso del tipo (revision: envio_revision | aprobo | devolvio). */
+  evento: string | null
+}
+
+// Forma cruda del select con embeds (database.types no declara Relationships).
+interface NotifFila {
+  id: string
+  created_at: string
+  autor_id: string | null
+  tipo: string
+  evento: string | null
+  texto: string
+  leido: boolean
+  tarea_id: string | null
+  proyecto_id: string | null
+  personas: { nombre: string; color: string } | null
+  tareas: { titulo: string; fecha: string | null } | null
+  proyectos: { nombre: string; color: string } | null
 }
 
 export function useNotificaciones(personaId: string) {
@@ -34,12 +50,13 @@ export function useNotificaciones(personaId: string) {
           created_at,
           autor_id,
           tipo,
+          evento,
           texto,
           leido,
           tarea_id,
           proyecto_id,
           personas:autor_id(nombre, color),
-          tareas(titulo),
+          tareas(titulo, fecha),
           proyectos(nombre, color)
         `)
         .eq('persona_id', personaId)
@@ -48,7 +65,7 @@ export function useNotificaciones(personaId: string) {
 
       if (error) throw error
 
-      return (data ?? []).map((n: any) => ({
+      return ((data ?? []) as unknown as NotifFila[]).map((n) => ({
         id: n.id,
         created_at: n.created_at,
         autor_id: n.autor_id,
@@ -58,10 +75,12 @@ export function useNotificaciones(personaId: string) {
         leido: n.leido,
         tarea_id: n.tarea_id,
         tarea_titulo: n.tareas?.titulo ?? '',
+        tarea_fecha: n.tareas?.fecha ?? null,
         proyecto_id: n.proyecto_id,
         proyecto_nombre: n.proyectos?.nombre ?? '',
         proyecto_color: n.proyectos?.color ?? 'var(--color-avatar-empty)',
         tipo: n.tipo,
+        evento: n.evento,
       }))
     },
     enabled: Boolean(personaId),
@@ -106,72 +125,22 @@ export function useMarcarTodasLeidas() {
   })
 }
 
-export function useCrearNotificacion() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (nueva: TablesInsert<'notificaciones'>): Promise<void> => {
-      const { error } = await supabase.from('notificaciones').insert(nueva)
-      if (error) throw error
-    },
-    onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: qk.notificaciones.byPersona(variables.persona_id),
-      })
-    },
-  })
-}
-
+// Al abrir la app, genera los avisos de vencimiento propios que falten (la función
+// SQL deduplica). El cron diario /api/digest hace lo mismo para todo el equipo, así
+// que esto solo adelanta los avisos si alguien entra antes del cron.
 export function useChequearVencimientos(personaId: string) {
-  const { data: misTareas } = useMisTareas(personaId)
-  const { data: notifs } = useNotificaciones(personaId)
-  const crearNotif = useCrearNotificacion()
-
-  // Registro de notificaciones de vencimiento ya solicitadas en esta sesión
-  const creadosRef = useRef<Set<string>>(new Set())
-  const ultimoPersonaIdRef = useRef<string | null>(null)
+  const queryClient = useQueryClient()
+  const hechoPara = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!personaId) {
-      creadosRef.current.clear()
-      ultimoPersonaIdRef.current = null
-      return
-    }
-
-    // Si cambia de usuario, limpiar el registro
-    if (ultimoPersonaIdRef.current !== personaId) {
-      creadosRef.current.clear()
-      ultimoPersonaIdRef.current = personaId
-    }
-
-    if (!misTareas || !notifs) return
-
-    const ahora = new Date()
-    ahora.setHours(0, 0, 0, 0)
-
-    const vencenPronto = misTareas.filter((t) => {
-      if (t.estado === 'hecho' || !t.fecha) return false
-      const fVence = new Date(t.fecha + 'T00:00:00')
-      const diffTiempo = fVence.getTime() - ahora.getTime()
-      const diffDias = diffTiempo / (1000 * 3600 * 24)
-      return diffDias <= 2 // vence hoy, mañana o ya vencida
-    })
-
-    for (const t of vencenPronto) {
-      const existeNotif = notifs.some((n) => n.tipo === 'vencimiento' && n.tarea_id === t.id)
-      
-      // Solo disparar la mutación si no existe en BD y no ha sido solicitada en esta sesión
-      if (!existeNotif && !creadosRef.current.has(t.id)) {
-        creadosRef.current.add(t.id)
-        crearNotif.mutate({
-          persona_id: personaId,
-          autor_id: null,
-          tipo: 'vencimiento',
-          texto: i18n.t('notif.vencimiento', { titulo: t.titulo, fecha: fmtFecha(t.fecha) }),
-          tarea_id: t.id,
-          proyecto_id: t.modulos?.proyectos?.id ?? null,
-          leido: false,
-        })
+    if (!personaId || hechoPara.current === personaId) return
+    hechoPara.current = personaId
+    void supabase.rpc('generar_avisos_vencimiento', {}).then(({ data, error }) => {
+      if (error) {
+        console.error('No se pudieron generar los avisos de vencimiento:', error.message)
+        return
       }
-    }
-  }, [misTareas, notifs, personaId, crearNotif])
+      if (data) void queryClient.invalidateQueries({ queryKey: qk.notificaciones.byPersona(personaId) })
+    })
+  }, [personaId, queryClient])
 }

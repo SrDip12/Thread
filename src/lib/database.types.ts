@@ -61,6 +61,7 @@ export interface Database {
           para_quien: string | null
           problema: string | null
           responsable_vision_id: string | null
+          repo_url: string | null
           created_at: string
         }
         Insert: {
@@ -73,6 +74,7 @@ export interface Database {
           para_quien?: string | null
           problema?: string | null
           responsable_vision_id?: string | null
+          repo_url?: string | null
           created_at?: string
         }
         Update: {
@@ -85,6 +87,7 @@ export interface Database {
           para_quien?: string | null
           problema?: string | null
           responsable_vision_id?: string | null
+          repo_url?: string | null
           created_at?: string
         }
       }
@@ -217,6 +220,8 @@ export interface Database {
           reunion_id: string | null
           tipo: Database['public']['Enums']['tipo_tarea']
           criterio: string | null
+          prioridad: Database['public']['Enums']['prioridad_tarea']
+          pr_url: string | null
           created_at: string
           updated_at: string
         }
@@ -233,6 +238,8 @@ export interface Database {
           reunion_id?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
           criterio?: string | null
+          prioridad?: Database['public']['Enums']['prioridad_tarea']
+          pr_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -249,6 +256,8 @@ export interface Database {
           reunion_id?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
           criterio?: string | null
+          prioridad?: Database['public']['Enums']['prioridad_tarea']
+          pr_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -281,6 +290,7 @@ export interface Database {
           texto: string
           para_po: boolean
           resuelto: boolean
+          correo_enviado_at: string | null
           created_at: string
         }
         Insert: {
@@ -291,6 +301,7 @@ export interface Database {
           texto: string
           para_po?: boolean
           resuelto?: boolean
+          correo_enviado_at?: string | null
           created_at?: string
         }
         Update: {
@@ -301,6 +312,7 @@ export interface Database {
           texto?: string
           para_po?: boolean
           resuelto?: boolean
+          correo_enviado_at?: string | null
           created_at?: string
         }
       }
@@ -437,6 +449,7 @@ export interface Database {
           persona_id: string
           autor_id: string | null
           tipo: string
+          evento: string | null
           texto: string
           leido: boolean
           tarea_id: string | null
@@ -448,6 +461,7 @@ export interface Database {
           persona_id: string
           autor_id?: string | null
           tipo: string
+          evento?: string | null
           texto: string
           leido?: boolean
           tarea_id?: string | null
@@ -459,6 +473,7 @@ export interface Database {
           persona_id?: string
           autor_id?: string | null
           tipo?: string
+          evento?: string | null
           texto?: string
           leido?: boolean
           tarea_id?: string | null
@@ -466,9 +481,73 @@ export interface Database {
           created_at?: string
         }
       }
+      decisiones: {
+        Relationships: []
+        Row: {
+          id: string
+          proyecto_id: string
+          reunion_id: string | null
+          autor_id: string | null
+          texto: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          proyecto_id: string
+          reunion_id?: string | null
+          autor_id?: string | null
+          texto: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          proyecto_id?: string
+          reunion_id?: string | null
+          autor_id?: string | null
+          texto?: string
+          created_at?: string
+        }
+      }
     }
-    Views: Record<never, never>
-    Functions: Record<never, never>
+    Views: {
+      v_salud_proyectos: {
+        Relationships: []
+        Row: {
+          proyecto_id: string
+          total: number
+          hechas: number
+          vencidas: number
+          en_revision: number
+          en_curso: number
+          sin_asignar: number
+          correcciones: number
+          alta_abiertas: number
+          ultima_actividad: string | null
+        }
+      }
+    }
+    Functions: {
+      generar_avisos_vencimiento: {
+        Args: { p_persona?: string | null }
+        Returns: number
+      }
+      persona_actual_id: {
+        Args: Record<string, never>
+        Returns: string | null
+      }
+      personas_mencionadas: {
+        Args: { p_texto: string }
+        Returns: string[]
+      }
+      puede_aprobar: {
+        Args: { p_proyecto: string }
+        Returns: boolean
+      }
+      es_miembro: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+    }
     Enums: {
       rol_persona: 'po' | 'dev'
       estado_proyecto: 'activo' | 'pausado' | 'cerrado'
@@ -477,6 +556,7 @@ export interface Database {
       estado_sprint: 'planificado' | 'activo' | 'cerrado'
       tipo_reunion: 'sprint_planning' | 'retro' | 'sync' | 'otro' | 'cliente'
       tipo_tarea: 'tarea' | 'correccion'
+      prioridad_tarea: 'alta' | 'media' | 'baja'
     }
     CompositeTypes: Record<never, never>
   }

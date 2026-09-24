@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Tables } from '../lib/database.types.ts'
-import { ESTADOS, estadoVM, fmtFecha, fmtFechaHora } from '../lib/ui.ts'
+import { ESTADOS, PRIORIDADES, estadoVM, fmtFecha, fmtFechaHora, prioridadVM, type Prioridad } from '../lib/ui.ts'
 import i18n from '../i18n/index.ts'
 import {
   useActualizarTarea,
@@ -190,6 +190,21 @@ export default function TareaPanel({
             </select>
           </Fila>
 
+          <Fila etiqueta={t('tareaPanel.prioridad')}>
+            <select
+              value={tarea.prioridad}
+              onChange={(e) => setCambios({ prioridad: e.target.value as Prioridad })}
+              className="rounded-lg py-[3px] pl-2 pr-2 text-[12.5px] font-semibold outline-none"
+              style={{ background: prioridadVM(tarea.prioridad).bg, color: prioridadVM(tarea.prioridad).fg }}
+            >
+              {PRIORIDADES.map((p) => (
+                <option key={p} value={p}>
+                  {prioridadVM(p).label}
+                </option>
+              ))}
+            </select>
+          </Fila>
+
           <Fila etiqueta={t('tareaPanel.tipo')}>
             {(() => {
               const vm = tipoVM(tarea.tipo)
@@ -227,6 +242,33 @@ export default function TareaPanel({
             />
             <FechaTag fecha={tarea.fecha} done={tarea.estado === 'hecho'} />
           </Fila>
+
+          <Fila etiqueta={t('tareaPanel.pr')}>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <InlineEdit
+                value={tarea.pr_url ?? ''}
+                onSave={(v) => setCambios({ pr_url: v || null })}
+                multiline
+                placeholder={t('tareaPanel.prPlaceholder')}
+                viewClassName="min-w-0 flex-1 truncate rounded-md px-1 py-0.5 font-mono text-[12px] text-ink-soft hover:bg-hover"
+                editClassName="w-full resize-none rounded-md border border-brand bg-surface px-1.5 py-1 font-mono text-[12px] outline-none"
+              />
+              {tarea.pr_url && /^https?:\/\//.test(tarea.pr_url) && (
+                <a
+                  href={tarea.pr_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-none text-[12px] font-semibold text-brand hover:underline"
+                >
+                  {t('tareaPanel.abrirPr')}
+                </a>
+              )}
+            </div>
+          </Fila>
+        </div>
+        <div className="mt-3 rounded-lg bg-canvas px-3 py-2 text-[11.5px] leading-[1.5] text-muted">
+          {t('tareaPanel.prAyuda')}{' '}
+          <code className="select-all font-mono text-[11px] text-ink-soft">Thread-Tarea: {tarea.id}</code>
         </div>
       </div>
 

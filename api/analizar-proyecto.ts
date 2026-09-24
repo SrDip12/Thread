@@ -2,6 +2,9 @@
 // Recibe el texto de un documento (Markdown: requisitos, RF, alcance…), llama a
 // Groq y devuelve una propuesta de módulos con sus tareas. La API key SOLO vive
 // como env var de Vercel (process.env.GROQ_API_KEY); NUNCA en el cliente.
+// Requiere sesión de Supabase de un miembro activo (header Authorization).
+
+import { autenticar, json } from './_lib/supabase'
 
 export const config = { runtime: 'edge' }
 
@@ -22,13 +25,6 @@ interface ModuloPropuesto {
   nombre: string
   descripcion: string | null
   tareas: TareaPropuesta[]
-}
-
-function json(cuerpo: unknown, status = 200): Response {
-  return new Response(JSON.stringify(cuerpo), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  })
 }
 
 function normalizarTexto(valor: unknown): string | null {
@@ -91,6 +87,9 @@ export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
     return json({ error: 'Método no permitido.' }, 405)
   }
+
+  const sesion = await autenticar(request)
+  if (sesion instanceof Response) return sesion
 
   let cuerpoCrudo: unknown
   try {

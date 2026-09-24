@@ -12,6 +12,8 @@ interface AuthContextValue {
   cargando: boolean
   /** Falla real de la query de personas (red/permiso), distinta de "email no registrado". */
   error: string | null
+  /** Login email+password. Devuelve el mensaje de error o null si entró. */
+  signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
 }
 
@@ -72,12 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  async function signIn(email: string, password: string): Promise<string | null> {
+    const { error: errLogin } = await supabase.auth.signInWithPassword({ email, password })
+    return errLogin?.message ?? null
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ session, persona, cargando, error, signOut }}>
+    <AuthContext.Provider value={{ session, persona, cargando, error, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

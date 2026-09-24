@@ -18,6 +18,7 @@ const Reuniones = lazy(() => import('./pages/Reuniones.tsx'))
 const ReunionDetalle = lazy(() => import('./pages/ReunionDetalle.tsx'))
 const Calendario = lazy(() => import('./pages/Calendario.tsx'))
 const Revisiones = lazy(() => import('./pages/Revisiones.tsx'))
+const Cartera = lazy(() => import('./pages/Cartera.tsx'))
 
 function CargandoRuta() {
   const { t } = useTranslation()
@@ -50,6 +51,7 @@ function Rutas() {
           <Route path="/reuniones/:id" element={<ReunionDetalle />} />
           <Route path="/calendario" element={<Calendario />} />
           <Route path="/revisiones" element={<Revisiones />} />
+          <Route path="/cartera" element={<Cartera />} />
           <Route path="/equipo" element={<Equipo />} />
         </Route>
         <Route path="*" element={<NoEncontrado />} />

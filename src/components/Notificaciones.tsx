@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider.tsx'
-import { useNotificaciones, useMarcarLeida, useMarcarTodasLeidas } from '../data/notificaciones.ts'
+import { useNotificaciones, useMarcarLeida, useMarcarTodasLeidas, type Notif } from '../data/notificaciones.ts'
 import { useRealtimeNotificaciones } from '../data/realtime.ts'
-import { fmtRelativo } from '../lib/ui.ts'
+import { fmtFecha, fmtRelativo } from '../lib/ui.ts'
 import { rutaTarea, volverDesde } from '../lib/navegacion.ts'
 import { Avatar } from './ui.tsx'
 
@@ -23,6 +23,28 @@ export default function Campana() {
   const marcarTodasLeidas = useMarcarTodasLeidas()
 
   const [abierto, setAbierto] = useState(false)
+
+  // Verbo traducido según tipo/evento; null → se muestra el texto persistido.
+  const accionNotif = (n: Notif): string | null => {
+    if (!n.tarea_titulo) return null
+    switch (n.tipo) {
+      case 'mencion':
+        return t('notif.mencion')
+      case 'pregunta':
+        return t('notif.pregunta')
+      case 'comentario':
+        return t('notif.comentario')
+      case 'asignacion':
+        return t('notif.asignacion')
+      case 'revision':
+        if (n.evento === 'envio_revision') return t('notif.revEnvio')
+        if (n.evento === 'aprobo') return t('notif.revAprobo')
+        if (n.evento === 'devolvio') return t('notif.revDevolvio')
+        return null
+      default:
+        return null
+    }
+  }
 
   const lista = notifs ?? []
   const noLeidas = lista.filter((n) => !n.leido).length
@@ -90,15 +112,19 @@ export default function Campana() {
                       <div className="min-w-0 flex-1">
                         <div className="text-[12.5px] leading-snug text-ink">
                           {n.tipo === 'vencimiento' ? (
-                            <span className="text-muted font-normal">{n.texto}</span>
+                            <span className="text-muted font-normal">
+                              {n.tarea_titulo
+                                ? t('notif.vencimiento', { titulo: n.tarea_titulo, fecha: fmtFecha(n.tarea_fecha) })
+                                : n.texto}
+                            </span>
                           ) : (
                             <>
                               <span className="font-bold">{n.autor_nombre}</span>{' '}
-                              {n.tipo === 'mencion' && <>{t('notif.mencion')} <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'pregunta' && <>{t('notif.pregunta')} <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'comentario' && <>{t('notif.comentario')} <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {n.tipo === 'asignacion' && <>{t('notif.asignacion')} <span className="font-semibold">{n.tarea_titulo}</span></>}
-                              {!['mencion', 'pregunta', 'comentario', 'asignacion'].includes(n.tipo) && n.texto}
+                              {accionNotif(n) ? (
+                                <>{accionNotif(n)} <span className="font-semibold">{n.tarea_titulo}</span></>
+                              ) : (
+                                n.texto
+                              )}
                             </>
                           )}
                         </div>

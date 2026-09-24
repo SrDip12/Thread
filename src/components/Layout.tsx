@@ -74,6 +74,17 @@ const navPrincipal: NavItem[] = [
       </svg>
     ),
   },
+  {
+    // Salud de todos los proyectos: la vista de la reunión semanal de socios.
+    to: '/cartera',
+    label: 'nav.cartera',
+    icon: (
+      <svg {...iconProps} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 13.5h12" />
+        <path d="M4 11V8M7 11V4.5M10 11V6.5M13 11V9" />
+      </svg>
+    ),
+  },
 ]
 
 const navSecundaria: NavItem[] = [

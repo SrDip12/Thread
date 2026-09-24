@@ -25,6 +25,25 @@ export interface ResultadoBusqueda {
   }[]
 }
 
+// Formas crudas de los selects con embeds (database.types no declara Relationships).
+type ModuloEmbed = {
+  nombre: string
+  proyecto_id: string
+  proyectos: { nombre: string; color: string } | null
+} | null
+interface TareaFila {
+  id: string
+  titulo: string
+  modulo_id: string
+  modulos: ModuloEmbed
+}
+interface ComentarioFila {
+  id: string
+  texto: string
+  tarea_id: string | null
+  tareas: { titulo: string; modulo_id: string; modulos: ModuloEmbed } | null
+}
+
 export function useBuscarGlobal(q: string) {
   const term = q.trim()
   return useQuery({
@@ -32,38 +51,28 @@ export function useBuscarGlobal(q: string) {
     queryFn: async (): Promise<ResultadoBusqueda> => {
       if (!term) return { proyectos: [], tareas: [], personas: [], comentarios: [] }
 
-      // 1. Buscar proyectos
-      const { data: proys } = await supabase
-        .from('proyectos')
-        .select('id, nombre, color')
-        .ilike('nombre', `%${term}%`)
-        .limit(5)
-
-      // 2. Buscar personas
-      const { data: pers } = await supabase
-        .from('personas')
-        .select('id, nombre, email, color')
-        .ilike('nombre', `%${term}%`)
-        .limit(5)
-
-      // 3. Buscar tareas (resolviendo módulo y proyecto)
-      const { data: targs } = await supabase
-        .from('tareas')
-        .select('id, titulo, modulo_id, modulos(nombre, proyecto_id, proyectos(nombre, color))')
-        .ilike('titulo', `%${term}%`)
-        .limit(10)
-
-      // 4. Buscar comentarios (resolviendo tarea y proyecto)
-      const { data: coms } = await supabase
-        .from('comentarios')
-        .select('id, texto, tarea_id, tareas(titulo, modulo_id, modulos(nombre, proyecto_id, proyectos(nombre, color)))')
-        .ilike('texto', `%${term}%`)
-        .limit(5)
+      const patron = `%${term}%`
+      const [proys, pers, targs, coms] = await Promise.all([
+        supabase.from('proyectos').select('id, nombre, color').ilike('nombre', patron).limit(5),
+        supabase.from('personas').select('id, nombre, email, color').ilike('nombre', patron).limit(5),
+        supabase
+          .from('tareas')
+          .select('id, titulo, modulo_id, modulos(nombre, proyecto_id, proyectos(nombre, color))')
+          .ilike('titulo', patron)
+          .limit(10),
+        supabase
+          .from('comentarios')
+          .select('id, texto, tarea_id, tareas(titulo, modulo_id, modulos(nombre, proyecto_id, proyectos(nombre, color)))')
+          .ilike('texto', patron)
+          .limit(5),
+      ])
+      const error = proys.error ?? pers.error ?? targs.error ?? coms.error
+      if (error) throw error
 
       return {
-        proyectos: (proys ?? []) as { id: string; nombre: string; color: string }[],
-        personas: (pers ?? []) as { id: string; nombre: string; email: string; color: string }[],
-        tareas: ((targs ?? []) as any[]).map((t) => ({
+        proyectos: proys.data ?? [],
+        personas: pers.data ?? [],
+        tareas: ((targs.data ?? []) as unknown as TareaFila[]).map((t) => ({
           id: t.id,
           titulo: t.titulo,
           modulo_id: t.modulo_id,
@@ -72,12 +81,12 @@ export function useBuscarGlobal(q: string) {
           proyecto_nombre: t.modulos?.proyectos?.nombre ?? '',
           proyecto_color: t.modulos?.proyectos?.color ?? '#c96442',
         })),
-        comentarios: ((coms ?? []) as any[])
-          .filter((c) => c.tareas) // Filtrar por si la tarea fue eliminada
+        comentarios: ((coms.data ?? []) as unknown as ComentarioFila[])
+          .filter((c) => c.tareas && c.tarea_id) // Comentarios de módulo o de tareas borradas
           .map((c) => ({
             id: c.id,
             texto: c.texto,
-            tarea_id: c.tarea_id,
+            tarea_id: c.tarea_id as string,
             tarea_titulo: c.tareas?.titulo ?? '',
             modulo_id: c.tareas?.modulo_id ?? '',
             proyecto_id: c.tareas?.modulos?.proyecto_id ?? '',

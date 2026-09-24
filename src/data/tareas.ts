@@ -4,10 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types.ts'
 import { supabase } from '../lib/supabase.ts'
-import { useAuth } from '../auth/AuthProvider.tsx'
 import { diasHasta } from '../lib/ui.ts'
 import { qk } from './queryKeys.ts'
-import i18n from '../i18n/index.ts'
 
 type Tarea = Tables<'tareas'>
 
@@ -292,6 +290,8 @@ export function useCrearTarea() {
         reunion_id: nueva.reunion_id ?? null,
         tipo: nueva.tipo ?? 'tarea',
         criterio: nueva.criterio ?? null,
+        prioridad: nueva.prioridad ?? 'media',
+        pr_url: nueva.pr_url ?? null,
         created_at: nueva.created_at ?? ahora,
         updated_at: nueva.updated_at ?? ahora,
       }
@@ -332,10 +332,10 @@ export function useCrearTarea() {
 }
 
 // Actualizar tarea con merge optimista en todas las vistas.
+// Los avisos (asignación, entra/sale de revisión) los genera el trigger
+// `tareas_notificar` en la base; la aprobación la valida `tareas_validar_aprobacion`.
 export function useActualizarTarea() {
   const queryClient = useQueryClient()
-  const { persona } = useAuth()
-  const yoId = persona?.id ?? null
   return useMutation({
     mutationFn: async ({
       id,
@@ -345,26 +345,6 @@ export function useActualizarTarea() {
       moduloId: string
       cambios: TablesUpdate<'tareas'>
     }): Promise<Tarea> => {
-      // El estado previo hace falta para notificar una asignación nueva o una
-      // transición de revisión; en el resto de updates (fechas…) va directo el UPDATE.
-      const notificar = Boolean(cambios.responsable_id) && cambios.responsable_id !== yoId
-      const cambiaEstado = Boolean(cambios.estado)
-      let previa: {
-        responsable_id: string | null
-        titulo: string
-        modulo_id: string
-        estado: Tarea['estado']
-      } | null = null
-      if (notificar || cambiaEstado) {
-        const { data: actual, error: errGet } = await supabase
-          .from('tareas')
-          .select('responsable_id, titulo, modulo_id, estado')
-          .eq('id', id)
-          .single()
-        if (errGet) throw errGet
-        previa = actual
-      }
-
       const { data, error } = await supabase
         .from('tareas')
         .update(cambios)
@@ -372,78 +352,6 @@ export function useActualizarTarea() {
         .select()
         .single()
       if (error) throw error
-
-      // Avisar al nuevo responsable (si no se autoasignó y de verdad cambió).
-      if (notificar && previa && cambios.responsable_id !== previa.responsable_id) {
-        try {
-          const { data: mod } = await supabase
-            .from('modulos')
-            .select('proyecto_id')
-            .eq('id', previa.modulo_id)
-            .single()
-          await supabase.from('notificaciones').insert({
-            persona_id: cambios.responsable_id as string,
-            autor_id: yoId,
-            tipo: 'asignacion',
-            texto: i18n.t('notif.genAsigno', { titulo: previa.titulo }),
-            tarea_id: id,
-            proyecto_id: mod?.proyecto_id ?? null,
-            leido: false,
-          })
-        } catch (e) {
-          console.error('Error al insertar notificación de asignación:', e)
-        }
-      }
-
-      // Transiciones de revisión: avisar al responsable de visión cuando una
-      // tarea entra a revisión, y al responsable cuando se la aprueban o devuelven.
-      if (previa && cambios.estado && cambios.estado !== previa.estado) {
-        try {
-          const entraARevision = cambios.estado === 'revision'
-          const saleDeRevision = previa.estado === 'revision'
-          if (entraARevision || saleDeRevision) {
-            const { data: mod } = await supabase
-              .from('modulos')
-              .select('proyecto_id, proyectos(id, responsable_vision_id)')
-              .eq('id', previa.modulo_id)
-              .single()
-            const proyecto = (mod as unknown as {
-              proyecto_id: string
-              proyectos: { id: string; responsable_vision_id: string | null } | null
-            } | null)?.proyectos
-            const avisos: { persona_id: string; texto: string }[] = []
-            if (entraARevision && proyecto?.responsable_vision_id && proyecto.responsable_vision_id !== yoId) {
-              avisos.push({
-                persona_id: proyecto.responsable_vision_id,
-                texto: i18n.t('notif.genEnvioRevision', { titulo: previa.titulo }),
-              })
-            }
-            if (saleDeRevision && previa.responsable_id && previa.responsable_id !== yoId) {
-              if (cambios.estado === 'hecho') {
-                avisos.push({ persona_id: previa.responsable_id, texto: i18n.t('notif.genAprobo', { titulo: previa.titulo }) })
-              } else if (cambios.estado === 'en_curso') {
-                avisos.push({ persona_id: previa.responsable_id, texto: i18n.t('notif.genDevolvio', { titulo: previa.titulo }) })
-              }
-            }
-            if (avisos.length) {
-              await supabase.from('notificaciones').insert(
-                avisos.map((a) => ({
-                  persona_id: a.persona_id,
-                  autor_id: yoId,
-                  tipo: 'revision',
-                  texto: a.texto,
-                  tarea_id: id,
-                  proyecto_id: proyecto?.id ?? null,
-                  leido: false,
-                })),
-              )
-            }
-          }
-        } catch (e) {
-          console.error('Error al insertar notificación de revisión:', e)
-        }
-      }
-
       return data
     },
     onMutate: async ({ id, cambios }) => {

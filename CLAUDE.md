@@ -20,7 +20,9 @@ App web de gestión de proyectos/tareas. UI **en español**.
 /public            Estáticos. vercel.json hace el fallback SPA (rewrites).
 /src
   /components       Componentes compartidos (Layout, etc.)
-  /lib              Clientes/infra (supabase.ts)
+    /proyecto       Secciones de ProyectoDetalle (definición, decisiones, cliente, módulos, acciones)
+    /sprint         Piezas de la página Sprint (VistaSprint, CrearSprintRapido)
+  /lib              Clientes/infra (supabase.ts, api.ts) + helpers puros (ui.ts, salud.ts)
   /pages            Vistas por ruta
   App.tsx           Definición de rutas
   main.tsx          Entry: StrictMode + QueryClient + Router
@@ -55,13 +57,18 @@ App base en español con inglés como alternativa. **i18next + react-i18next + i
 npm run dev         # servidor de desarrollo (Vite)
 npm run build       # tsc -b + vite build
 npm run typecheck   # solo chequeo de tipos
+npm test            # vitest: unitarios + TODAS las migraciones y triggers en PGlite (sin Docker)
 npm run preview     # sirve el build de prod
 ```
+
+Tests: `src/**/*.test.ts` y `api/**/*.test.ts` (lógica pura) y `supabase/tests/migraciones.test.ts`
+(aplica cada migración sobre Postgres embebido con stubs de `auth.*` y prueba triggers/funciones).
+**Al cambiar el esquema o un trigger, agregá el caso ahí.** CI corre typecheck + tests + build.
 
 ## Env
 
 Copiar `.env.example` a `.env` y completar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-En producción, definirlas en Cloudflare Pages.
+En producción, definirlas en Vercel (ver «Deploy»). `.env.example` lista también las variables solo-servidor.
 
 ## Base de datos (Supabase)
 
@@ -87,16 +94,23 @@ supabase gen types typescript --local > src/lib/database.types.ts   # regenerar 
 Para entorno remoto: `supabase link --project-ref <ref>`, `supabase db push`, y `gen types --linked`.
 **Regenerá `src/lib/database.types.ts` después de cada cambio de esquema.** Los tipos actuales fueron escritos a mano (no había Docker al crearlos); al regenerar incluirán el bloque `Relationships`.
 
-### RLS — estado actual y cómo endurecer
+### RLS — modelo actual
 
-Hoy: RLS **activado** en todas las tablas con una política permisiva `auth_all_<tabla>` → cualquier usuario **autenticado** lee y escribe todo. El rol `anon` no tiene acceso. Punto de partida, no para producción con datos sensibles.
+Modelo **equipo único** (`…_rls_equipo.sql` + `…_seguridad_avisos.sql`): `personas.user_id` ↔ `auth.users`; helpers `SECURITY DEFINER` `es_miembro()`, `es_po()`, `persona_actual_id()`, `puede_aprobar(proyecto)`.
+- Toda persona **activa** lee/escribe las tablas generales. `anon` no ve nada. Signup público cerrado (`config.toml` y Dashboard): las cuentas las invita un PO.
+- `notificaciones`: cada uno ve/marca **solo las suyas**; nadie inserta desde el cliente (solo triggers).
+- `mensajes`: se escribe/borra solo lo propio. `personas`: gestión solo PO.
+- **Permisos por proyecto**: aprobar una tarea (revision → hecho), registrar la revisión de un módulo y borrar el proyecto → su **responsable de visión**, un PO, o cualquiera si el proyecto no tiene responsable (trigger `tareas_validar_aprobacion`). La UI lo refleja (`puedeAprobar` en `Revisiones.tsx`) pero decide la base.
+- Recordar: un `UPDATE` necesita también policy de `SELECT`. Verificar con `supabase db advisors` antes de subir.
 
-Plan de cierre (cuando haya modelo de acceso real):
-1. Mapear `auth.users.id` ↔ `personas` (agregar `personas.user_id uuid references auth.users` o usar `personas.id = auth.uid()`).
-2. Reemplazar cada `auth_all_*` por políticas por operación (`select`/`insert`/`update`/`delete`) según pertenencia: ej. una persona solo edita tareas de proyectos donde es miembro.
-3. Guardar el **rol** (`po`/`dev`) en `app_metadata` (no en `user_metadata`, es editable por el usuario) y leerlo con `auth.jwt()` para permisos de PO.
-4. Recordar: un `UPDATE` necesita también policy de `SELECT` (si no, devuelve 0 filas sin error).
-5. Verificar con `supabase db advisors` (lints de seguridad/RLS) antes de subir.
+### Notificaciones (servidor)
+
+Las notificaciones in-app las generan **triggers** — web, MCP y webhook producen lo mismo sin código duplicado:
+- `tareas_notificar`: asignación (a otro), entra a revisión (→ responsable de visión), aprobada/devuelta (→ responsable). Columna `evento` (`envio_revision|aprobo|devolvio`) para que la UI traduzca.
+- `comentarios_notificar`: menciones `@nombre`, pregunta para el PO, comentario al responsable (sin duplicar).
+- `generar_avisos_vencimiento()`: tareas que vencen en ≤2 días; la llama el cron diario (todo el equipo) y cada cliente al abrir la app (solo las propias). Idempotente.
+- `texto` se guarda en español como respaldo; `Notificaciones.tsx` arma el mensaje por `tipo`/`evento` con i18n.
+- Correos: `POST /api/enviar-correo { comentarioId, preguntaId? }` — el servidor resuelve destinatarios con la RLS del usuario, solo el autor puede dispararlo y una vez (`comentarios.correo_enviado_at`). HTML siempre escapado (`api/_lib/correo.ts`).
 
 ## Datos y Auth
 
@@ -108,6 +122,8 @@ Plan de cierre (cuando haya modelo de acceso real):
 
 Para una entidad/operación nueva: agregá el hook en su módulo de `src/data/`, no en el componente.
 
+**Functions de `/api`**: todas exigen sesión salvo el cron y el webhook. Desde el cliente se llaman con `postApi(ruta, cuerpo)` (`src/lib/api.ts`, agrega `Authorization: Bearer <token>`); del lado servidor, `autenticar(request)` de `api/_lib/supabase.ts` valida el JWT y que sea persona activa, y devuelve un cliente con la RLS del usuario. `clienteServicio()` (service role) solo para cron/webhook. Los archivos `api/_lib/*` no son rutas.
+
 ## Diseño
 
 `/design` (export de Claude Design) es la fuente visual de la verdad — **no modificar**. Lenguaje: minimalista cálido, lienzo hueso `#faf9f7`, acento terracota `#c96442`, un color de acento por proyecto (`proyectos.color`), estados gris/azul/verde, tipografía Manrope + JetBrains Mono (métricas).
@@ -117,7 +133,8 @@ Para una entidad/operación nueva: agregá el hook en su módulo de `src/data/`,
 - Colores dinámicos (acento por proyecto, estados de tarea) → inline desde `src/lib/ui.ts` (`estadoVM`, `iniciales`, `fmtFecha`).
 - Presentacionales reutilizables → `src/components/ui.tsx` (`Avatar`, `AvatarStack`, `EstadoChip`, `FechaTag`, `ProgressBar`, `Eyebrow`, `InlineEdit`, `Skeleton`, `EmptyState`).
 - Señal de vencimiento: `fechaVM`/`diasHasta` en `src/lib/ui.ts` + `FechaTag` (rojo vencida, marca hoy, ámbar mañana). Usada en todas las filas de tarea.
-- Pantallas en `src/pages/`: `Hoy` (home: vencidas/para hoy/semana/reuniones del día), `Proyectos`, `ProyectoDetalle` (módulos = secciones, filas densas, panel lateral `TareaPanel`, vista Kanban), `Sprint`, `ProyectoGantt`, `MisTareas` (filtros pendientes/hechas, orden por vencimiento), `ParaMi`, `Reuniones`, `ReunionDetalle`, `Calendario` (reuniones + mis vencimientos), `Revisiones` (tabs: **Tareas** en estado `revision` para aprobar/devolver con motivo + **Módulos** con la compuerta del responsable de visión), `Equipo`.
+- Prioridad de tarea (`alta|media|baja`, default media): `PrioridadTag` en filas (solo marca alta), `compararFoco` en `src/lib/ui.ts` ordena prioridad → vencimiento (Hoy, Mis tareas, `siguiente_tarea` del MCP).
+- Pantallas en `src/pages/`: `Hoy` (home: vencidas/para hoy/semana/reuniones del día), `Cartera` (salud de todos los proyectos desde la vista SQL `v_salud_proyectos`: avance, vencidas, en revisión, sin dueño, prioridad alta, tasa de corrección y **días sin actividad**; semáforo en `src/lib/salud.ts`), `Proyectos`, `ProyectoDetalle` (módulos = secciones, filas densas, panel lateral `TareaPanel`, vista Kanban), `Sprint`, `ProyectoGantt`, `MisTareas` (filtros pendientes/hechas, orden por vencimiento), `ParaMi`, `Reuniones`, `ReunionDetalle`, `Calendario` (reuniones + mis vencimientos), `Revisiones` (tabs: **Tareas** en estado `revision` para aprobar/devolver con motivo + **Módulos** con la compuerta del responsable de visión), `Equipo`.
 
 ## Sprints (liviano)
 
@@ -133,6 +150,7 @@ Registra reuniones (no las agenda) y convierte notas en tareas. Datos `src/data/
 - Cada función declara `export const config = { runtime: 'edge' }` y exporta `default async function handler(request: Request)`. La otra función IA es `api/analizar-proyecto.ts` (cliente `src/lib/analizarProyecto.ts`).
 - Recibe `{ notas, personas[], modulos[] }`, devuelve `{ tareas: [{ titulo, responsable_sugerido, modulo_sugerido, fecha }] }` (validado/tipado). Cliente: `src/lib/extraer.ts`.
 - Las tareas **nunca** se crean sin revisión: el detalle muestra una vista editable (responsable/módulo/fecha) antes de confirmar; al confirmar se crean con `reunion_id` + `sprint_id`.
+- En reuniones internas la IA también devuelve `decisiones: string[]`; se revisan igual y se guardan en la tabla `decisiones` (→proyecto, →reunión?). Registro por proyecto en `DecisionesSeccion` (ProyectoDetalle), datos en `src/data/decisiones.ts`.
 - **Dev local**: `vite dev` NO ejecuta Functions. Para probar la IA local: `vercel dev` (sirve `/api`) con `GROQ_API_KEY` en `.env.local`, o probá contra el deploy.
 
 ## Realtime
@@ -151,10 +169,16 @@ Build de Vite: **build command** `npm run build`, **output dir** `dist`. Node 20
 1. Push del repo a GitHub/GitLab.
 2. Vercel dashboard → **Add New → Project → Import** el repo.
 3. Build settings: framework preset **Vite** (autodetectado), **build command** `npm run build`, **output directory** `dist`. No hay deploy command.
-4. **Variables de entorno** (Settings → Environment Variables):
-   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` → públicas (Vite las inyecta en build).
-   - `GROQ_API_KEY` → solo la Function la lee en runtime (`process.env`); nunca llega al cliente.
+4. **Variables de entorno** (Settings → Environment Variables; lista completa en `.env.example`):
+   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` → públicas (Vite las inyecta en build; las Functions también las leen).
+   - Solo servidor: `GROQ_API_KEY`, `RESEND_API_KEY` + `RESEND_FROM`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `GITHUB_WEBHOOK_SECRET`, `APP_URL`. Nunca con prefijo `VITE_`.
 5. Deploy. Cada push redeploya (Preview en ramas, Production en `main`).
+
+### Resumen diario (cron)
+`vercel.json → crons` llama `GET /api/digest` lun–vie 11:00 UTC (08:00 en UTC-3). Valida `CRON_SECRET`, corre `generar_avisos_vencimiento()` para todo el equipo y manda a cada persona un correo con: reuniones del día, vencidas, por vencer (≤2 días), lo que espera su revisión y los proyectos que lidera sin actividad ≥7 días. Si no hay nada, no manda.
+
+### GitHub → tareas (webhook)
+`POST /api/github` (evento *Pull requests*, secreto `GITHUB_WEBHOOK_SECRET`, firma HMAC verificada). Un PR se vincula a una tarea si su título/descripción/rama contiene el **uuid** de la tarea (convención: `Thread-Tarea: <id>` en la descripción; el panel de tarea lo muestra para copiar) o si `tareas.pr_url` ya apunta a él. PR abierto → `pr_url` + estado **revisión**; mergeado → **hecho**. Si el proyecto tiene `repo_url`, solo cuentan PRs de ese repo. Escribe con service role; los avisos salen de los triggers.
 
 ### Comandos
 ```
@@ -173,16 +197,20 @@ Para `vercel dev` con el secret local: `vercel env add GROQ_API_KEY` (remoto) o 
 Claude Code/Desktop. Cada persona lo corre con su login de la app (`THREAD_EMAIL`/`THREAD_PASSWORD`
 en `.env.local`); usa `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` de `.env` y la misma RLS que la web.
 `.mcp.json` en la raíz lo registra a nivel proyecto (Claude Code lo ofrece al abrir el repo).
-Tools: `mis_tareas`, `listar_tareas`, `ver_tarea`, `crear_tarea`, `empezar_tarea`, `completar_tarea`,
-`enviar_a_revision`, `revisiones_pendientes`, `aprobar_tarea`, `devolver_tarea`, `comentar_tarea`,
-`asignar_tarea`, `listar_proyectos`, `equipo`. Genera las mismas notificaciones in-app que la web
-(tipo `revision` para transiciones de revisión). Setup y ejemplos: `mcp/README.md`.
+Tools: `siguiente_tarea`, `contexto_proyecto`, `mis_tareas`, `listar_tareas`, `ver_tarea`, `crear_tarea`,
+`crear_modulo`, `priorizar_tarea`, `empezar_tarea`, `registrar_avance`, `completar_tarea`, `enviar_a_revision`,
+`revisiones_pendientes`, `aprobar_tarea`, `devolver_tarea`, `comentar_tarea`, `asignar_tarea`,
+`registrar_decision`, `cartera`, `listar_proyectos`, `equipo`. Las notificaciones las generan los triggers
+(no se insertan desde el MCP). Setup y ejemplos: `mcp/README.md`. Para los repos de cada proyecto hay una
+plantilla de `CLAUDE.md` en `mcp/CLAUDE.proyecto.md` (flujo: `siguiente_tarea` → `contexto_proyecto` →
+PR con `Thread-Tarea: <id>` → `registrar_avance`). El smoke test (`mcp/smoke-test.mjs`) lista las tools
+esperadas: al agregar una, sumala ahí.
 Correr a mano: `npm run mcp`. Smoke test: es stdio JSON-RPC (initialize → tools/list).
 
 ## Navegación base
 
 Sidebar en dos grupos (`src/components/Layout.tsx`):
-- **Siempre visible** (el día a día es tareas): Hoy · Mis tareas · Para mí · Revisiones.
+- **Siempre visible** (el día a día es tareas): Hoy · Mis tareas · Para mí · Revisiones · Cartera.
 - **Bajo «Más»**, colapsado por defecto (armado del proyecto, se usa fuerte al principio): Proyectos · Reuniones · Calendario · Equipo. Estado en `localStorage.nav_mas`; se despliega solo si la ruta activa cae ahí o si corre el onboarding (para que el ítem activo y los targets del tour nunca queden invisibles).
 
 `/` redirige a `/hoy`.

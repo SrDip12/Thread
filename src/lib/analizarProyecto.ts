@@ -4,6 +4,8 @@
 // Vercel. En `vite dev` el fetch fallará (404 / HTML) y el UI debe mostrar el error
 // con gracia.
 
+import { postApi } from './api.ts'
+
 export interface TareaPropuesta {
   titulo: string
   descripcion: string | null
@@ -34,11 +36,7 @@ function esModuloPropuesto(x: unknown): x is ModuloPropuesto {
 }
 
 export async function analizarProyecto(documento: string): Promise<ModuloPropuesto[]> {
-  const res = await fetch('/api/analizar-proyecto', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ documento }),
-  })
+  const res = await postApi('/api/analizar-proyecto', { documento })
 
   if (!res.ok) {
     let mensaje = `Error ${res.status} al analizar el documento`

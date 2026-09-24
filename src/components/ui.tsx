@@ -1,7 +1,24 @@
 // Componentes presentacionales reutilizables, fieles al /design. Sin lógica de datos.
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { estadoVM, fechaVM, iniciales, type EstadoTarea } from '../lib/ui.ts'
+import { estadoVM, fechaVM, iniciales, prioridadVM, type EstadoTarea, type Prioridad } from '../lib/ui.ts'
+
+// Marca de prioridad para filas de tarea. Solo se ve si es alta (o baja con `todas`):
+// la media es el default y no agrega ruido.
+export function PrioridadTag({ prioridad, todas = false }: { prioridad: Prioridad; todas?: boolean }) {
+  if (prioridad === 'media' || (prioridad === 'baja' && !todas)) return null
+  const vm = prioridadVM(prioridad)
+  return (
+    <span
+      title={vm.label}
+      className="flex-none rounded px-1.5 py-[2px] text-[10.5px] font-bold uppercase tracking-[0.03em]"
+      style={{ color: vm.fg, background: vm.bg }}
+    >
+      {prioridad === 'alta' ? '▲ ' : '▼ '}
+      {vm.label}
+    </span>
+  )
+}
 
 // Fecha límite de una tarea con señal de vencimiento (rojo si venció, marca si es hoy).
 export function FechaTag({ fecha, done = false }: { fecha: string | null; done?: boolean }) {

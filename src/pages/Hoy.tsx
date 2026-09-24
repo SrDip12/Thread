@@ -7,9 +7,9 @@ import { useMisTareas, useActualizarTarea, type TareaConProyecto } from '../data
 import { useReuniones, type Reunion } from '../data/reuniones.ts'
 import { momentoReunion } from '../data/recordatorios.ts'
 import { useProyectos } from '../data/proyectos.ts'
-import { estadoVM, ESTADOS, diasHasta, tiposReunion, fmtFecha } from '../lib/ui.ts'
+import { estadoVM, ESTADOS, diasHasta, tiposReunion, fmtFecha, compararFoco } from '../lib/ui.ts'
 import { rutaTarea } from '../lib/navegacion.ts'
-import { Eyebrow, EstadoChip, FechaTag, Skeleton, EmptyState } from '../components/ui.tsx'
+import { Eyebrow, EstadoChip, FechaTag, PrioridadTag, Skeleton, EmptyState } from '../components/ui.tsx'
 
 // Días desde hoy (0 = hoy) hasta el momento de la reunión, en días de calendario.
 function diasReunion(r: Reunion): number {
@@ -31,16 +31,20 @@ export default function Hoy() {
   const proyectoPorId = new Map((proyectos ?? []).map((p) => [p.id, p]))
   const pendientes = (tareas ?? []).filter((t) => t.estado !== 'hecho')
 
-  const vencidas = pendientes.filter((t) => t.fecha && diasHasta(t.fecha) < 0)
-  const paraHoy = pendientes.filter((t) => t.fecha && diasHasta(t.fecha) === 0)
+  // Cada sección en orden de foco: prioridad alta primero, después por fecha.
+  const vencidas = pendientes.filter((t) => t.fecha && diasHasta(t.fecha) < 0).sort(compararFoco)
+  const paraHoy = pendientes.filter((t) => t.fecha && diasHasta(t.fecha) === 0).sort(compararFoco)
   const semana = pendientes
     .filter((t) => {
       if (!t.fecha) return false
       const d = diasHasta(t.fecha)
       return d >= 1 && d <= 7
     })
-    .sort((a, b) => diasHasta(a.fecha as string) - diasHasta(b.fecha as string))
-  const enCurso = pendientes.filter((t) => t.estado === 'en_curso' && !t.fecha)
+    .sort(compararFoco)
+  // Sin fecha: lo que está en curso, y lo marcado de prioridad alta aunque no haya empezado.
+  const enCurso = pendientes
+    .filter((t) => !t.fecha && (t.estado === 'en_curso' || t.prioridad === 'alta'))
+    .sort(compararFoco)
 
   const reunionesHoy = (reuniones ?? [])
     .filter((r) => diasReunion(r) === 0)
@@ -226,6 +230,7 @@ function FilaTareaHoy({
           {proy.nombre}
         </span>
       )}
+      <PrioridadTag prioridad={t.prioridad} />
       <FechaTag fecha={t.fecha} done={vm.done} />
       <EstadoChip estado={t.estado} onClick={onCiclar} />
     </div>
